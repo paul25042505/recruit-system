@@ -22,10 +22,6 @@
 </head>
 <body>
 <div id="root"></div>
-<<<<<<< HEAD
-=======
-
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
 <script type="importmap">
 {
   "imports": {
@@ -34,20 +30,12 @@
   }
 }
 </script>
-<<<<<<< HEAD
-=======
-
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
 <script type="module">
 import React, { useState, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-<<<<<<< HEAD
-=======
-// ─── Firebase ────────────────────────────────────────────────────────────────
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
 const firebaseConfig = {
   apiKey: "AIzaSyCwdW1sg-h6SwC71N18s20AO4fQNFo2Mpk",
   authDomain: "recruitment-sys-cc79d.firebaseapp.com",
@@ -59,10 +47,6 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 
-<<<<<<< HEAD
-=======
-// ─── 預設資料 ────────────────────────────────────────────────────────────────
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
 const DEFAULT_STATUS_OPTIONS = [
   { id: 1, emoji: "❌", label: "資格不符", color: "#ef4444" },
   { id: 2, emoji: "🚫", label: "無意願",   color: "#f97316" },
@@ -71,7 +55,6 @@ const DEFAULT_STATUS_OPTIONS = [
   { id: 5, emoji: "🟢", label: "高意願",   color: "#22c55e" },
   { id: 6, emoji: "✅", label: "確簽",     color: "#10b981" },
 ];
-<<<<<<< HEAD
 const DEFAULT_UNITS      = ["陸軍","海軍","空軍","海軍陸戰隊","憲兵"];
 const DEFAULT_BATTALIONS = ["第一營","第二營","第三營","特勤營","後勤營"];
 const EDUCATIONS = ["高中職","專科","大學","研究所","其他"];
@@ -130,84 +113,15 @@ function App() {
   const [toast,setToast]     = useState(null);
 
   const showToast = (msg,type="ok")=>{ setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
-=======
-const DEFAULT_UNITS = ["陸軍","海軍","空軍","海軍陸戰隊","憲兵"];
-const BATTALIONS   = ["第一營","第二營","第三營","特勤營","後勤營"];
-const EDUCATIONS   = ["高中職","專科","大學","研究所","其他"];
-const CITIES = ["台北市","新北市","桃園市","台中市","台南市","高雄市","基隆市","新竹市","新竹縣","苗栗縣","彰化縣","南投縣","雲林縣","嘉義市","嘉義縣","屏東縣","宜蘭縣","花蓮縣","台東縣","澎湖縣","金門縣","連江縣"];
-
-// ─── DB helpers ───────────────────────────────────────────────────────────────
-async function loadSettings() {
-  const snap = await getDoc(doc(db, "settings", "global"));
-  if (snap.exists()) return snap.data();
-  const defaults = { adminPassword: "admin1234", statusOptions: DEFAULT_STATUS_OPTIONS, units: DEFAULT_UNITS };
-  await setDoc(doc(db, "settings", "global"), defaults);
-  return defaults;
-}
-async function saveSettings(patch) { await setDoc(doc(db, "settings", "global"), patch, { merge: true }); }
-async function loadBatches() {
-  const snap = await getDocs(collection(db, "batches"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-async function saveBatch(batch) { const { id, ...data } = batch; await setDoc(doc(db, "batches", id), data); }
-async function deleteBatchDoc(id) { await deleteDoc(doc(db, "batches", id)); }
-async function updateTraineesInDB(batchId, trainees) { await updateDoc(doc(db, "batches", batchId), { trainees }); }
-
-// ─── 假資料產生器 ─────────────────────────────────────────────────────────────
-function generateTrainees(batchId) {
-  const names = ["陳志遠","林俊宏","黃建安","張雅婷","王柏勳","李宗翰","吳芷萱","劉品辰","蔡明哲","鄭佳穎","許文彬","洪子涵","謝宇晨","周雅雯","廖家豪","江岳霖","方昱璋","賴冠廷","邱怡瑾","曾冠霖"];
-  const depts = ["資訊工程","電機工程","機械工程","企業管理","財務金融","國際貿易","護理學系","體育學系","法律學系","心理學系"];
-  return names.map((name, i) => ({
-    id: `${batchId}-${String(i+1).padStart(3,"0")}`, seatNo: String(i+1).padStart(3,"0"),
-    name, city: CITIES[i % CITIES.length], education: EDUCATIONS[i % EDUCATIONS.length],
-    department: depts[i % depts.length], age: 18+(i%8),
-    phone: `09${String(10000000+i*1111111).slice(0,8)}`,
-    bloodType: ["A","B","O","AB"][i%4], height: 165+(i%20), weight: 60+(i%25),
-    status: null, interviewNote: "", recruiterNote: "", entryDate: "", batchId,
-  }));
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-function App() {
-  const [view, setView]             = useState("loading");
-  const [settings, setSettings]     = useState(null);
-  const [batches, setBatches]       = useState([]);
-  const [currentBatch, setCurrentBatch]     = useState(null);
-  const [currentTrainee, setCurrentTrainee] = useState(null);
-  const [unlockedBatches, setUnlockedBatches] = useState({});
-  const [batchPwdInput, setBatchPwdInput]   = useState("");
-  const [batchPwdError, setBatchPwdError]   = useState(false);
-  const [adminPwdInput, setAdminPwdInput]   = useState("");
-  const [adminPwdError, setAdminPwdError]   = useState(false);
-  const [showAddBatch, setShowAddBatch]     = useState(false);
-  const [newBatch, setNewBatch] = useState({ unit:"", battalion:"", sequence:"", password:"" });
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [searchQuery, setSearchQuery]   = useState("");
-  const [adminTab, setAdminTab]         = useState("units");
-  const [newUnit, setNewUnit]           = useState("");
-  const [newStatusItem, setNewStatusItem] = useState({ emoji:"", label:"", color:"#3b82f6" });
-  const [newAdminPwd, setNewAdminPwd]   = useState("");
-  const [editPwdVisible, setEditPwdVisible] = useState({});
-  const [saving, setSaving]   = useState(false);
-  const [toast, setToast]     = useState(null);
-
-  const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
 
   useEffect(()=>{
     (async()=>{
       try {
-<<<<<<< HEAD
         const [s,b] = await Promise.all([loadSettings(),loadBatches()]);
         // 若舊資料沒有 battalions 欄位，補上預設值
         if(!s.battalions) s.battalions = DEFAULT_BATTALIONS;
         setSettings(s); setBatches(b); setView("home");
       } catch(e){ console.error(e); setView("error"); }
-=======
-        const [s, b] = await Promise.all([loadSettings(), loadBatches()]);
-        setSettings(s); setBatches(b); setView("home");
-      } catch(e) { console.error(e); setView("error"); }
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
     })();
   },[]);
 
@@ -215,7 +129,6 @@ function App() {
     if(currentBatch){ const u=batches.find(b=>b.id===currentBatch.id); if(u) setCurrentBatch(u); }
   },[batches]);
 
-<<<<<<< HEAD
   const updateSettings = async(patch)=>{
     const merged={...settings,...patch};
     setSettings(merged); await saveSettings(patch);
@@ -255,49 +168,11 @@ function App() {
   const filteredTrainees=()=>{
     if(!currentBatch) return [];
     let list=currentBatch.trainees||[];
-=======
-  const updateSettings = async(patch) => {
-    const merged = {...settings,...patch};
-    setSettings(merged); await saveSettings(patch);
-  };
-
-  const enterBatch = (batch) => {
-    if(unlockedBatches[batch.id]){ setCurrentBatch(batch); setView("batch"); return; }
-    setCurrentBatch(batch); setBatchPwdInput(""); setBatchPwdError(false); setView("batchPwd");
-  };
-  const submitBatchPwd = () => {
-    if(batchPwdInput===currentBatch.password){ setUnlockedBatches(p=>({...p,[currentBatch.id]:true})); setView("batch"); }
-    else setBatchPwdError(true);
-  };
-  const addBatch = async() => {
-    if(!newBatch.unit||!newBatch.battalion||!newBatch.sequence||!newBatch.password) return;
-    setSaving(true);
-    const id=`b_${Date.now()}`;
-    const batch={...newBatch,id,createdAt:new Date().toISOString().slice(0,10),trainees:generateTrainees(id)};
-    await saveBatch(batch); setBatches(p=>[...p,batch]);
-    setNewBatch({unit:"",battalion:"",sequence:"",password:""}); setShowAddBatch(false); setSaving(false);
-    showToast("梯次已新增");
-  };
-  const removeBatch = async(id)=>{ await deleteBatchDoc(id); setBatches(p=>p.filter(b=>b.id!==id)); showToast("梯次已刪除"); };
-
-  const updateTrainee = useCallback(async(traineeId, field, value)=>{
-    const batch = batches.find(b=>b.id===currentBatch?.id); if(!batch) return;
-    const updated = batch.trainees.map(t=>t.id===traineeId?{...t,[field]:value}:t);
-    setBatches(p=>p.map(b=>b.id===batch.id?{...b,trainees:updated}:b));
-    setCurrentTrainee(p=>p?.id===traineeId?{...p,[field]:value}:p);
-    await updateTraineesInDB(batch.id, updated);
-  },[batches,currentBatch]);
-
-  const filteredTrainees = () => {
-    if(!currentBatch) return [];
-    let list = currentBatch.trainees||[];
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
     if(filterStatus!=="all") list=list.filter(t=>t.status===parseInt(filterStatus));
     if(searchQuery) list=list.filter(t=>t.name?.includes(searchQuery)||t.seatNo?.includes(searchQuery)||t.city?.includes(searchQuery));
     return list;
   };
 
-<<<<<<< HEAD
   const getStatus=id=>settings?.statusOptions?.find(s=>s.id===id);
   const batchStats=batch=>{
     const tr=batch.trainees||[];
@@ -317,29 +192,10 @@ function App() {
   const removeBattalion=async(u)=>{ await updateSettings({battalions:settings.battalions.filter(x=>x!==u)}); showToast("已刪除"); };
   // 意願
   const addStatusOption=async()=>{
-=======
-  const getStatus = id => settings?.statusOptions?.find(s=>s.id===id);
-  const batchStats = batch => {
-    const tr = batch.trainees||[];
-    return { total:tr.length, reviewed:tr.filter(t=>t.status!=null).length, confirmed:tr.filter(t=>getStatus(t.status)?.label==="確簽").length };
-  };
-
-  const submitAdminPwd = () => {
-    if(adminPwdInput===settings?.adminPassword){ setView("admin"); setAdminPwdInput(""); setAdminPwdError(false); }
-    else setAdminPwdError(true);
-  };
-  const addUnit = async()=>{
-    if(!newUnit.trim()) return;
-    await updateSettings({units:[...(settings.units||[]),newUnit.trim()]}); setNewUnit(""); showToast("單位已新增");
-  };
-  const removeUnit = async(u)=>{ await updateSettings({units:settings.units.filter(x=>x!==u)}); showToast("已刪除"); };
-  const addStatusOption = async()=>{
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
     if(!newStatusItem.emoji||!newStatusItem.label) return;
     const statusOptions=[...(settings.statusOptions||[]),{...newStatusItem,id:Date.now()}];
     await updateSettings({statusOptions}); setNewStatusItem({emoji:"",label:"",color:"#3b82f6"}); showToast("選項已新增");
   };
-<<<<<<< HEAD
   const removeStatusOption=async(id)=>{ await updateSettings({statusOptions:settings.statusOptions.filter(s=>s.id!==id)}); showToast("已刪除"); };
   const updateAdminPwd=async()=>{ if(!newAdminPwd) return; await updateSettings({adminPassword:newAdminPwd}); setNewAdminPwd(""); showToast("密碼已更新"); };
   const saveBatchPwd=async(b)=>{ await updateDoc(doc(db,"batches",b.id),{password:b.password}); showToast("密碼已儲存"); };
@@ -374,52 +230,6 @@ function App() {
 
   if(view==="loading") return e("div",{style:{...S.app,...S.center}},e("div",{style:{fontSize:48,marginBottom:16}},"🎖️"),e("div",{style:{color:"#94a3b8",fontSize:16}},"連線中…"));
   if(view==="error")   return e("div",{style:{...S.app,...S.center}},e("div",{style:{fontSize:40,marginBottom:12}},"⚠️"),e("div",{style:{color:"#ef4444",textAlign:"center",fontSize:14}},"無法連線至資料庫，請重新整理"));
-=======
-  const removeStatusOption = async(id)=>{ await updateSettings({statusOptions:settings.statusOptions.filter(s=>s.id!==id)}); showToast("已刪除"); };
-  const updateAdminPwd = async()=>{ if(!newAdminPwd) return; await updateSettings({adminPassword:newAdminPwd}); setNewAdminPwd(""); showToast("密碼已更新"); };
-  const saveBatchPwd = async(b)=>{ await updateDoc(doc(db,"batches",b.id),{password:b.password}); showToast("密碼已儲存"); };
-
-  // STYLES
-  const S = {
-    app:  { fontFamily:"'Noto Sans TC',sans-serif", minHeight:"100vh", background:"#0f172a", color:"#e2e8f0" },
-    hdr:  { background:"linear-gradient(135deg,#1e293b,#0f172a)", borderBottom:"1px solid #334155", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:100 },
-    logo: { width:36, height:36, background:"linear-gradient(135deg,#f59e0b,#ef4444)", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 },
-    btn: (v="default",sz="md") => ({
-      padding: sz==="sm"?"5px 12px":"8px 18px", fontSize:sz==="sm"?12:13, fontWeight:600, borderRadius:8, border:"none", cursor:"pointer",
-      background: v==="primary"?"linear-gradient(135deg,#f59e0b,#ef4444)":v==="danger"?"#ef4444":v==="ghost"?"transparent":"#1e293b",
-      color: v==="primary"||v==="danger"?"#fff":v==="ghost"?"#94a3b8":"#e2e8f0",
-      outline: v==="ghost"?"1px solid #334155":"none",
-    }),
-    card:  { background:"#1e293b", borderRadius:12, border:"1px solid #334155", padding:16, marginBottom:10 },
-    inp:   { background:"#0f172a", border:"1px solid #334155", borderRadius:8, padding:"8px 12px", color:"#e2e8f0", fontSize:13, width:"100%", outline:"none", boxSizing:"border-box" },
-    sel:   { background:"#0f172a", border:"1px solid #334155", borderRadius:8, padding:"8px 12px", color:"#e2e8f0", fontSize:13, width:"100%", outline:"none" },
-    tag:   c => ({ background:`${c}22`, color:c, border:`1px solid ${c}55`, borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:600 }),
-    badge: { background:"#334155", borderRadius:6, padding:"2px 8px", fontSize:11, color:"#94a3b8" },
-    sec:   { padding:"14px 14px 100px" },
-    lbl:   { fontSize:11, color:"#94a3b8", marginBottom:4, display:"block", fontWeight:600, letterSpacing:"0.05em" },
-    div:   { border:"none", borderTop:"1px solid #334155", margin:"14px 0" },
-    sBar:  { position:"fixed", bottom:0, left:0, right:0, background:"#1e293b", borderTop:"1px solid #334155", padding:"10px 14px", zIndex:99 },
-    modal: { position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", zIndex:200 },
-    mBox:  { background:"#1e293b", borderRadius:"16px 16px 0 0", padding:22, width:"100%", maxHeight:"85vh", overflowY:"auto" },
-    center:{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh", padding:24 },
-    toast: t => ({ position:"fixed", top:20, left:"50%", transform:"translateX(-50%)", background:t==="ok"?"#10b981":"#ef4444", color:"#fff", borderRadius:10, padding:"10px 20px", fontSize:13, fontWeight:600, zIndex:999, whiteSpace:"nowrap" }),
-  };
-
-  const e = React.createElement;
-  const Toast = () => toast ? e("div",{style:S.toast(toast.type)},toast.msg) : null;
-
-  // LOADING
-  if(view==="loading") return e("div",{style:{...S.app,...S.center}},
-    e(Toast),
-    e("div",{style:{fontSize:48,marginBottom:16}},"🎖️"),
-    e("div",{style:{color:"#94a3b8",fontSize:16}},"連線中…")
-  );
-
-  if(view==="error") return e("div",{style:{...S.app,...S.center}},
-    e("div",{style:{fontSize:40,marginBottom:12}},"⚠️"),
-    e("div",{style:{color:"#ef4444",textAlign:"center",fontSize:14}},"無法連線至資料庫\n請檢查網路後重新整理")
-  );
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
 
   // HOME
   if(view==="home") return e("div",{style:S.app},
@@ -441,11 +251,7 @@ function App() {
         e("button",{style:S.btn("primary","sm"),onClick:()=>setShowAddBatch(true)},"＋ 新增梯次")
       ),
       ...batches.map(batch=>{
-<<<<<<< HEAD
         const st=batchStats(batch),pct=st.total?Math.round(st.reviewed/st.total*100):0;
-=======
-        const st=batchStats(batch), pct=st.total?Math.round(st.reviewed/st.total*100):0;
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         return e("div",{key:batch.id,style:{...S.card,cursor:"pointer"},onClick:()=>enterBatch(batch)},
           e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
             e("div",null,
@@ -469,7 +275,6 @@ function App() {
           )
         );
       }),
-<<<<<<< HEAD
       batches.length===0&&e("div",{style:{textAlign:"center",color:"#475569",padding:40}},e("div",{style:{fontSize:40,marginBottom:8}},"📋"),"尚無梯次，請新增")
     ),
     // 新增梯次 Modal
@@ -477,15 +282,6 @@ function App() {
       e("div",{style:S.mBox},
         e("div",{style:{fontSize:16,fontWeight:700,marginBottom:18,color:"#f8fafc"}},"新增梯次"),
         // 接訓單位
-=======
-      batches.length===0 && e("div",{style:{textAlign:"center",color:"#475569",padding:40}},
-        e("div",{style:{fontSize:40,marginBottom:8}},"📋"),"尚無梯次，請新增"
-      )
-    ),
-    showAddBatch && e("div",{style:S.modal},
-      e("div",{style:S.mBox},
-        e("div",{style:{fontSize:16,fontWeight:700,marginBottom:18,color:"#f8fafc"}},"新增梯次"),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{marginBottom:12}},
           e("label",{style:S.lbl},"接訓單位"),
           e("select",{style:S.sel,value:newBatch.unit,onChange:ev=>setNewBatch(p=>({...p,unit:ev.target.value}))},
@@ -493,15 +289,11 @@ function App() {
             ...(settings?.units||[]).map(u=>e("option",{key:u},u))
           )
         ),
-<<<<<<< HEAD
         // 營
-=======
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{marginBottom:12}},
           e("label",{style:S.lbl},"營"),
           e("select",{style:S.sel,value:newBatch.battalion,onChange:ev=>setNewBatch(p=>({...p,battalion:ev.target.value}))},
             e("option",{value:""},"請選擇"),
-<<<<<<< HEAD
             ...(settings?.battalions||[]).map(b=>e("option",{key:b},b))
           )
         ),
@@ -516,15 +308,6 @@ function App() {
           e("input",{style:S.inp,type:"number",placeholder:"例：30",min:"1",max:"500",value:newBatch.traineeCount,onChange:ev=>setNewBatch(p=>({...p,traineeCount:ev.target.value}))})
         ),
         // 專案密碼
-=======
-            ...BATTALIONS.map(b=>e("option",{key:b},b))
-          )
-        ),
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"梯次"),
-          e("input",{style:S.inp,placeholder:"例：第1梯次",value:newBatch.sequence,onChange:ev=>setNewBatch(p=>({...p,sequence:ev.target.value}))})
-        ),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{marginBottom:18}},
           e("label",{style:S.lbl},"專案密碼"),
           e("input",{style:S.inp,type:"password",placeholder:"設定此梯次密碼",value:newBatch.password,onChange:ev=>setNewBatch(p=>({...p,password:ev.target.value}))})
@@ -549,11 +332,7 @@ function App() {
         type:"password",placeholder:"••••••",value:batchPwdInput,autoFocus:true,
         onChange:ev=>{setBatchPwdInput(ev.target.value);setBatchPwdError(false);},
         onKeyDown:ev=>ev.key==="Enter"&&submitBatchPwd()}),
-<<<<<<< HEAD
       batchPwdError&&e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}},"密碼錯誤，請重試"),
-=======
-      batchPwdError && e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}},"密碼錯誤，請重試"),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
       e("button",{style:{...S.btn("primary"),width:"100%",padding:12},onClick:submitBatchPwd},"進入"),
       e("button",{style:{...S.btn("ghost"),width:"100%",marginTop:8,padding:10},onClick:()=>setView("home")},"← 返回")
     )
@@ -572,11 +351,7 @@ function App() {
         )
       ),
       e("div",{style:{padding:"12px 14px 0"}},
-<<<<<<< HEAD
         e("input",{style:{...S.inp,marginBottom:8},placeholder:"🔍 搜尋姓名、座號…",value:searchQuery,onChange:ev=>setSearchQuery(ev.target.value)}),
-=======
-        e("input",{style:{...S.inp,marginBottom:8},placeholder:"🔍 搜尋姓名、座號、居住地…",value:searchQuery,onChange:ev=>setSearchQuery(ev.target.value)}),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{display:"flex",gap:6,overflowX:"auto",paddingBottom:8}},
           e("button",{style:{...S.btn(filterStatus==="all"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFilterStatus("all")},"全部"),
           ...(settings?.statusOptions||[]).map(s=>
@@ -592,7 +367,6 @@ function App() {
               e("div",{style:{background:"#334155",borderRadius:8,padding:"5px 9px",fontSize:13,fontWeight:700,color:"#94a3b8",flexShrink:0}},t.seatNo),
               e("div",{style:{flex:1,minWidth:0}},
                 e("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}},
-<<<<<<< HEAD
                   e("span",{style:{fontSize:15,fontWeight:700,color:t.name?"#f8fafc":"#475569"}},t.name||"（未填姓名）"),
                   si&&e("span",{style:S.tag(si.color)},`${si.emoji} ${si.label}`)
                 ),
@@ -607,61 +381,29 @@ function App() {
           );
         }),
         list.length===0&&e("div",{style:{textAlign:"center",color:"#475569",padding:40}},e("div",{style:{fontSize:36,marginBottom:8}},"🔍"),"找不到符合條件的訓員")
-=======
-                  e("span",{style:{fontSize:15,fontWeight:700,color:"#f8fafc"}},t.name),
-                  si && e("span",{style:S.tag(si.color)},`${si.emoji} ${si.label}`)
-                ),
-                e("div",{style:{fontSize:12,color:"#64748b",marginTop:2}},`${t.city} · ${t.education} · ${t.department}`)
-              ),
-              e("span",{style:{color:"#475569"}},"›")
-            ),
-            t.interviewNote && e("div",{style:{marginTop:8,fontSize:11,color:"#64748b",background:"#0f172a",borderRadius:6,padding:"5px 10px",borderLeft:"3px solid #334155"}},
-              t.interviewNote.slice(0,60)+(t.interviewNote.length>60?"…":""))
-          );
-        }),
-        list.length===0 && e("div",{style:{textAlign:"center",color:"#475569",padding:40}},
-          e("div",{style:{fontSize:36,marginBottom:8}},"🔍"),"找不到符合條件的訓員"
-        )
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
       )
     );
   }
 
   // TRAINEE DETAIL
   if(view==="trainee"&&currentTrainee){
-<<<<<<< HEAD
     const t=currentTrainee,si=t.status?getStatus(t.status):null;
-=======
-    const t=currentTrainee, si=t.status?getStatus(t.status):null;
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
     const Field=(label,field,type,options,span2)=>
       e("div",{style:{marginBottom:12,gridColumn:span2?"span 2":"span 1"}},
         e("label",{style:S.lbl},label),
         options
-<<<<<<< HEAD
           ?e("select",{style:S.sel,value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)},
               e("option",{value:""},"請選擇"),...options.map(o=>e("option",{key:o},o)))
           :type==="textarea"
             ?e("textarea",{style:{...S.inp,minHeight:80,resize:"vertical"},value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)})
             :e("input",{style:S.inp,type,value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)})
-=======
-          ? e("select",{style:S.sel,value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)},
-              e("option",{value:""},"請選擇"),...options.map(o=>e("option",{key:o},o)))
-          : type==="textarea"
-            ? e("textarea",{style:{...S.inp,minHeight:80,resize:"vertical"},value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)})
-            : e("input",{style:S.inp,type,value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)})
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
       );
     return e("div",{style:S.app},
       e(Toast),
       e("div",{style:S.hdr},
         e("button",{style:{...S.btn("ghost","sm"),padding:"5px 8px"},onClick:()=>setView("batch")},"←"),
         e("div",null,
-<<<<<<< HEAD
           e("div",{style:{fontSize:16,fontWeight:700,color:"#f8fafc"}},`${t.seatNo}${t.name?" · "+t.name:""}`),
-=======
-          e("div",{style:{fontSize:16,fontWeight:700,color:"#f8fafc"}},`${t.seatNo} · ${t.name}`),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
           e("div",{style:{fontSize:11,color:"#94a3b8"}},si?`${si.emoji} ${si.label}`:"尚未評估")
         )
       ),
@@ -711,11 +453,7 @@ function App() {
         type:"password",placeholder:"••••••",value:adminPwdInput,autoFocus:true,
         onChange:ev=>{setAdminPwdInput(ev.target.value);setAdminPwdError(false);},
         onKeyDown:ev=>ev.key==="Enter"&&submitAdminPwd()}),
-<<<<<<< HEAD
       adminPwdError&&e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}},"密碼錯誤"),
-=======
-      adminPwdError && e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}},"密碼錯誤"),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
       e("button",{style:{...S.btn("primary"),width:"100%",padding:12},onClick:submitAdminPwd},"進入後台"),
       e("button",{style:{...S.btn("ghost"),width:"100%",marginTop:8,padding:10},onClick:()=>setView("home")},"← 返回")
     )
@@ -732,25 +470,15 @@ function App() {
       )
     ),
     e("div",{style:{display:"flex",borderBottom:"1px solid #334155",padding:"0 14px",overflowX:"auto"}},
-<<<<<<< HEAD
       ...[["units","🏢 單位"],["battalions","🪖 營"],["batches","📋 梯次"],["status","🏷️ 意願"],["security","🔐 安全"]].map(([k,l])=>
         e("button",{key:k,onClick:()=>setAdminTab(k),style:{...S.btn("ghost","sm"),borderRadius:0,padding:"12px 10px",flexShrink:0,
-=======
-      ...[["units","🏢 接訓單位"],["batches","📋 梯次密碼"],["status","🏷️ 意願選項"],["security","🔐 安全設定"]].map(([k,l])=>
-        e("button",{key:k,onClick:()=>setAdminTab(k),style:{...S.btn("ghost","sm"),borderRadius:0,padding:"12px 12px",flexShrink:0,
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
           borderBottom:adminTab===k?"2px solid #f59e0b":"2px solid transparent",color:adminTab===k?"#f59e0b":"#64748b"}},l)
       )
     ),
     e("div",{style:S.sec},
-<<<<<<< HEAD
 
       // 接訓單位
       adminTab==="units"&&e("div",null,
-=======
-      // 接訓單位
-      adminTab==="units" && e("div",null,
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"接訓單位管理"),
         ...(settings?.units||[]).map(u=>
           e("div",{key:u,style:{...S.card,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}},
@@ -762,17 +490,11 @@ function App() {
         e("div",{style:S.card},
           e("div",{style:{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}},"新增單位"),
           e("div",{style:{display:"flex",gap:8}},
-<<<<<<< HEAD
             e("input",{style:{...S.inp,flex:1},placeholder:"輸入單位名稱",value:newUnit,onChange:ev=>setNewUnit(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&addUnit()}),
-=======
-            e("input",{style:{...S.inp,flex:1},placeholder:"輸入單位名稱",value:newUnit,
-              onChange:ev=>setNewUnit(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&addUnit()}),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
             e("button",{style:{...S.btn("primary","sm"),flexShrink:0},onClick:addUnit},"新增")
           )
         )
       ),
-<<<<<<< HEAD
 
       // 營
       adminTab==="battalions"&&e("div",null,
@@ -795,10 +517,6 @@ function App() {
 
       // 梯次密碼
       adminTab==="batches"&&e("div",null,
-=======
-      // 梯次密碼
-      adminTab==="batches" && e("div",null,
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"梯次密碼管理"),
         ...batches.map(b=>
           e("div",{key:b.id,style:S.card},
@@ -810,25 +528,15 @@ function App() {
             e("div",{style:{display:"flex",gap:8}},
               e("input",{style:S.inp,type:editPwdVisible[b.id]?"text":"password",value:b.password,
                 onChange:ev=>setBatches(p=>p.map(x=>x.id===b.id?{...x,password:ev.target.value}:x))}),
-<<<<<<< HEAD
               e("button",{style:{...S.btn("ghost","sm"),flexShrink:0},onClick:()=>setEditPwdVisible(p=>({...p,[b.id]:!p[b.id]}))},editPwdVisible[b.id]?"隱藏":"顯示"),
-=======
-              e("button",{style:{...S.btn("ghost","sm"),flexShrink:0},onClick:()=>setEditPwdVisible(p=>({...p,[b.id]:!p[b.id]}))},
-                editPwdVisible[b.id]?"隱藏":"顯示"),
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
               e("button",{style:{...S.btn("primary","sm"),flexShrink:0},onClick:()=>saveBatchPwd(b)},"儲存")
             )
           )
         )
       ),
-<<<<<<< HEAD
 
       // 意願選項
       adminTab==="status"&&e("div",null,
-=======
-      // 意願選項
-      adminTab==="status" && e("div",null,
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"意願評估選項"),
         ...(settings?.statusOptions||[]).map(s=>
           e("div",{key:s.id,style:{...S.card,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}},
@@ -854,14 +562,9 @@ function App() {
           e("button",{style:{...S.btn("primary"),width:"100%"},onClick:addStatusOption},"新增選項")
         )
       ),
-<<<<<<< HEAD
 
       // 安全設定
       adminTab==="security"&&e("div",null,
-=======
-      // 安全設定
-      adminTab==="security" && e("div",null,
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
         e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"安全設定"),
         e("div",{style:S.card},
           e("div",{style:{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}},"更改管理員密碼"),
@@ -879,8 +582,4 @@ function App() {
 createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
 </body>
-<<<<<<< HEAD
 </html>
-=======
-</html>
->>>>>>> e08afac6e0bfacccdedfe9d18b10328b9b2ee2e2
