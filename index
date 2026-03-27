@@ -1,4 +1,40 @@
-import { useState, useEffect, useCallback } from "react";
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>招募訓員管理系統</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0f172a;color:#e2e8f0;font-family:'Noto Sans TC',sans-serif;}
+    #root{min-height:100vh;}
+    select option{background:#1e293b;color:#e2e8f0;}
+    ::-webkit-scrollbar{width:4px;height:4px;}
+    ::-webkit-scrollbar-track{background:#0f172a;}
+    ::-webkit-scrollbar-thumb{background:#334155;border-radius:4px;}
+    input[type=color]{-webkit-appearance:none;border:none;padding:0;cursor:pointer;}
+    input[type=color]::-webkit-color-swatch-wrapper{padding:4px;}
+    input[type=color]::-webkit-color-swatch{border-radius:4px;border:none;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18",
+    "react-dom/client": "https://esm.sh/react-dom@18/client"
+  }
+}
+</script>
+
+<script type="module">
+import React, { useState, useEffect, useCallback } from "react";
+import { createRoot } from "react-dom/client";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
@@ -60,7 +96,7 @@ function generateTrainees(batchId) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-export default function App() {
+function App() {
   const [view, setView]             = useState("loading");
   const [settings, setSettings]     = useState(null);
   const [batches, setBatches]       = useState([]);
@@ -85,7 +121,6 @@ export default function App() {
 
   const showToast = (msg, type="ok") => { setToast({msg,type}); setTimeout(()=>setToast(null),2500); };
 
-  // ── 初始載入 ──────────────────────────────────────────────────────────────
   useEffect(()=>{
     (async()=>{
       try {
@@ -95,18 +130,15 @@ export default function App() {
     })();
   },[]);
 
-  // 同步 currentBatch
   useEffect(()=>{
     if(currentBatch){ const u=batches.find(b=>b.id===currentBatch.id); if(u) setCurrentBatch(u); }
   },[batches]);
 
-  // ── 設定更新 ──────────────────────────────────────────────────────────────
   const updateSettings = async(patch) => {
     const merged = {...settings,...patch};
     setSettings(merged); await saveSettings(patch);
   };
 
-  // ── 梯次 ──────────────────────────────────────────────────────────────────
   const enterBatch = (batch) => {
     if(unlockedBatches[batch.id]){ setCurrentBatch(batch); setView("batch"); return; }
     setCurrentBatch(batch); setBatchPwdInput(""); setBatchPwdError(false); setView("batchPwd");
@@ -126,7 +158,6 @@ export default function App() {
   };
   const removeBatch = async(id)=>{ await deleteBatchDoc(id); setBatches(p=>p.filter(b=>b.id!==id)); showToast("梯次已刪除"); };
 
-  // ── 訓員 ──────────────────────────────────────────────────────────────────
   const updateTrainee = useCallback(async(traineeId, field, value)=>{
     const batch = batches.find(b=>b.id===currentBatch?.id); if(!batch) return;
     const updated = batch.trainees.map(t=>t.id===traineeId?{...t,[field]:value}:t);
@@ -144,13 +175,11 @@ export default function App() {
   };
 
   const getStatus = id => settings?.statusOptions?.find(s=>s.id===id);
-
   const batchStats = batch => {
     const tr = batch.trainees||[];
     return { total:tr.length, reviewed:tr.filter(t=>t.status!=null).length, confirmed:tr.filter(t=>getStatus(t.status)?.label==="確簽").length };
   };
 
-  // ── 後台 ──────────────────────────────────────────────────────────────────
   const submitAdminPwd = () => {
     if(adminPwdInput===settings?.adminPassword){ setView("admin"); setAdminPwdInput(""); setAdminPwdError(false); }
     else setAdminPwdError(true);
@@ -169,9 +198,7 @@ export default function App() {
   const updateAdminPwd = async()=>{ if(!newAdminPwd) return; await updateSettings({adminPassword:newAdminPwd}); setNewAdminPwd(""); showToast("密碼已更新"); };
   const saveBatchPwd = async(b)=>{ await updateDoc(doc(db,"batches",b.id),{password:b.password}); showToast("密碼已儲存"); };
 
-  // ══════════════════════════════════════════════════════════════════════════
   // STYLES
-  // ══════════════════════════════════════════════════════════════════════════
   const S = {
     app:  { fontFamily:"'Noto Sans TC',sans-serif", minHeight:"100vh", background:"#0f172a", color:"#e2e8f0" },
     hdr:  { background:"linear-gradient(135deg,#1e293b,#0f172a)", borderBottom:"1px solid #334155", padding:"12px 16px", display:"flex", alignItems:"center", gap:12, position:"sticky", top:0, zIndex:100 },
@@ -191,356 +218,347 @@ export default function App() {
     lbl:   { fontSize:11, color:"#94a3b8", marginBottom:4, display:"block", fontWeight:600, letterSpacing:"0.05em" },
     div:   { border:"none", borderTop:"1px solid #334155", margin:"14px 0" },
     sBar:  { position:"fixed", bottom:0, left:0, right:0, background:"#1e293b", borderTop:"1px solid #334155", padding:"10px 14px", zIndex:99 },
-    modal: { position:"fixed", inset:0, background:"#000b", display:"flex", alignItems:"flex-end", zIndex:200 },
+    modal: { position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", zIndex:200 },
     mBox:  { background:"#1e293b", borderRadius:"16px 16px 0 0", padding:22, width:"100%", maxHeight:"85vh", overflowY:"auto" },
     center:{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"100vh", padding:24 },
     toast: t => ({ position:"fixed", top:20, left:"50%", transform:"translateX(-50%)", background:t==="ok"?"#10b981":"#ef4444", color:"#fff", borderRadius:10, padding:"10px 20px", fontSize:13, fontWeight:600, zIndex:999, whiteSpace:"nowrap" }),
   };
-  const GFont = () => <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />;
-  const Toast = () => toast ? <div style={S.toast(toast.type)}>{toast.msg}</div> : null;
 
-  // ══════════════════════════════════════════════════════════════════════════
-  if(view==="loading") return <div style={{...S.app,...S.center}}><GFont/><div style={{fontSize:48,marginBottom:16}}>🎖️</div><div style={{color:"#94a3b8"}}>連線中…</div></div>;
-  if(view==="error")   return <div style={{...S.app,...S.center}}><GFont/><div style={{fontSize:40,marginBottom:12}}>⚠️</div><div style={{color:"#ef4444",textAlign:"center"}}>無法連線至資料庫<br/>請檢查網路後重新整理</div></div>;
+  const e = React.createElement;
+  const Toast = () => toast ? e("div",{style:S.toast(toast.type)},toast.msg) : null;
 
-  // ══════════════════════════════════════════════════════════════════════════
+  // LOADING
+  if(view==="loading") return e("div",{style:{...S.app,...S.center}},
+    e(Toast),
+    e("div",{style:{fontSize:48,marginBottom:16}},"🎖️"),
+    e("div",{style:{color:"#94a3b8",fontSize:16}},"連線中…")
+  );
+
+  if(view==="error") return e("div",{style:{...S.app,...S.center}},
+    e("div",{style:{fontSize:40,marginBottom:12}},"⚠️"),
+    e("div",{style:{color:"#ef4444",textAlign:"center",fontSize:14}},"無法連線至資料庫\n請檢查網路後重新整理")
+  );
+
   // HOME
-  // ══════════════════════════════════════════════════════════════════════════
-  if(view==="home") return (
-    <div style={S.app}><GFont/><Toast/>
-      <div style={S.hdr}>
-        <div style={S.logo}>🎖️</div>
-        <div>
-          <div style={{fontSize:16,fontWeight:700,color:"#f8fafc",letterSpacing:"0.05em"}}>招募訓員管理系統</div>
-          <div style={{fontSize:11,color:"#94a3b8",marginTop:1}}>RECRUITMENT MANAGEMENT SYSTEM</div>
-        </div>
-        <button style={{...S.btn("ghost","sm"),marginLeft:"auto"}} onClick={()=>{setView("adminPwd");setAdminPwdInput("");setAdminPwdError(false);}}>⚙️ 後台</button>
-      </div>
-
-      <div style={S.sec}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <div>
-            <div style={{fontSize:17,fontWeight:700,color:"#f8fafc"}}>梯次列表</div>
-            <div style={{fontSize:12,color:"#64748b",marginTop:2}}>共 {batches.length} 個梯次</div>
-          </div>
-          <button style={S.btn("primary","sm")} onClick={()=>setShowAddBatch(true)}>＋ 新增梯次</button>
-        </div>
-
-        {batches.map(batch=>{
-          const st=batchStats(batch);
-          const pct=st.total?Math.round(st.reviewed/st.total*100):0;
-          return (
-            <div key={batch.id} style={{...S.card,cursor:"pointer"}} onClick={()=>enterBatch(batch)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <div>
-                  <div style={{fontSize:15,fontWeight:700,color:"#f8fafc",marginBottom:5}}>{batch.unit} · {batch.battalion} · {batch.sequence}</div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                    <span style={S.badge}>建立 {batch.createdAt}</span>
-                    <span style={S.badge}>訓員 {st.total} 人</span>
-                    <span style={S.tag("#22c55e")}>確簽 {st.confirmed} 人</span>
-                  </div>
-                </div>
-                <span style={{color:"#475569",fontSize:20}}>›</span>
-              </div>
-              <div style={{marginTop:12}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{fontSize:11,color:"#64748b"}}>訪談進度</span>
-                  <span style={{fontSize:11,color:"#94a3b8"}}>{st.reviewed}/{st.total}</span>
-                </div>
-                <div style={{height:4,background:"#334155",borderRadius:4,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#f59e0b,#ef4444)",borderRadius:4}}/>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {batches.length===0&&<div style={{textAlign:"center",color:"#475569",padding:40}}><div style={{fontSize:40,marginBottom:8}}>📋</div>尚無梯次</div>}
-      </div>
-
-      {showAddBatch&&(
-        <div style={S.modal}>
-          <div style={S.mBox}>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:18,color:"#f8fafc"}}>新增梯次</div>
-            {[["接訓單位","unit",(settings?.units||[])],["營","battalion",BATTALIONS]].map(([lbl,key,opts])=>(
-              <div key={key} style={{marginBottom:12}}>
-                <label style={S.lbl}>{lbl}</label>
-                <select style={S.sel} value={newBatch[key]} onChange={e=>setNewBatch(p=>({...p,[key]:e.target.value}))}>
-                  <option value="">請選擇</option>{opts.map(o=><option key={o}>{o}</option>)}
-                </select>
-              </div>
-            ))}
-            <div style={{marginBottom:12}}><label style={S.lbl}>梯次</label><input style={S.inp} placeholder="例：第1梯次" value={newBatch.sequence} onChange={e=>setNewBatch(p=>({...p,sequence:e.target.value}))}/></div>
-            <div style={{marginBottom:18}}><label style={S.lbl}>專案密碼</label><input style={S.inp} type="password" placeholder="設定此梯次密碼" value={newBatch.password} onChange={e=>setNewBatch(p=>({...p,password:e.target.value}))}/></div>
-            <div style={{display:"flex",gap:10}}>
-              <button style={{...S.btn("ghost"),flex:1}} onClick={()=>setShowAddBatch(false)}>取消</button>
-              <button style={{...S.btn("primary"),flex:1}} onClick={addBatch} disabled={saving}>{saving?"儲存中…":"新增"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+  if(view==="home") return e("div",{style:S.app},
+    e(Toast),
+    e("div",{style:S.hdr},
+      e("div",{style:S.logo},"🎖️"),
+      e("div",null,
+        e("div",{style:{fontSize:16,fontWeight:700,color:"#f8fafc",letterSpacing:"0.05em"}},"招募訓員管理系統"),
+        e("div",{style:{fontSize:11,color:"#94a3b8",marginTop:1}},"RECRUITMENT MANAGEMENT SYSTEM")
+      ),
+      e("button",{style:{...S.btn("ghost","sm"),marginLeft:"auto"},onClick:()=>{setView("adminPwd");setAdminPwdInput("");setAdminPwdError(false);}},"⚙️ 後台")
+    ),
+    e("div",{style:S.sec},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}},
+        e("div",null,
+          e("div",{style:{fontSize:17,fontWeight:700,color:"#f8fafc"}},"梯次列表"),
+          e("div",{style:{fontSize:12,color:"#64748b",marginTop:2}},`共 ${batches.length} 個梯次`)
+        ),
+        e("button",{style:S.btn("primary","sm"),onClick:()=>setShowAddBatch(true)},"＋ 新增梯次")
+      ),
+      ...batches.map(batch=>{
+        const st=batchStats(batch), pct=st.total?Math.round(st.reviewed/st.total*100):0;
+        return e("div",{key:batch.id,style:{...S.card,cursor:"pointer"},onClick:()=>enterBatch(batch)},
+          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
+            e("div",null,
+              e("div",{style:{fontSize:15,fontWeight:700,color:"#f8fafc",marginBottom:5}},`${batch.unit} · ${batch.battalion} · ${batch.sequence}`),
+              e("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+                e("span",{style:S.badge},`建立 ${batch.createdAt}`),
+                e("span",{style:S.badge},`訓員 ${st.total} 人`),
+                e("span",{style:S.tag("#22c55e")},`確簽 ${st.confirmed} 人`)
+              )
+            ),
+            e("span",{style:{color:"#475569",fontSize:20}},"›")
+          ),
+          e("div",{style:{marginTop:12}},
+            e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}},
+              e("span",{style:{fontSize:11,color:"#64748b"}},"訪談進度"),
+              e("span",{style:{fontSize:11,color:"#94a3b8"}},`${st.reviewed}/${st.total}`)
+            ),
+            e("div",{style:{height:4,background:"#334155",borderRadius:4,overflow:"hidden"}},
+              e("div",{style:{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#f59e0b,#ef4444)",borderRadius:4}})
+            )
+          )
+        );
+      }),
+      batches.length===0 && e("div",{style:{textAlign:"center",color:"#475569",padding:40}},
+        e("div",{style:{fontSize:40,marginBottom:8}},"📋"),"尚無梯次，請新增"
+      )
+    ),
+    showAddBatch && e("div",{style:S.modal},
+      e("div",{style:S.mBox},
+        e("div",{style:{fontSize:16,fontWeight:700,marginBottom:18,color:"#f8fafc"}},"新增梯次"),
+        e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"接訓單位"),
+          e("select",{style:S.sel,value:newBatch.unit,onChange:ev=>setNewBatch(p=>({...p,unit:ev.target.value}))},
+            e("option",{value:""},"請選擇"),
+            ...(settings?.units||[]).map(u=>e("option",{key:u},u))
+          )
+        ),
+        e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"營"),
+          e("select",{style:S.sel,value:newBatch.battalion,onChange:ev=>setNewBatch(p=>({...p,battalion:ev.target.value}))},
+            e("option",{value:""},"請選擇"),
+            ...BATTALIONS.map(b=>e("option",{key:b},b))
+          )
+        ),
+        e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"梯次"),
+          e("input",{style:S.inp,placeholder:"例：第1梯次",value:newBatch.sequence,onChange:ev=>setNewBatch(p=>({...p,sequence:ev.target.value}))})
+        ),
+        e("div",{style:{marginBottom:18}},
+          e("label",{style:S.lbl},"專案密碼"),
+          e("input",{style:S.inp,type:"password",placeholder:"設定此梯次密碼",value:newBatch.password,onChange:ev=>setNewBatch(p=>({...p,password:ev.target.value}))})
+        ),
+        e("div",{style:{display:"flex",gap:10}},
+          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowAddBatch(false)},"取消"),
+          e("button",{style:{...S.btn("primary"),flex:1},onClick:addBatch,disabled:saving},saving?"儲存中…":"新增")
+        )
+      )
+    )
   );
 
-  // ══════════════════════════════════════════════════════════════════════════
   // BATCH PASSWORD
-  // ══════════════════════════════════════════════════════════════════════════
-  if(view==="batchPwd") return (
-    <div style={{...S.app,...S.center}}><GFont/>
-      <div style={{width:"100%",maxWidth:360}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{fontSize:44,marginBottom:10}}>🔒</div>
-          <div style={{fontSize:17,fontWeight:700,color:"#f8fafc"}}>輸入專案密碼</div>
-          <div style={{fontSize:12,color:"#64748b",marginTop:6}}>{currentBatch?.unit} · {currentBatch?.battalion} · {currentBatch?.sequence}</div>
-        </div>
-        <input style={{...S.inp,textAlign:"center",fontSize:20,letterSpacing:"0.2em",marginBottom:10,padding:14}}
-          type="password" placeholder="••••••" value={batchPwdInput}
-          onChange={e=>{setBatchPwdInput(e.target.value);setBatchPwdError(false);}}
-          onKeyDown={e=>e.key==="Enter"&&submitBatchPwd()} autoFocus/>
-        {batchPwdError&&<div style={{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}}>密碼錯誤，請重試</div>}
-        <button style={{...S.btn("primary"),width:"100%",padding:12}} onClick={submitBatchPwd}>進入</button>
-        <button style={{...S.btn("ghost"),width:"100%",marginTop:8,padding:10}} onClick={()=>setView("home")}>← 返回</button>
-      </div>
-    </div>
+  if(view==="batchPwd") return e("div",{style:{...S.app,...S.center}},
+    e("div",{style:{width:"100%",maxWidth:360}},
+      e("div",{style:{textAlign:"center",marginBottom:28}},
+        e("div",{style:{fontSize:44,marginBottom:10}},"🔒"),
+        e("div",{style:{fontSize:17,fontWeight:700,color:"#f8fafc"}},"輸入專案密碼"),
+        e("div",{style:{fontSize:12,color:"#64748b",marginTop:6}},`${currentBatch?.unit} · ${currentBatch?.battalion} · ${currentBatch?.sequence}`)
+      ),
+      e("input",{style:{...S.inp,textAlign:"center",fontSize:20,letterSpacing:"0.2em",marginBottom:10,padding:14},
+        type:"password",placeholder:"••••••",value:batchPwdInput,autoFocus:true,
+        onChange:ev=>{setBatchPwdInput(ev.target.value);setBatchPwdError(false);},
+        onKeyDown:ev=>ev.key==="Enter"&&submitBatchPwd()}),
+      batchPwdError && e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}},"密碼錯誤，請重試"),
+      e("button",{style:{...S.btn("primary"),width:"100%",padding:12},onClick:submitBatchPwd},"進入"),
+      e("button",{style:{...S.btn("ghost"),width:"100%",marginTop:8,padding:10},onClick:()=>setView("home")},"← 返回")
+    )
   );
 
-  // ══════════════════════════════════════════════════════════════════════════
   // BATCH LIST
-  // ══════════════════════════════════════════════════════════════════════════
   if(view==="batch"){
     const list=filteredTrainees();
-    return (
-      <div style={S.app}><GFont/><Toast/>
-        <div style={S.hdr}>
-          <button style={{...S.btn("ghost","sm"),padding:"5px 8px"}} onClick={()=>setView("home")}>←</button>
-          <div>
-            <div style={{fontSize:16,fontWeight:700,color:"#f8fafc"}}>{currentBatch?.unit} · {currentBatch?.sequence}</div>
-            <div style={{fontSize:11,color:"#94a3b8"}}>{currentBatch?.battalion} · {list.length} 人</div>
-          </div>
-        </div>
-        <div style={{padding:"12px 14px 0"}}>
-          <input style={{...S.inp,marginBottom:8}} placeholder="🔍 搜尋姓名、座號、居住地…" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}/>
-          <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8}}>
-            <button style={{...S.btn(filterStatus==="all"?"primary":"ghost","sm"),flexShrink:0}} onClick={()=>setFilterStatus("all")}>全部</button>
-            {(settings?.statusOptions||[]).map(s=>(
-              <button key={s.id} style={{...S.btn(filterStatus===String(s.id)?"primary":"ghost","sm"),flexShrink:0,color:filterStatus===String(s.id)?"#fff":s.color}} onClick={()=>setFilterStatus(String(s.id))}>{s.emoji} {s.label}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{...S.sec,paddingTop:8}}>
-          {list.map(t=>{
-            const si=t.status?getStatus(t.status):null;
-            return (
-              <div key={t.id} style={{...S.card,padding:"12px 14px",cursor:"pointer"}} onClick={()=>{setCurrentTrainee(t);setView("trainee");}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{background:"#334155",borderRadius:8,padding:"5px 9px",fontSize:13,fontWeight:700,color:"#94a3b8",flexShrink:0}}>{t.seatNo}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                      <span style={{fontSize:15,fontWeight:700,color:"#f8fafc"}}>{t.name}</span>
-                      {si&&<span style={S.tag(si.color)}>{si.emoji} {si.label}</span>}
-                    </div>
-                    <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{t.city} · {t.education} · {t.department}</div>
-                  </div>
-                  <span style={{color:"#475569"}}>›</span>
-                </div>
-                {t.interviewNote&&<div style={{marginTop:8,fontSize:11,color:"#64748b",background:"#0f172a",borderRadius:6,padding:"5px 10px",borderLeft:"3px solid #334155"}}>{t.interviewNote.slice(0,60)}{t.interviewNote.length>60?"…":""}</div>}
-              </div>
-            );
-          })}
-          {list.length===0&&<div style={{textAlign:"center",color:"#475569",padding:40}}><div style={{fontSize:36,marginBottom:8}}>🔍</div>找不到符合條件的訓員</div>}
-        </div>
-      </div>
+    return e("div",{style:S.app},
+      e(Toast),
+      e("div",{style:S.hdr},
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 8px"},onClick:()=>setView("home")},"←"),
+        e("div",null,
+          e("div",{style:{fontSize:16,fontWeight:700,color:"#f8fafc"}},`${currentBatch?.unit} · ${currentBatch?.sequence}`),
+          e("div",{style:{fontSize:11,color:"#94a3b8"}},`${currentBatch?.battalion} · ${list.length} 人`)
+        )
+      ),
+      e("div",{style:{padding:"12px 14px 0"}},
+        e("input",{style:{...S.inp,marginBottom:8},placeholder:"🔍 搜尋姓名、座號、居住地…",value:searchQuery,onChange:ev=>setSearchQuery(ev.target.value)}),
+        e("div",{style:{display:"flex",gap:6,overflowX:"auto",paddingBottom:8}},
+          e("button",{style:{...S.btn(filterStatus==="all"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFilterStatus("all")},"全部"),
+          ...(settings?.statusOptions||[]).map(s=>
+            e("button",{key:s.id,style:{...S.btn(filterStatus===String(s.id)?"primary":"ghost","sm"),flexShrink:0,color:filterStatus===String(s.id)?"#fff":s.color},onClick:()=>setFilterStatus(String(s.id))},`${s.emoji} ${s.label}`)
+          )
+        )
+      ),
+      e("div",{style:{...S.sec,paddingTop:8}},
+        ...list.map(t=>{
+          const si=t.status?getStatus(t.status):null;
+          return e("div",{key:t.id,style:{...S.card,padding:"12px 14px",cursor:"pointer"},onClick:()=>{setCurrentTrainee(t);setView("trainee");}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:10}},
+              e("div",{style:{background:"#334155",borderRadius:8,padding:"5px 9px",fontSize:13,fontWeight:700,color:"#94a3b8",flexShrink:0}},t.seatNo),
+              e("div",{style:{flex:1,minWidth:0}},
+                e("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}},
+                  e("span",{style:{fontSize:15,fontWeight:700,color:"#f8fafc"}},t.name),
+                  si && e("span",{style:S.tag(si.color)},`${si.emoji} ${si.label}`)
+                ),
+                e("div",{style:{fontSize:12,color:"#64748b",marginTop:2}},`${t.city} · ${t.education} · ${t.department}`)
+              ),
+              e("span",{style:{color:"#475569"}},"›")
+            ),
+            t.interviewNote && e("div",{style:{marginTop:8,fontSize:11,color:"#64748b",background:"#0f172a",borderRadius:6,padding:"5px 10px",borderLeft:"3px solid #334155"}},
+              t.interviewNote.slice(0,60)+(t.interviewNote.length>60?"…":""))
+          );
+        }),
+        list.length===0 && e("div",{style:{textAlign:"center",color:"#475569",padding:40}},
+          e("div",{style:{fontSize:36,marginBottom:8}},"🔍"),"找不到符合條件的訓員"
+        )
+      )
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
   // TRAINEE DETAIL
-  // ══════════════════════════════════════════════════════════════════════════
   if(view==="trainee"&&currentTrainee){
-    const t=currentTrainee;
-    const si=t.status?getStatus(t.status):null;
-    const Field=({label,field,type="text",options,span2})=>(
-      <div style={{marginBottom:12,gridColumn:span2?"span 2":"span 1"}}>
-        <label style={S.lbl}>{label}</label>
-        {options
-          ?<select style={S.sel} value={t[field]||""} onChange={e=>updateTrainee(t.id,field,e.target.value)}><option value="">請選擇</option>{options.map(o=><option key={o}>{o}</option>)}</select>
-          :type==="textarea"
-            ?<textarea style={{...S.inp,minHeight:80,resize:"vertical"}} value={t[field]||""} onChange={e=>updateTrainee(t.id,field,e.target.value)}/>
-            :<input style={S.inp} type={type} value={t[field]||""} onChange={e=>updateTrainee(t.id,field,e.target.value)}/>
-        }
-      </div>
-    );
-    return (
-      <div style={S.app}><GFont/><Toast/>
-        <div style={S.hdr}>
-          <button style={{...S.btn("ghost","sm"),padding:"5px 8px"}} onClick={()=>setView("batch")}>←</button>
-          <div>
-            <div style={{fontSize:16,fontWeight:700,color:"#f8fafc"}}>{t.seatNo} · {t.name}</div>
-            <div style={{fontSize:11,color:"#94a3b8"}}>{si?`${si.emoji} ${si.label}`:"尚未評估"}</div>
-          </div>
-        </div>
-        <div style={{...S.sec,paddingBottom:160}}>
-          <div style={S.card}>
-            <div style={{fontSize:11,fontWeight:700,color:"#f59e0b",letterSpacing:"0.1em",marginBottom:12}}>▍ 基本資料</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 10px"}}>
-              <Field label="姓名" field="name"/><Field label="年齡" field="age" type="number"/>
-              <Field label="居住地" field="city" options={CITIES}/><Field label="血型" field="bloodType" options={["A","B","O","AB"]}/>
-              <Field label="學歷" field="education" options={EDUCATIONS}/><Field label="科系" field="department"/>
-              <Field label="身高(cm)" field="height" type="number"/><Field label="體重(kg)" field="weight" type="number"/>
-              <Field label="聯絡電話" field="phone" type="tel" span2/><Field label="入伍日期" field="entryDate" type="date" span2/>
-            </div>
-          </div>
-          <div style={S.card}>
-            <div style={{fontSize:11,fontWeight:700,color:"#f59e0b",letterSpacing:"0.1em",marginBottom:12}}>▍ 訪談紀錄</div>
-            <Field label="訪談摘要" field="interviewNote" type="textarea" span2/>
-            <Field label="招募員備注" field="recruiterNote" type="textarea" span2/>
-          </div>
-        </div>
-        <div style={S.sBar}>
-          <div style={{fontSize:11,color:"#64748b",marginBottom:8,fontWeight:600}}>意願評估</div>
-          <div style={{display:"flex",gap:6,overflowX:"auto"}}>
-            {(settings?.statusOptions||[]).map(s=>(
-              <button key={s.id} onClick={()=>updateTrainee(t.id,"status",t.status===s.id?null:s.id)}
-                style={{flexShrink:0,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
-                  background:t.status===s.id?s.color:"#0f172a",color:t.status===s.id?"#fff":s.color,
-                  outline:t.status===s.id?"none":`1px solid ${s.color}44`}}>
-                {s.emoji} {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+    const t=currentTrainee, si=t.status?getStatus(t.status):null;
+    const Field=(label,field,type,options,span2)=>
+      e("div",{style:{marginBottom:12,gridColumn:span2?"span 2":"span 1"}},
+        e("label",{style:S.lbl},label),
+        options
+          ? e("select",{style:S.sel,value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)},
+              e("option",{value:""},"請選擇"),...options.map(o=>e("option",{key:o},o)))
+          : type==="textarea"
+            ? e("textarea",{style:{...S.inp,minHeight:80,resize:"vertical"},value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)})
+            : e("input",{style:S.inp,type,value:t[field]||"",onChange:ev=>updateTrainee(t.id,field,ev.target.value)})
+      );
+    return e("div",{style:S.app},
+      e(Toast),
+      e("div",{style:S.hdr},
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 8px"},onClick:()=>setView("batch")},"←"),
+        e("div",null,
+          e("div",{style:{fontSize:16,fontWeight:700,color:"#f8fafc"}},`${t.seatNo} · ${t.name}`),
+          e("div",{style:{fontSize:11,color:"#94a3b8"}},si?`${si.emoji} ${si.label}`:"尚未評估")
+        )
+      ),
+      e("div",{style:{...S.sec,paddingBottom:160}},
+        e("div",{style:S.card},
+          e("div",{style:{fontSize:11,fontWeight:700,color:"#f59e0b",letterSpacing:"0.1em",marginBottom:12}},"▍ 基本資料"),
+          e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 10px"}},
+            Field("姓名","name","text"),Field("年齡","age","number"),
+            Field("居住地","city","text",CITIES),Field("血型","bloodType","text",["A","B","O","AB"]),
+            Field("學歷","education","text",EDUCATIONS),Field("科系","department","text"),
+            Field("身高(cm)","height","number"),Field("體重(kg)","weight","number"),
+            Field("聯絡電話","phone","tel",null,true),Field("入伍日期","entryDate","date",null,true)
+          )
+        ),
+        e("div",{style:S.card},
+          e("div",{style:{fontSize:11,fontWeight:700,color:"#f59e0b",letterSpacing:"0.1em",marginBottom:12}},"▍ 訪談紀錄"),
+          e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 10px"}},
+            Field("訪談摘要","interviewNote","textarea",null,true),
+            Field("招募員備注","recruiterNote","textarea",null,true)
+          )
+        )
+      ),
+      e("div",{style:S.sBar},
+        e("div",{style:{fontSize:11,color:"#64748b",marginBottom:8,fontWeight:600}},"意願評估"),
+        e("div",{style:{display:"flex",gap:6,overflowX:"auto"}},
+          ...(settings?.statusOptions||[]).map(s=>
+            e("button",{key:s.id,onClick:()=>updateTrainee(t.id,"status",t.status===s.id?null:s.id),
+              style:{flexShrink:0,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+                background:t.status===s.id?s.color:"#0f172a",color:t.status===s.id?"#fff":s.color,
+                outline:t.status===s.id?"none":`1px solid ${s.color}44`}},
+              `${s.emoji} ${s.label}`)
+          )
+        )
+      )
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
   // ADMIN PASSWORD
-  // ══════════════════════════════════════════════════════════════════════════
-  if(view==="adminPwd") return (
-    <div style={{...S.app,...S.center}}><GFont/>
-      <div style={{width:"100%",maxWidth:360}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{fontSize:44,marginBottom:10}}>🛡️</div>
-          <div style={{fontSize:17,fontWeight:700,color:"#f8fafc"}}>管理員登入</div>
-          <div style={{fontSize:12,color:"#64748b",marginTop:6}}>請輸入管理員密碼</div>
-        </div>
-        <input style={{...S.inp,textAlign:"center",fontSize:20,letterSpacing:"0.2em",marginBottom:10,padding:14}}
-          type="password" placeholder="••••••" value={adminPwdInput}
-          onChange={e=>{setAdminPwdInput(e.target.value);setAdminPwdError(false);}}
-          onKeyDown={e=>e.key==="Enter"&&submitAdminPwd()} autoFocus/>
-        {adminPwdError&&<div style={{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}}>密碼錯誤</div>}
-        <button style={{...S.btn("primary"),width:"100%",padding:12}} onClick={submitAdminPwd}>進入後台</button>
-        <button style={{...S.btn("ghost"),width:"100%",marginTop:8,padding:10}} onClick={()=>setView("home")}>← 返回</button>
-      </div>
-    </div>
+  if(view==="adminPwd") return e("div",{style:{...S.app,...S.center}},
+    e("div",{style:{width:"100%",maxWidth:360}},
+      e("div",{style:{textAlign:"center",marginBottom:28}},
+        e("div",{style:{fontSize:44,marginBottom:10}},"🛡️"),
+        e("div",{style:{fontSize:17,fontWeight:700,color:"#f8fafc"}},"管理員登入"),
+        e("div",{style:{fontSize:12,color:"#64748b",marginTop:6}},"請輸入管理員密碼")
+      ),
+      e("input",{style:{...S.inp,textAlign:"center",fontSize:20,letterSpacing:"0.2em",marginBottom:10,padding:14},
+        type:"password",placeholder:"••••••",value:adminPwdInput,autoFocus:true,
+        onChange:ev=>{setAdminPwdInput(ev.target.value);setAdminPwdError(false);},
+        onKeyDown:ev=>ev.key==="Enter"&&submitAdminPwd()}),
+      adminPwdError && e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10}},"密碼錯誤"),
+      e("button",{style:{...S.btn("primary"),width:"100%",padding:12},onClick:submitAdminPwd},"進入後台"),
+      e("button",{style:{...S.btn("ghost"),width:"100%",marginTop:8,padding:10},onClick:()=>setView("home")},"← 返回")
+    )
   );
 
-  // ══════════════════════════════════════════════════════════════════════════
   // ADMIN PANEL
-  // ══════════════════════════════════════════════════════════════════════════
-  if(view==="admin") return (
-    <div style={S.app}><GFont/><Toast/>
-      <div style={S.hdr}>
-        <button style={{...S.btn("ghost","sm"),padding:"5px 8px"}} onClick={()=>setView("home")}>←</button>
-        <div>
-          <div style={{fontSize:16,fontWeight:700,color:"#f8fafc"}}>系統後台</div>
-          <div style={{fontSize:11,color:"#94a3b8"}}>ADMIN PANEL</div>
-        </div>
-      </div>
-
-      <div style={{display:"flex",borderBottom:"1px solid #334155",padding:"0 14px",overflowX:"auto"}}>
-        {[["units","🏢 接訓單位"],["batches","📋 梯次密碼"],["status","🏷️ 意願選項"],["security","🔐 安全設定"]].map(([k,l])=>(
-          <button key={k} onClick={()=>setAdminTab(k)}
-            style={{...S.btn("ghost","sm"),borderRadius:0,padding:"12px 12px",flexShrink:0,
-              borderBottom:adminTab===k?"2px solid #f59e0b":"2px solid transparent",
-              color:adminTab===k?"#f59e0b":"#64748b"}}>{l}</button>
-        ))}
-      </div>
-
-      <div style={S.sec}>
-
-        {/* 接訓單位 */}
-        {adminTab==="units"&&<>
-          <div style={{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}}>接訓單位管理</div>
-          {(settings?.units||[]).map(u=>(
-            <div key={u} style={{...S.card,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <span style={{fontSize:14,fontWeight:600,color:"#f8fafc"}}>🏢 {u}</span>
-              <button style={S.btn("danger","sm")} onClick={()=>removeUnit(u)}>刪除</button>
-            </div>
-          ))}
-          <hr style={S.div}/>
-          <div style={S.card}>
-            <div style={{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}}>新增單位</div>
-            <div style={{display:"flex",gap:8}}>
-              <input style={{...S.inp,flex:1}} placeholder="輸入單位名稱" value={newUnit} onChange={e=>setNewUnit(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addUnit()}/>
-              <button style={{...S.btn("primary","sm"),flexShrink:0}} onClick={addUnit}>新增</button>
-            </div>
-          </div>
-        </>}
-
-        {/* 梯次密碼 */}
-        {adminTab==="batches"&&<>
-          <div style={{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}}>梯次密碼管理</div>
-          {batches.map(b=>(
-            <div key={b.id} style={S.card}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#f8fafc"}}>{b.unit} · {b.battalion} · {b.sequence}</div>
-                <button style={S.btn("danger","sm")} onClick={()=>removeBatch(b.id)}>刪除</button>
-              </div>
-              <label style={S.lbl}>專案密碼</label>
-              <div style={{display:"flex",gap:8}}>
-                <input style={S.inp} type={editPwdVisible[b.id]?"text":"password"} value={b.password}
-                  onChange={e=>setBatches(p=>p.map(x=>x.id===b.id?{...x,password:e.target.value}:x))}/>
-                <button style={{...S.btn("ghost","sm"),flexShrink:0}} onClick={()=>setEditPwdVisible(p=>({...p,[b.id]:!p[b.id]}))}>
-                  {editPwdVisible[b.id]?"隱藏":"顯示"}
-                </button>
-                <button style={{...S.btn("primary","sm"),flexShrink:0}} onClick={()=>saveBatchPwd(b)}>儲存</button>
-              </div>
-            </div>
-          ))}
-        </>}
-
-        {/* 意願選項 */}
-        {adminTab==="status"&&<>
-          <div style={{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}}>意願評估選項</div>
-          {(settings?.statusOptions||[]).map(s=>(
-            <div key={s.id} style={{...S.card,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{fontSize:22,width:30}}>{s.emoji}</div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#f8fafc"}}>{s.label}</div>
-                <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
-                  <div style={{width:10,height:10,borderRadius:"50%",background:s.color}}/>
-                  <span style={{fontSize:11,color:"#64748b"}}>{s.color}</span>
-                </div>
-              </div>
-              <button style={S.btn("danger","sm")} onClick={()=>removeStatusOption(s.id)}>刪除</button>
-            </div>
-          ))}
-          <hr style={S.div}/>
-          <div style={S.card}>
-            <div style={{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}}>新增選項</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 2fr 1fr",gap:8,marginBottom:10}}>
-              <div><label style={S.lbl}>Emoji</label><input style={S.inp} placeholder="😊" value={newStatusItem.emoji} onChange={e=>setNewStatusItem(p=>({...p,emoji:e.target.value}))}/></div>
-              <div><label style={S.lbl}>名稱</label><input style={S.inp} placeholder="觀察中" value={newStatusItem.label} onChange={e=>setNewStatusItem(p=>({...p,label:e.target.value}))}/></div>
-              <div><label style={S.lbl}>顏色</label><input style={{...S.inp,padding:"6px 8px",cursor:"pointer"}} type="color" value={newStatusItem.color} onChange={e=>setNewStatusItem(p=>({...p,color:e.target.value}))}/></div>
-            </div>
-            <button style={{...S.btn("primary"),width:"100%"}} onClick={addStatusOption}>新增選項</button>
-          </div>
-        </>}
-
-        {/* 安全設定 */}
-        {adminTab==="security"&&<>
-          <div style={{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}}>安全設定</div>
-          <div style={S.card}>
-            <div style={{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}}>更改管理員密碼</div>
-            <label style={S.lbl}>新密碼</label>
-            <input style={{...S.inp,marginBottom:10}} type="password" placeholder="輸入新密碼" value={newAdminPwd} onChange={e=>setNewAdminPwd(e.target.value)}/>
-            <button style={{...S.btn("primary"),width:"100%"}} onClick={updateAdminPwd}>更新密碼</button>
-          </div>
-        </>}
-
-      </div>
-    </div>
+  if(view==="admin") return e("div",{style:S.app},
+    e(Toast),
+    e("div",{style:S.hdr},
+      e("button",{style:{...S.btn("ghost","sm"),padding:"5px 8px"},onClick:()=>setView("home")},"←"),
+      e("div",null,
+        e("div",{style:{fontSize:16,fontWeight:700,color:"#f8fafc"}},"系統後台"),
+        e("div",{style:{fontSize:11,color:"#94a3b8"}},"ADMIN PANEL")
+      )
+    ),
+    e("div",{style:{display:"flex",borderBottom:"1px solid #334155",padding:"0 14px",overflowX:"auto"}},
+      ...[["units","🏢 接訓單位"],["batches","📋 梯次密碼"],["status","🏷️ 意願選項"],["security","🔐 安全設定"]].map(([k,l])=>
+        e("button",{key:k,onClick:()=>setAdminTab(k),style:{...S.btn("ghost","sm"),borderRadius:0,padding:"12px 12px",flexShrink:0,
+          borderBottom:adminTab===k?"2px solid #f59e0b":"2px solid transparent",color:adminTab===k?"#f59e0b":"#64748b"}},l)
+      )
+    ),
+    e("div",{style:S.sec},
+      // 接訓單位
+      adminTab==="units" && e("div",null,
+        e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"接訓單位管理"),
+        ...(settings?.units||[]).map(u=>
+          e("div",{key:u,style:{...S.card,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}},
+            e("span",{style:{fontSize:14,fontWeight:600,color:"#f8fafc"}},`🏢 ${u}`),
+            e("button",{style:S.btn("danger","sm"),onClick:()=>removeUnit(u)},"刪除")
+          )
+        ),
+        e("hr",{style:S.div}),
+        e("div",{style:S.card},
+          e("div",{style:{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}},"新增單位"),
+          e("div",{style:{display:"flex",gap:8}},
+            e("input",{style:{...S.inp,flex:1},placeholder:"輸入單位名稱",value:newUnit,
+              onChange:ev=>setNewUnit(ev.target.value),onKeyDown:ev=>ev.key==="Enter"&&addUnit()}),
+            e("button",{style:{...S.btn("primary","sm"),flexShrink:0},onClick:addUnit},"新增")
+          )
+        )
+      ),
+      // 梯次密碼
+      adminTab==="batches" && e("div",null,
+        e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"梯次密碼管理"),
+        ...batches.map(b=>
+          e("div",{key:b.id,style:S.card},
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},
+              e("div",{style:{fontSize:14,fontWeight:700,color:"#f8fafc"}},`${b.unit} · ${b.battalion} · ${b.sequence}`),
+              e("button",{style:S.btn("danger","sm"),onClick:()=>removeBatch(b.id)},"刪除")
+            ),
+            e("label",{style:S.lbl},"專案密碼"),
+            e("div",{style:{display:"flex",gap:8}},
+              e("input",{style:S.inp,type:editPwdVisible[b.id]?"text":"password",value:b.password,
+                onChange:ev=>setBatches(p=>p.map(x=>x.id===b.id?{...x,password:ev.target.value}:x))}),
+              e("button",{style:{...S.btn("ghost","sm"),flexShrink:0},onClick:()=>setEditPwdVisible(p=>({...p,[b.id]:!p[b.id]}))},
+                editPwdVisible[b.id]?"隱藏":"顯示"),
+              e("button",{style:{...S.btn("primary","sm"),flexShrink:0},onClick:()=>saveBatchPwd(b)},"儲存")
+            )
+          )
+        )
+      ),
+      // 意願選項
+      adminTab==="status" && e("div",null,
+        e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"意願評估選項"),
+        ...(settings?.statusOptions||[]).map(s=>
+          e("div",{key:s.id,style:{...S.card,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}},
+            e("div",{style:{fontSize:22,width:30}},s.emoji),
+            e("div",{style:{flex:1}},
+              e("div",{style:{fontSize:14,fontWeight:700,color:"#f8fafc"}},s.label),
+              e("div",{style:{display:"flex",alignItems:"center",gap:5,marginTop:2}},
+                e("div",{style:{width:10,height:10,borderRadius:"50%",background:s.color}}),
+                e("span",{style:{fontSize:11,color:"#64748b"}},s.color)
+              )
+            ),
+            e("button",{style:S.btn("danger","sm"),onClick:()=>removeStatusOption(s.id)},"刪除")
+          )
+        ),
+        e("hr",{style:S.div}),
+        e("div",{style:S.card},
+          e("div",{style:{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}},"新增選項"),
+          e("div",{style:{display:"grid",gridTemplateColumns:"1fr 2fr 1fr",gap:8,marginBottom:10}},
+            e("div",null,e("label",{style:S.lbl},"Emoji"),e("input",{style:S.inp,placeholder:"😊",value:newStatusItem.emoji,onChange:ev=>setNewStatusItem(p=>({...p,emoji:ev.target.value}))})),
+            e("div",null,e("label",{style:S.lbl},"名稱"),e("input",{style:S.inp,placeholder:"觀察中",value:newStatusItem.label,onChange:ev=>setNewStatusItem(p=>({...p,label:ev.target.value}))})),
+            e("div",null,e("label",{style:S.lbl},"顏色"),e("input",{style:{...S.inp,padding:"6px 8px",cursor:"pointer"},type:"color",value:newStatusItem.color,onChange:ev=>setNewStatusItem(p=>({...p,color:ev.target.value}))}))
+          ),
+          e("button",{style:{...S.btn("primary"),width:"100%"},onClick:addStatusOption},"新增選項")
+        )
+      ),
+      // 安全設定
+      adminTab==="security" && e("div",null,
+        e("div",{style:{fontSize:13,fontWeight:700,color:"#94a3b8",marginBottom:12}},"安全設定"),
+        e("div",{style:S.card},
+          e("div",{style:{fontSize:13,fontWeight:700,color:"#f8fafc",marginBottom:12}},"更改管理員密碼"),
+          e("label",{style:S.lbl},"新密碼"),
+          e("input",{style:{...S.inp,marginBottom:10},type:"password",placeholder:"輸入新密碼",value:newAdminPwd,onChange:ev=>setNewAdminPwd(ev.target.value)}),
+          e("button",{style:{...S.btn("primary"),width:"100%"},onClick:updateAdminPwd},"更新密碼")
+        )
+      )
+    )
   );
 
   return null;
 }
+
+createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>
