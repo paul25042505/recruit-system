@@ -46,7 +46,7 @@ const DEF={
   statusOptions:[
     {id:1,emoji:"❌",label:"資格不符",color:"#ef4444",subReasons:["酒駕前科","吸毒前科","學歷不符","近三個月就診身心科"],hasNote:true},
     {id:2,emoji:"🚫",label:"無意願",color:"#f97316",subReasons:[],hasNote:true},
-    {id:3,emoji:"🟡",label:"低意願",hint:"已初步接觸，持續追蹤",color:"#eab308",subReasons:[],hasNote:true},
+    {id:3,emoji:"🟡",label:"低意願",hint:"已初步接觸，持續掌握",color:"#eab308",subReasons:[],hasNote:true},
     {id:4,emoji:"🔵",label:"中意願",hint:"已約電訪",color:"#3b82f6",subReasons:[],hasNote:true},
     {id:5,emoji:"🟢",label:"高意願",hint:"已約家訪",color:"#22c55e",subReasons:[],hasNote:true},
     {id:6,emoji:"✅",label:"確簽",hint:"已完成簽署",color:"#10b981",subReasons:[],hasNote:false},
@@ -207,6 +207,8 @@ function App(){
   const scrollDoneRef=useRef(false);
   // 單位查詢
   const [queryUnit,setQueryUnit]=useState("");
+  const [queryDate,setQueryDate]=useState("");
+  const [queryPeriod,setQueryPeriod]=useState("");
 
   const toastRef=useRef(null);
   function toast_(msg,type="ok"){setToast({msg,type});clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2500);}
@@ -322,7 +324,11 @@ function App(){
     if(!tf||!curBatch)return;
     setSaving(true);
     try{
-      await patchBatch({trainees:(curBatch.trainees||[]).map(t=>t.id===tf.id?tf:t)});
+      const updatedTrainees=(curBatch.trainees||[]).map(t=>t.id===tf.id?tf:t);
+      const up={...curBatch,trainees:updatedTrainees};
+      await fsSet("batches/"+up.id,up);
+      setCurBatch(up);
+      setBatches(p=>p.map(b=>b.id===up.id?up:b));
       setDirty(false);
       toast_("已儲存 ✓");
       if(!stayOnPage){
@@ -392,7 +398,17 @@ function App(){
     return(curBatch?.trainees||[]).filter(t=>{
       const q=sq.toLowerCase();
       const mq=!q||t.name?.toLowerCase().includes(q)||String(t.seat).includes(q);
-      const ms=fst==="all"||(fst==="null"&&!t.statusId)||String(t.statusId)===fst;
+      // 資格不符：看資格審查結果
+      if(t.qualCheck?.result==="fail"){
+        const ms=fst==="all"||fst==="1";
+        return mq&&ms;
+      }
+      // 其他：用最新約談紀錄的意願狀態
+      const allLogs=t.interviewLogs||[];
+      const lastLog=allLogs[allLogs.length-1];
+      const fallback=(t.qualCheck?.result==="pass"&&t.statusId===1)?null:t.statusId;
+      const latestStId=lastLog?.statusId||fallback;
+      const ms=fst==="all"||(fst==="null"&&!latestStId)||String(latestStId)===fst;
       return mq&&ms;
     });
   }
@@ -634,7 +650,7 @@ function App(){
         })
       ),
       listEd("units","接訓單位"),
-      listEd("recruitUnits","協訓單位"),
+      listEd("recruitUnits","掌握單位"),
       listEd("battalions","營別"),
       listEd("companies","連別"),
       statusEditor(),
@@ -733,8 +749,7 @@ function App(){
     )
   );
 
-  if(view==="home"){if(document.title.includes("招募")||document.title===""||!history.state){document.title="梯次列表 | 招募訓員管理系統";}
-  return e("div",{style:S.app},
+  if(view==="home") return e("div",{style:S.app},
     e(Toast),e(MenuOverlay),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),fontSize:20,padding:"4px 10px"},onClick:()=>setShowMenu(true)},"≡"),
@@ -837,7 +852,6 @@ function App(){
     )
   );
 
-  }
   if(view==="batch"&&curBatch){
     const trainees=filterT();
     const sched=curBatch.schedule||DEF_SCHED;
@@ -854,7 +868,8 @@ function App(){
           e("div",{style:{fontSize:15,fontWeight:800,color:"#f8fafc"}},
             {"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢"}[batchTab]||"梯次"
           )
-        )
+        ),
+        e("div",{style:{width:44,flexShrink:0}})
       ),
       e("div",{style:{...S.sec,paddingTop:14,paddingBottom:0}},
         e("div",{style:{...S.card,marginBottom:0}},
@@ -878,11 +893,25 @@ function App(){
         ),
         batchTab==="list"&&e(React.Fragment,null,
           e("input",{style:{...S.inp,marginBottom:8},placeholder:"🔍 搜尋姓名或座號…",value:sq,onChange:ev=>setSq(ev.target.value)}),
-          e("div",{className:"hs",style:{display:"flex",gap:6,overflowX:"auto",paddingBottom:8}},
-            e("button",{style:{...S.btn(fst==="all"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFst("all")},"全部"),
-            e("button",{style:{...S.btn(fst==="null"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFst("null")},"未訪談"),
-            ...sts.map(s=>e("button",{key:s.id,style:{...S.btn(fst===String(s.id)?"primary":"ghost","sm"),flexShrink:0,color:fst===String(s.id)?"#fff":s.color,border:"1px solid "+(fst===String(s.id)?"transparent":s.color+"44")},onClick:()=>setFst(String(s.id))},s.emoji+" "+s.label))
-          ),
+          (()=>{
+            const allT=curBatch.trainees||[];
+            function getLatestStId(t){
+              // 資格不符：看資格審查的整體資格判定
+              if(t.qualCheck?.result==="fail") return 1;
+              const logs=t.interviewLogs||[];
+              const last=logs[logs.length-1];
+              // 若 qualCheck.result 為 pass，舊的 statusId=1（資格不符）不應繼續使用
+              const fallback=(t.qualCheck?.result==="pass"&&t.statusId===1)?null:t.statusId;
+              return last?.statusId||fallback;
+            }
+            const counts={all:allT.length,null:allT.filter(t=>!getLatestStId(t)&&t.qualCheck?.result!=="fail").length};
+            sts.forEach(s=>{counts[s.id]=allT.filter(t=>getLatestStId(t)===s.id).length;});
+            return e("div",{className:"hs",style:{display:"flex",gap:6,overflowX:"auto",paddingBottom:8}},
+              e("button",{style:{...S.btn(fst==="all"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFst("all")},"全部 "+counts.all),
+              e("button",{style:{...S.btn(fst==="null"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFst("null")},"未訪談 "+counts.null),
+              ...sts.map(s=>e("button",{key:s.id,style:{...S.btn(fst===String(s.id)?"primary":"ghost","sm"),flexShrink:0,color:fst===String(s.id)?"#fff":s.color,border:"1px solid "+(fst===String(s.id)?"transparent":s.color+"44")},onClick:()=>setFst(String(s.id))},s.emoji+" "+s.label+" "+(counts[s.id]||0)))
+            );
+          })(),
           e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"10px 0 8px"}},
             e("div",{style:{fontSize:12,color:"#4b6080"}},"顯示 "+trainees.length+" 人"),
             e("button",{style:S.btn("primary","sm"),onClick:()=>{setNewTName("");setShowAT(true);}},"＋ 新增訓員")
@@ -910,12 +939,12 @@ function App(){
                 )
               ),
               (()=>{
-                // 資格不符優先顯示
                 if(t.qualCheck?.result==="fail") return e("span",{style:S.tag("#ef4444")},"❌ 資格不符");
-                // 最新約談紀錄的意願狀態
                 const logs=t.interviewLogs||[];
-                const lastLog=logs.length>0?logs[logs.length-1]:null;
-                const displayStId=lastLog?.statusId||t.statusId;
+                const lastLog=logs[logs.length-1];
+                // 若 qualCheck.result 為 pass，舊的 statusId=1（資格不符）不應繼續使用
+                const rawStId=lastLog?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);
+                const displayStId=rawStId;
                 const displaySt=sts.find(s=>s.id===displayStId);
                 return displaySt?e("span",{style:S.tag(displaySt.color)},displaySt.emoji+" "+displaySt.label):e("span",{style:{...S.badge,color:"#2a3a50",fontSize:11}},"未訪談");
               })(),
@@ -941,7 +970,7 @@ function App(){
             const held=(curBatch.trainees||[]).filter(t=>t.holdUnit);
             const groups={};
             held.forEach(t=>{if(!groups[t.holdUnit])groups[t.holdUnit]=[];groups[t.holdUnit].push(t);});
-            if(!held.length)return e("div",{style:{textAlign:"center",color:"#4b6080",padding:"40px 0"}},e("div",{style:{fontSize:36,marginBottom:12}},"🔓"),e("div",{style:{fontSize:14}},"目前無協訓中的訓員"));
+            if(!held.length)return e("div",{style:{textAlign:"center",color:"#4b6080",padding:"40px 0"}},e("div",{style:{fontSize:36,marginBottom:12}},"🔓"),e("div",{style:{fontSize:14}},"目前無掌握中的訓員"));
             return e(React.Fragment,null,
               e("div",{style:{fontSize:12,color:"#4b6080",marginBottom:10}},"共 "+held.length+" 位訓員・"+Object.keys(groups).length+" 個單位"),
               ...Object.entries(groups).map(([unit,list])=>e("div",{key:unit,style:{...S.card,marginBottom:10}},
@@ -975,24 +1004,54 @@ function App(){
         ),
         batchTab==="query"&&e(React.Fragment,null,
           e("div",{style:{...S.card,marginBottom:10}},
-            e("div",{style:S.slbl},"▍ 選擇查詢單位"),
-            e("select",{style:S.sel,value:queryUnit,onChange:ev=>setQueryUnit(ev.target.value)},
-              e("option",{value:""},"請選擇協訓單位"),
-              ...[...new Set([
-                ...(curBatch.trainees||[]).flatMap(t=>(t.interviewLogs||[]).map(l=>l.unit).filter(Boolean)),
-                ...(curBatch.trainees||[]).map(t=>t.holdUnit).filter(Boolean),
-                ...(cfg?.recruitUnits||DEF.recruitUnits)
-              ])].sort().map(u=>e("option",{key:u,value:u},u))
+            e("div",{style:S.slbl},"▍ 查詢條件"),
+            e("div",{style:{marginBottom:10}},
+              e("label",{style:S.lbl},"掌握單位"),
+              e("select",{style:S.sel,value:queryUnit,onChange:ev=>setQueryUnit(ev.target.value)},
+                e("option",{value:""},"— 全部單位 —"),
+                ...[...new Set([
+                  ...(curBatch.trainees||[]).flatMap(t=>(t.interviewLogs||[]).map(l=>l.unit).filter(Boolean)),
+                  ...(curBatch.trainees||[]).map(t=>t.holdUnit).filter(Boolean),
+                  ...(cfg?.recruitUnits||DEF.recruitUnits)
+                ])].sort().map(u=>e("option",{key:u,value:u},u))
+              )
+            ),
+            e("div",null,
+              e("div",{style:{display:"flex",gap:10,marginBottom:4}},
+                e("label",{style:{...S.lbl,marginBottom:0,flex:1}},"查詢日期"),
+                e("label",{style:{...S.lbl,marginBottom:0,width:72,textAlign:"center"}},"時段")
+              ),
+              e("div",{style:{display:"flex",gap:6}},
+                e("input",{style:{...S.inp,flex:1,minWidth:0},type:"date",value:queryDate||"",onChange:ev=>setQueryDate(ev.target.value)}),
+                e("select",{style:{...S.sel,width:72,flexShrink:0},value:queryPeriod||"",onChange:ev=>setQueryPeriod(ev.target.value)},
+                  e("option",{value:""},"全部"),e("option",{value:"上午"},"上午"),e("option",{value:"下午"},"下午"),e("option",{value:"晚上"},"晚上")
+                )
+              )
             )
           ),
-          queryUnit&&e(React.Fragment,null,
+          (()=>{
+            const allT=curBatch.trainees||[];
+            const hasFilter=queryUnit||queryDate||queryPeriod;
+            const talked=allT.filter(t=>(t.interviewLogs||[]).some(l=>
+              (!queryUnit||l.unit===queryUnit)&&
+              (!queryDate||l.date===queryDate)&&
+              (!queryPeriod||l.period===queryPeriod)
+            ));
+            const units=new Set(talked.flatMap(t=>(t.interviewLogs||[]).filter(l=>(!queryUnit||l.unit===queryUnit)&&(!queryDate||l.date===queryDate)&&(!queryPeriod||l.period===queryPeriod)).map(l=>l.unit).filter(Boolean)));
+            if(!hasFilter) return e("div",{style:{fontSize:12,color:"#4b6080",marginBottom:10}},"請選擇查詢條件以顯示結果");
+            return e("div",{style:{fontSize:12,color:"#4b6080",marginBottom:10}},"共 "+talked.length+" 位訓員・"+units.size+" 個單位");
+          })(),
+          e(React.Fragment,null,
             e("div",{style:{...S.card,marginBottom:10}},
               e("div",{style:S.slbl},"▍ 已約談訓員"),
               (()=>{
-                const talked=(curBatch.trainees||[]).filter(t=>(t.interviewLogs||[]).some(l=>l.unit===queryUnit));
-                if(!talked.length)return e("div",{style:{color:"#4b6080",fontSize:12,padding:"8px 0"}},"尚無約談紀錄");
+                if(!queryDate&&!queryUnit){return e("div",{style:{color:"#4b6080",fontSize:12,padding:"8px 0"}},"請選擇查詢條件（至少填寫日期或選擇單位）");}
+                const talked=(curBatch.trainees||[]).filter(t=>(t.interviewLogs||[]).some(l=>
+                  (!queryUnit||l.unit===queryUnit)&&(!queryDate||l.date===queryDate)&&(!queryPeriod||l.period===queryPeriod)
+                ));
+                if(!talked.length)return e("div",{style:{color:"#4b6080",fontSize:12,padding:"8px 0"}},"無符合條件的約談紀錄");
                 return e(React.Fragment,null,...talked.map(t=>{
-                  const logs=(t.interviewLogs||[]).filter(l=>l.unit===queryUnit);
+                  const logs=(t.interviewLogs||[]).filter(l=>(!queryUnit||l.unit===queryUnit)&&(!queryDate||l.date===queryDate)&&(!queryPeriod||l.period===queryPeriod));
                   const last=logs[logs.length-1];
                   // 顯示最新約談紀錄的意願狀態
                   const allLogs=t.interviewLogs||[];
@@ -1019,35 +1078,7 @@ function App(){
                 }));
               })()
             ),
-            e("div",{style:{...S.card,marginBottom:10}},
-              e("div",{style:S.slbl},"▍ 目前掌握中"),
-              (()=>{
-                const held=(curBatch.trainees||[]).filter(t=>t.holdUnit===queryUnit);
-                if(!held.length)return e("div",{style:{color:"#4b6080",fontSize:12,padding:"8px 0"}},"目前無掌握中訓員");
-                return e(React.Fragment,null,...held.map(t=>{
-                  const allLogs=t.interviewLogs||[];
-                  const lastLog=allLogs[allLogs.length-1];
-                  const latestStId=lastLog?.statusId||t.statusId;
-                  const st=sts.find(s=>s.id===latestStId);
-                  return e("div",{key:t.id,style:{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #1e2d4544",cursor:"pointer"},onClick:()=>openT(t)},
-                    e("div",{style:{width:30,height:30,background:"#f59e0b20",border:"1px solid #f59e0b44",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#f59e0b",flexShrink:0}},t.seat||"?"),
-                    e("div",{style:{flex:1,minWidth:0}},
-                      e("div",{style:{fontSize:13,fontWeight:700,color:"#f8fafc"}},t.name||"（未填）"),
-                      (()=>{
-                      const info=[
-                        t.education,t.school,t.department,
-                        t.city&&t.district?t.city+t.district:t.city||t.district,
-                        t.workExp==="有"?(t.workPlace||(t.workYears?"工作"+t.workYears+"年":null)):null,
-                      ].filter(Boolean);
-                      return info.length>0&&e("div",{style:{fontSize:11,color:"#4b6080",marginTop:2,lineHeight:1.5}},info.join(" · "));
-                    })()
-                    ),
-                    st&&e("span",{style:S.tag(st.color)},st.emoji+" "+st.label),
-                    e("span",{style:{color:"#4b6080",fontSize:18}},"›")
-                  );
-                }));
-              })()
-            )
+
           ),
           e("div",{style:{height:40}})
         ),
@@ -1154,7 +1185,7 @@ function App(){
               ),
               medDate&&expItem?.date&&e("span",{style:S.tag(medExpired?"#ef4444":"#22c55e")},medExpired?"⚠️ 已過期":"✅ 有效")
             ),
-            e("input",{style:{...S.inp,minWidth:0,width:"100%",boxSizing:"border-box"},type:"date",value:qa.medicalDate||"",onChange:ev=>uqa({medicalDate:ev.target.value})})
+            e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",display:"block"},type:"date",value:qa.medicalDate||"",onChange:ev=>uqa({medicalDate:ev.target.value})})
           ),
           ...qualItems.map(({id,label,desc})=>e("div",{key:id,style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid #1e2d4566"}},
             e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}},
@@ -1180,27 +1211,27 @@ function App(){
         ),
         // 掌握狀態
         e("div",{style:{...S.card,marginBottom:10}},
-          e("div",{style:S.slbl},"▍ 協訓掌握"),
+          e("div",{style:S.slbl},"▍ 掌握狀態"),
           tf.holdUnit
             ? e("div",{style:{background:"#f59e0b15",border:"1px solid #f59e0b44",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}},
                 e("div",{style:{fontSize:13,fontWeight:800,color:"#f59e0b"}},"🔒 "+tf.holdUnit+" 協訓中"),
-                e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setTf(p=>({...p,holdUnit:"",holdNote:""}));setDirty(true);}},"解除協訓")
+                e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setTf(p=>({...p,holdUnit:"",holdNote:""}));setDirty(true);}},"解除掌握")
               )
             : e("div",{style:{fontSize:12,color:"#4b6080",marginBottom:12}},"目前無協訓單位"),
           e("div",{style:{display:"grid",gridTemplateColumns:"1fr",gap:8}},
             e("div",null,
-              e("label",{style:S.lbl},"協訓單位"),
+              e("label",{style:S.lbl},"掌握單位"),
               e("select",{style:{...S.sel,marginBottom:6},value:tf.holdUnit||"",onChange:ev=>{setTf(p=>({...p,holdUnit:ev.target.value}));setDirty(true);}},
                 e("option",{value:""},"請選擇"),
                 ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
               ),
               e("div",{style:{display:"flex",gap:6}},
-                e("input",{style:{...S.inp,flex:1,fontSize:12},placeholder:"新增協訓單位…",value:newHoldUnit,onChange:ev=>setNewHoldUnit(ev.target.value),
+                e("input",{style:{...S.inp,flex:1,fontSize:12},placeholder:"新增掌握單位…",value:newHoldUnit,onChange:ev=>setNewHoldUnit(ev.target.value),
                   onKeyDown:async ev=>{if(ev.key==="Enter"&&newHoldUnit.trim()){await addRecruitUnit(newHoldUnit);setTf(p=>({...p,holdUnit:newHoldUnit.trim()}));setDirty(true);setNewHoldUnit("");}}}),
                 e("button",{style:S.btn("primary","sm"),onClick:async()=>{if(!newHoldUnit.trim())return;await addRecruitUnit(newHoldUnit);setTf(p=>({...p,holdUnit:newHoldUnit.trim()}));setDirty(true);setNewHoldUnit("");}},"＋")
               )
             ),
-            e("div",null,e("label",{style:S.lbl},"協訓備註"),e("input",{style:S.inp,placeholder:"備註說明…",value:tf.holdNote||"",onChange:ev=>{setTf(p=>({...p,holdNote:ev.target.value}));setDirty(true);}}))
+            e("div",null,e("label",{style:S.lbl},"掌握備註"),e("input",{style:S.inp,placeholder:"備註說明…",value:tf.holdNote||"",onChange:ev=>{setTf(p=>({...p,holdNote:ev.target.value}));setDirty(true);}}))
           )
         ),
         // 意願訪談
@@ -1225,14 +1256,15 @@ function App(){
                 ),
                 e("div",{style:{marginBottom:14,paddingBottom:14,borderBottom:"1px solid #1e2d45"}},
                   e("div",{style:{fontSize:12,fontWeight:700,color:"#94a3b8",marginBottom:10,letterSpacing:"0.05em"}},"＋ 新增約談紀錄"),
-                  e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px",marginBottom:8}},
-                    e("div",null,e("label",{style:S.lbl},"協訓單位"),
-                      e("select",{style:{...S.sel,marginBottom:4},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
-                        e("option",{value:""},"請選擇或自行輸入"),
-                        ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
-                      ),
-                      e("div",{style:{display:"flex",gap:6}},
-                        e("input",{style:{...S.inp,flex:1,fontSize:12},placeholder:"或輸入新單位…",value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))}),
+                  e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginBottom:8}},
+                    e("div",null,
+                      e("label",{style:S.lbl},"掌握單位"),
+                      e("div",{style:{display:"flex",gap:6,marginBottom:4}},
+                        e("select",{style:{...S.sel,flex:1,minWidth:0},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
+                          e("option",{value:""},"請選擇或自行輸入"),
+                          ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
+                        ),
+                        e("input",{style:{...S.inp,flex:1,minWidth:0,fontSize:12},placeholder:"輸入新單位…",value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))}),
                         e("button",{style:S.btn("primary","sm"),onClick:async()=>{if(newItvw.unit.trim())await addRecruitUnit(newItvw.unit.trim());}},"存入")
                       )
                     ),
@@ -1246,8 +1278,10 @@ function App(){
                         e("select",{style:{...S.sel,width:72,flexShrink:0},value:newItvw.period,onChange:ev=>setNewItvw(p=>({...p,period:ev.target.value}))},e("option",{value:""},"—"),e("option",{value:"上午"},"上午"),e("option",{value:"下午"},"下午"),e("option",{value:"晚上"},"晚上"))
                       )
                     ),
-                    e("div",null,e("label",{style:S.lbl},"招募員級職姓名"),e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})),
-                    e("div",null,e("label",{style:S.lbl},"聯絡方式"),e("input",{style:S.inp,placeholder:"電話 / LINE",value:newItvw.contact,onChange:ev=>setNewItvw(p=>({...p,contact:ev.target.value}))}))
+                    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px"}},
+                      e("div",null,e("label",{style:S.lbl},"招募員級職姓名"),e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})),
+                      e("div",null,e("label",{style:S.lbl},"聯絡方式"),e("input",{style:S.inp,placeholder:"電話 / LINE",value:newItvw.contact,onChange:ev=>setNewItvw(p=>({...p,contact:ev.target.value}))}))
+                    )
                   ),
                   e("div",{style:{marginBottom:10}},e("label",{style:S.lbl},"約談內容"),e("textarea",{style:{...S.inp,minHeight:80,lineHeight:1.7},placeholder:"記錄本次約談重點、訓員回應、後續追蹤事項…",value:newItvw.note,onChange:ev=>setNewItvw(p=>({...p,note:ev.target.value}))})),
                   e("button",{style:{...S.btn("primary"),width:"100%"},onClick:addItvwLog,disabled:saving},saving?"新增中…":"📝 新增約談紀錄")
@@ -1305,7 +1339,7 @@ function App(){
             )
           ),
           e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px",marginBottom:10}},
-            e("div",null,e("label",{style:S.lbl},"協訓單位"),
+            e("div",null,e("label",{style:S.lbl},"掌握單位"),
               e("select",{style:{...S.sel,marginBottom:4},value:editLogData.unit||"",onChange:ev=>setEditLogData(p=>({...p,unit:ev.target.value}))},
                 e("option",{value:""},"請選擇"),
                 ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
