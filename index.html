@@ -33,6 +33,7 @@ select option{background:var(--bg2);color:var(--txt);}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:4px;}
 textarea{font-family:'Noto Sans TC',sans-serif;resize:vertical;}
+input[type=date]{width:100%;min-width:0;max-width:100%;box-sizing:border-box;}
 input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.4);}
 html.light input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}
 .hs::-webkit-scrollbar{display:none;}
@@ -154,8 +155,8 @@ const S={
   app:{minHeight:"100vh",background:"var(--bg)",color:"var(--txt)"},
   ctr:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"},
   hdr:{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",background:"var(--hdr)",backdropFilter:"blur(12px)",borderBottom:"1px solid var(--border)",position:"sticky",top:0,zIndex:100},
-  sec:{padding:"14px 16px",maxWidth:640,margin:"0 auto"},
-  card:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:14,padding:"14px 16px",marginBottom:10},
+  sec:{padding:"16px 16px",maxWidth:640,margin:"0 auto"},
+  card:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:14,padding:"16px 18px",marginBottom:12},
   modal:{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(4px)"},
   mBox:{background:"var(--bg2)",borderTop:"1px solid var(--border)",borderRadius:"18px 18px 0 0",padding:"20px 20px 40px",width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto"},
   inp:{width:"100%",background:"var(--inp-bg)",border:"1px solid var(--border)",borderRadius:9,padding:"10px 12px",color:"var(--txt)",fontSize:15,outline:"none",position:"relative",zIndex:1},
@@ -228,6 +229,7 @@ function App(){
   const [newItvw,setNewItvw]=useState({unit:"",date:"",period:"",interviewer:"",contact:"",note:"",statusId:null});
   // 梯次 Tab
   const [batchTab,setBatchTab]=useState("list");
+  const [traineeTab,setTraineeTab]=useState("basic");
   const [scrollToSeat,setScrollToSeat]=useState(null);
   const scrollDoneRef=useRef(false);
   // 單位查詢
@@ -252,9 +254,17 @@ function App(){
   },[isDark]);
 
   const toastRef=useRef(null);
+  const lastActiveRef=useRef(Date.now());
   // 手機省電後自動重整
   useEffect(()=>{
-    function onVis(){if(document.visibilityState==="visible"&&view==="loading")window.location.reload();}
+    function onVis(){
+      if(document.visibilityState==="hidden"){lastActiveRef.current=Date.now();return;}
+      if(document.visibilityState==="visible"){
+        const away=Date.now()-lastActiveRef.current;
+        // 離開超過3分鐘或是在loading狀態就重整
+        if(view==="loading"||away>180000){window.location.reload();}
+      }
+    }
     document.addEventListener("visibilitychange",onVis);
     return()=>document.removeEventListener("visibilitychange",onVis);
   },[view]);
@@ -275,7 +285,7 @@ function App(){
           const tab=st.tab||"list";
           setBatchTab(tab);
           setView("batch");
-          const tabTitle={"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢"}[tab]||"梯次";
+          const tabTitle={"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢","visit":"📞 電訪及家訪名單"}[tab]||"梯次";
           document.title=tabTitle+" | 招募資訊整合管理系統";
         }
         else setView("home");
@@ -466,7 +476,10 @@ function App(){
   function openT(t){
     const idx=(curBatch?.trainees||[]).findIndex(x=>x.id===t.id);
     setCurTIdx(idx>=0?idx:0);
-    setTf({...t});setDirty(false);setView("trainee");pushState({page:"trainee",traineeId:t.id,batchId:curBatch?.id},(t.name||"訓員")+" | "+fmtSeq(curBatch?.sequence));
+    setTf({...t});setDirty(false);setTraineeTab("basic");
+    // 自動帶入掌握單位
+    setNewItvw(p=>({...p,unit:t.holdUnit||p.unit||""}));
+    setView("trainee");pushState({page:"trainee",traineeId:t.id,batchId:curBatch?.id},(t.name||"訓員")+" | "+fmtSeq(curBatch?.sequence));
     setTimeout(()=>window.scrollTo({top:0,behavior:"instant"}),0);
   }
   function utf(patch){setTf(p=>({...p,...patch}));setDirty(true);}
@@ -637,6 +650,7 @@ function App(){
               {icon:"📅",label:"梯次期程",tab:"sched"},
               {icon:"🔒",label:"協訓單位掌握名單",tab:"hold"},
               {icon:"📋",label:"約談紀錄查詢",tab:"query"},
+              {icon:"📞",label:"電訪及家訪名單",tab:"visit"},
             ].map(({icon,label,tab})=>e("div",{key:tab,style:{display:"flex",alignItems:"center",gap:14,padding:"12px 20px",cursor:"pointer",borderBottom:"1px solid var(--border2)",background:batchTab===tab?"#1e2d45":"transparent"},
               onClick:()=>{setShowMenu(false);setBatchTab(tab);if(view!=="batch")setView("batch");}},
               e("span",{style:{fontSize:18}},icon),
@@ -1015,7 +1029,7 @@ function App(){
         e("button",{style:{...S.btn("ghost","sm"),fontSize:18,padding:"4px 10px"},onClick:()=>setShowMenu(true)},"≡"),
         e("div",{style:{flex:1,textAlign:"center"}},
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},
-            {"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢"}[batchTab]||"梯次"
+            {"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢","visit":"📞 電訪及家訪名單"}[batchTab]||"梯次"
           )
         ),
         e("div",{style:{width:44,flexShrink:0}})
@@ -1036,8 +1050,8 @@ function App(){
       e("div",{style:S.sec},
 
         e("div",{className:"hs",style:{display:"flex",gap:0,marginBottom:12,background:"var(--inp-bg)",borderRadius:10,padding:3,overflowX:"auto"}},
-          ...[["list","👥 訓員列表"],["sched","📅 梯次期程"],["hold","🔒 協訓單位掌握名單"],["query","📋 約談紀錄查詢"]].map(([tab,lbl])=>
-            e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:14,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:batchTab===tab?"var(--bg3)":"transparent",color:batchTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>{setBatchTab(tab);pushState({page:"batch",batchId:curBatch?.id,tab},{"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢"}[tab]||tab);}},lbl)
+          ...[["list","👥 訓員列表"],["sched","📅 梯次期程"],["hold","🔒 協訓單位掌握名單"],["query","📋 約談紀錄查詢"],["visit","📞 電訪及家訪名單"]].map(([tab,lbl])=>
+            e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:14,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:batchTab===tab?"var(--bg3)":"transparent",color:batchTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>{setBatchTab(tab);pushState({page:"batch",batchId:curBatch?.id,tab},{"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢","visit":"📞 電訪及家訪名單"}[tab]||tab);}},lbl)
           )
         ),
         batchTab==="list"&&e(React.Fragment,null,
@@ -1061,10 +1075,7 @@ function App(){
               ...sts.map(s=>e("button",{key:s.id,style:{...S.btn(fst===String(s.id)?"primary":"ghost","sm"),flexShrink:0,color:fst===String(s.id)?"#fff":s.color,border:"1px solid "+(fst===String(s.id)?"transparent":s.color+"44")},onClick:()=>setFst(String(s.id))},s.emoji+" "+s.label+" "+(counts[s.id]||0)))
             );
           })(),
-          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"10px 0 8px"}},
-            e("div",{style:{fontSize:14,color:"var(--txt3)"}},"顯示 "+trainees.length+" 人"),
-            e("button",{style:S.btn("primary","sm"),onClick:()=>{setNewTName("");setShowAT(true);}},"＋ 新增訓員")
-          ),
+          e("div",{style:{fontSize:14,color:"var(--txt3)",margin:"10px 0 8px"}},"顯示 "+trainees.length+" 人"),
           trainees.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:40}},"無符合條件的訓員"),
           scrollToSeat!==null&&e(ScrollAnchor,{seat:scrollToSeat,onDone:()=>setScrollToSeat(null)}),
           ...trainees.map(t=>{
@@ -1085,15 +1096,7 @@ function App(){
                 })(),
                 t.holdUnit&&e("div",{style:{marginTop:4,display:"inline-flex",alignItems:"center",gap:5,background:"#f59e0b15",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 8px"}},
                   e("span",{style:{fontSize:12,fontWeight:800,color:"#f59e0b"}},"🔒 "+t.holdUnit)
-                ),
-                (()=>{
-                  const logs=t.interviewLogs||[];
-                  const last=logs[logs.length-1];
-                  if(!last)return null;
-                  const parts=[last.unit,last.date,last.note].filter(Boolean);
-                  const summary=parts.join(" · ").slice(0,40)+(parts.join(" · ").length>40?"…":"");
-                  return e("div",{style:{marginTop:4,fontSize:12,color:"var(--txt3)",lineHeight:1.4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},"📝 "+summary);
-                })()
+                )
               ),
               (()=>{
                 if(t.qualCheck?.result==="fail") return e("span",{style:S.tag("#ef4444")},"❌ 資格不符");
@@ -1173,13 +1176,13 @@ function App(){
                 ])].sort().map(u=>e("option",{key:u,value:u},u))
               )
             ),
-            e("div",{style:{marginBottom:10}},
+            e("div",{style:{marginBottom:12}},
               e("label",{style:S.lbl},"起始日期"),
-              e("input",{style:{...S.inp,minWidth:0},type:"date",value:queryDateFrom||"",onChange:ev=>{setQueryDateFrom(ev.target.value);setQuerySubmitted(false);}})
+              e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box"},type:"date",value:queryDateFrom||"",onChange:ev=>{setQueryDateFrom(ev.target.value);setQuerySubmitted(false);}})
             ),
-            e("div",{style:{marginBottom:10}},
+            e("div",{style:{marginBottom:12}},
               e("label",{style:S.lbl},"結束日期"),
-              e("input",{style:{...S.inp,minWidth:0},type:"date",value:queryDateTo||"",onChange:ev=>{setQueryDateTo(ev.target.value);setQuerySubmitted(false);}})
+              e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box"},type:"date",value:queryDateTo||"",onChange:ev=>{setQueryDateTo(ev.target.value);setQuerySubmitted(false);}})
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"時段"),
@@ -1248,6 +1251,49 @@ function App(){
           ),
           e("div",{style:{height:40}})
         ),
+        batchTab==="visit"&&e(React.Fragment,null,
+          (()=>{
+            const allT=curBatch.trainees||[];
+            const midHighWill=allT.filter(t=>{
+              const logs=t.interviewLogs||[];
+              const last=logs[logs.length-1];
+              const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);
+              return sid===4||sid===5;
+            });
+            if(!midHighWill.length) return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
+              e("div",{style:{fontSize:36,marginBottom:12}},"📞"),
+              e("div",{style:{fontSize:14}},"目前無中高意願訓員")
+            );
+            const mid=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===4;});
+            const high=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===5;});
+            function VisitRow({t,showHome}){
+              return e("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid var(--border2)",cursor:"pointer"},onClick:()=>openT(t)},
+                e("div",{style:{width:32,height:32,background:"var(--bg3)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"var(--txt3)",flexShrink:0}},t.seat||"?"),
+                e("div",{style:{flex:1,minWidth:0}},
+                  e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},t.name||"（未填）"),
+                  e("div",{style:{fontSize:12,color:"var(--txt3)",marginTop:2}},t.holdUnit||""),
+                  e("div",{style:{display:"flex",gap:12,marginTop:4,flexWrap:"wrap"}},
+                    e("span",{style:{fontSize:13,color:"#3b82f6",fontWeight:600}},"📞 電訪："+(t.phoneVisitDate||"未填")),
+                    showHome&&e("span",{style:{fontSize:13,color:"#22c55e",fontWeight:600}},"🏠 家訪："+(t.homeVisitDate||"未填"))
+                  )
+                ),
+                e("span",{style:{color:"var(--txt3)",fontSize:18}},"›")
+              );
+            }
+            return e(React.Fragment,null,
+              e("div",{style:{fontSize:14,color:"var(--txt3)",marginBottom:10}},"中高意願共 "+midHighWill.length+" 人"),
+              mid.length>0&&e("div",{style:{...S.card,marginBottom:10}},
+                e("div",{style:{fontSize:14,fontWeight:800,color:"#3b82f6",marginBottom:8}},"🔵 中意願（"+mid.length+" 人）"),
+                ...mid.map(t=>e(VisitRow,{key:t.id,t,showHome:false}))
+              ),
+              high.length>0&&e("div",{style:{...S.card,marginBottom:10}},
+                e("div",{style:{fontSize:14,fontWeight:800,color:"#22c55e",marginBottom:8}},"🟢 高意願（"+high.length+" 人）"),
+                ...high.map(t=>e(VisitRow,{key:t.id,t,showHome:true}))
+              )
+            );
+          })(),
+          e("div",{style:{height:40}})
+        ),
         showEC&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEC(false)},
           e("div",{style:{...S.mBox,maxHeight:"50vh"}},
             e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:6}},"修改訓員人數"),
@@ -1288,7 +1334,7 @@ function App(){
           setScrollToSeat(tf?.seat);
           setView("batch");
           const tab=batchTab||"list";
-          const tabTitle={"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢"}[tab]||"梯次";
+          const tabTitle={"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢","visit":"📞 電訪及家訪名單"}[tab]||"梯次";
           document.title=tabTitle+" | 招募資訊整合管理系統";
           pushState({page:"batch",batchId:curBatch?.id,tab},tabTitle);
         }},"← 返回"),
@@ -1301,7 +1347,14 @@ function App(){
       ),
 
       e("div",{style:{...S.sec,paddingTop:20}},
-        // 基本資料
+        // Tab Bar
+        e("div",{className:"hs",style:{display:"flex",gap:0,marginBottom:14,background:"var(--inp-bg)",borderRadius:10,padding:3,overflowX:"auto"}},
+          ...[["basic","📋 基本資料"],["qual","✅ 資格審查"],["will","💬 意願訪談"]].map(([tab,lbl])=>
+            e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:13,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:traineeTab===tab?"var(--bg3)":"transparent",color:traineeTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>setTraineeTab(tab)},lbl)
+          )
+        ),
+        // 基本資料 tab
+        traineeTab==="basic"&&e(React.Fragment,null,
         e("div",{style:{...S.card,marginBottom:10}},
           e("div",{style:S.slbl},"▍ 基本資料"),
           e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}},
@@ -1339,8 +1392,11 @@ function App(){
             tf.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作單位"),e("input",{style:S.inp,placeholder:"例：台積電",value:tf.workPlace||"",onChange:ev=>{setTf(p=>({...p,workPlace:ev.target.value}));setDirty(true);}})),
             tf.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作年資（年）"),e("input",{style:S.inp,type:"text",inputMode:"numeric",placeholder:"例：3",value:tf.workYears||"",onChange:ev=>{setTf(p=>({...p,workYears:ev.target.value}));setDirty(true);}}))
           )
-        ),
-        // 資格審查
+        ),// end 基本資料 card
+        e("div",{style:{height:16}})
+        ),// end basic tab
+        // 資格審查 tab
+        traineeTab==="qual"&&e(React.Fragment,null,
         e("div",{style:{...S.card,marginBottom:10}},
           e("div",{style:S.slbl},"▍ 資格審查"),
           e("div",{style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
@@ -1351,15 +1407,16 @@ function App(){
               ),
               medDate&&expItem?.date&&e("span",{style:S.tag(medExpired?"#ef4444":"#22c55e")},medExpired?"⚠️ 已過期":"✅ 有效")
             ),
-            e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",display:"block"},type:"date",value:qa.medicalDate||"",onChange:ev=>uqa({medicalDate:ev.target.value})})
+            e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",display:"block"},type:"date",value:qa.medicalDate||"",onChange:ev=>uqa({medicalDate:ev.target.value})}),
+            qa.medicalDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,fontSize:13,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>uqa({medicalDate:""})},"✕ 清除日期")
           ),
           ...qualItems.map(({id,label,desc})=>e("div",{key:id,style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
             e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}},
               e("div",null,e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},label),e("div",{style:{fontSize:14,color:"var(--txt3)"}},desc)),
               e("div",{style:{display:"flex",gap:6,flexShrink:0}},
                 ...[["yes","是","#ef4444"],["no","否","#22c55e"]].map(([v,lbl,c])=>e("button",{key:v,
-                  style:{padding:"5px 14px",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:qa[id]===v?c+"28":"transparent",color:qa[id]===v?c:"#4b6080",border:"2px solid "+(qa[id]===v?c+"88":"#1e2d45")},
-                  onClick:()=>uqa({[id]:v,[id+"Note"]:qa[id+"Note"]||""})
+                  style:{padding:"5px 14px",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:qa[id]===v?c+"28":"transparent",color:qa[id]===v?c:"var(--txt3)",border:"2px solid "+(qa[id]===v?c+"88":"var(--border)")},
+                  onClick:()=>uqa({[id]:qa[id]===v?undefined:v,[id+"Note"]:qa[id+"Note"]||""})
                 },lbl))
               )
             ),
@@ -1369,13 +1426,16 @@ function App(){
             e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"整體資格判定"),
             e("div",{style:{display:"flex",gap:6}},
               ...[["pass","符合","#22c55e"],["fail","不符合","#ef4444"],["pending","待確認","#a855f7"]].map(([v,lbl,c])=>e("button",{key:v,
-                style:{padding:"5px 14px",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:qa.result===v?c+"28":"transparent",color:qa.result===v?c:"#4b6080",border:"2px solid "+(qa.result===v?c+"88":"#1e2d45")},
-                onClick:()=>uqa({result:v})
+                style:{padding:"5px 14px",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:qa.result===v?c+"28":"transparent",color:qa.result===v?c:"var(--txt3)",border:"2px solid "+(qa.result===v?c+"88":"var(--border)")},
+                onClick:()=>uqa({result:qa.result===v?undefined:v})
               },lbl))
             )
           )
-        ),
-        // 掌握狀態
+        ),// end 資格審查 card
+        e("div",{style:{height:16}})
+        ),// end qual tab
+        // 意願訪談 tab（掌握狀態 + 意願訪談合在一起）
+        traineeTab==="will"&&e(React.Fragment,null,
         e("div",{style:{...S.card,marginBottom:10}},
           e("div",{style:S.slbl},"▍ 掌握狀態"),
           tf.holdUnit
@@ -1425,14 +1485,30 @@ function App(){
                   e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginBottom:8}},
                     e("div",null,
                       e("label",{style:S.lbl},"掌握單位"),
-                      e("div",{style:{display:"flex",gap:6,marginBottom:4}},
-                        e("select",{style:{...S.sel,flex:1,minWidth:0},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
-                          e("option",{value:""},"請選擇或自行輸入"),
-                          ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
-                        ),
-                        e("input",{style:{...S.inp,flex:1,minWidth:0,fontSize:14},placeholder:"輸入新單位…",value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))}),
-                        e("button",{style:S.btn("primary","sm"),onClick:async()=>{if(newItvw.unit.trim())await addRecruitUnit(newItvw.unit.trim());}},"存入")
-                      )
+                      tf.holdUnit
+                        ? e("div",{style:{display:"flex",alignItems:"center",gap:8,background:"#f59e0b15",border:"1px solid #f59e0b44",borderRadius:9,padding:"9px 12px"}},
+                            e("span",{style:{fontSize:14,fontWeight:800,color:"#f59e0b",flex:1}},"🔒 "+tf.holdUnit),
+                            e("button",{style:{...S.btn("ghost","sm"),fontSize:13,padding:"3px 10px"},onClick:()=>setNewItvw(p=>({...p,unit:newItvw.unit===tf.holdUnit?"":tf.holdUnit}))},newItvw.unit===tf.holdUnit?"✓ 已套用":"套用")
+                          )
+                        : e("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+                            e("select",{style:{...S.sel},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
+                              e("option",{value:""},"請選擇單位"),
+                              ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
+                            ),
+                            !newItvw.unit&&e("div",{style:{display:"flex",gap:6}},
+                              e("input",{style:{...S.inp,flex:1,minWidth:0,fontSize:14},placeholder:"輸入新單位名稱…",value:newItvw._newUnit||"",onChange:ev=>setNewItvw(p=>({...p,_newUnit:ev.target.value}))}),
+                              e("button",{style:S.btn("primary","sm"),onClick:async()=>{
+                                const v=(newItvw._newUnit||"").trim();
+                                if(!v)return;
+                                await addRecruitUnit(v);
+                                setNewItvw(p=>({...p,unit:v,_newUnit:""}));
+                              }},"＋ 新增")
+                            )
+                          )
+                    ),
+                    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px"}},
+                      e("div",null,e("label",{style:S.lbl},"招募員級職姓名"),e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})),
+                      e("div",null,e("label",{style:S.lbl},"聯絡方式"),e("input",{style:S.inp,placeholder:"電話 / LINE",value:newItvw.contact,onChange:ev=>setNewItvw(p=>({...p,contact:ev.target.value}))}))
                     ),
                     e("div",null,
                       e("div",{style:{display:"flex",gap:10,marginBottom:4}},
@@ -1444,9 +1520,12 @@ function App(){
                         e("select",{style:{...S.sel,width:72,flexShrink:0},value:newItvw.period,onChange:ev=>setNewItvw(p=>({...p,period:ev.target.value}))},e("option",{value:""},"—"),e("option",{value:"上午"},"上午"),e("option",{value:"下午"},"下午"),e("option",{value:"晚上"},"晚上"))
                       )
                     ),
-                    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px"}},
-                      e("div",null,e("label",{style:S.lbl},"招募員級職姓名"),e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})),
-                      e("div",null,e("label",{style:S.lbl},"聯絡方式"),e("input",{style:S.inp,placeholder:"電話 / LINE",value:newItvw.contact,onChange:ev=>setNewItvw(p=>({...p,contact:ev.target.value}))}))
+                    (newItvw.statusId===4||newItvw.statusId===5)&&e("div",{style:{background:"#1e2d4566",border:"1px solid #3b82f633",borderRadius:9,padding:"10px 12px"}},
+                      e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt3)",marginBottom:8}},"📅 電訪 / 家訪排程"),
+                      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 12px"}},
+                        e("div",null,e("label",{style:S.lbl},"📞 電訪日期"),e("input",{style:{...S.inp,fontSize:14},type:"date",value:tf.phoneVisitDate||"",onChange:ev=>{setTf(p=>({...p,phoneVisitDate:ev.target.value}));setDirty(true);}})),
+                        (newItvw.statusId===5)&&e("div",null,e("label",{style:S.lbl},"🏠 家訪日期"),e("input",{style:{...S.inp,fontSize:14},type:"date",value:tf.homeVisitDate||"",onChange:ev=>{setTf(p=>({...p,homeVisitDate:ev.target.value}));setDirty(true);}}))
+                      )
                     )
                   ),
                   e("div",{style:{marginBottom:10}},e("label",{style:S.lbl},"約談內容"),e("textarea",{style:{...S.inp,minHeight:80,lineHeight:1.7},placeholder:"記錄本次約談重點、訓員回應、後續追蹤事項…",value:newItvw.note,onChange:ev=>setNewItvw(p=>({...p,note:ev.target.value}))})),
@@ -1471,14 +1550,15 @@ function App(){
                       logSt&&e("div",{style:{marginBottom:log.note?8:0}},
                         e("span",{style:{...S.tag(logSt.color),fontSize:14}},logSt.emoji+" "+logSt.label+(logSt.hint?" · "+logSt.hint:""))
                       ),
-                      log.note&&e("div",{className:"log-content",style:{fontSize:14,color:"#cbd5e1",lineHeight:1.7,whiteSpace:"pre-wrap"}},log.note),
+                      log.note&&e("div",{className:"log-content",style:{fontSize:14,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},log.note),
                       log.contact&&e("div",{style:{marginTop:8,paddingTop:8,borderTop:"1px solid var(--border)"}},e("span",{style:{fontSize:14,color:"var(--txt3)"}},"📱 "+log.contact))
                     );
                   })
                 )
               )
-        ),
+        ),// end 意願訪談 card
         e("div",{style:{height:48}})
+        ),// end will tab
       ),
       showEditLog&&editLogData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditLog(false)},
         e("div",{style:S.mBox},
