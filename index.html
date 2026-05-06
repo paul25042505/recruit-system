@@ -130,7 +130,9 @@ const DEF={
     {id:"dui",label:"酒駕紀錄",desc:"是否有酒後駕車相關紀錄"},
     {id:"drug",label:"毒品前科",desc:"是否有毒品相關紀錄"},
     {id:"tattoo",label:"刺青",desc:"是否有刺青（部位、大小）"},
-  ]
+  ],
+  // 自訂基本資料欄位：{id, label, type:"text"|"date"|"select", options:[], width:"half"|"full"}
+  customFields:[]
 };
 const DEF_SCHED=[
   {key:"report",label:"報到日",date:""},
@@ -260,6 +262,9 @@ function App(){
   const [editStSubInput,setEditStSubInput]=useState("");
   const [showEditQual,setShowEditQual]=useState(false);
   const [editQualItem,setEditQualItem]=useState(null);
+  const [showEditCF,setShowEditCF]=useState(false);
+  const [editCFItem,setEditCFItem]=useState(null);
+  const [cfOptionInput,setCfOptionInput]=useState("");
   // 意見回饋
   const [feedbackForm,setFeedbackForm]=useState({unit:"",name:"",content:""});
   const [feedbackList,setFeedbackList]=useState([]);
@@ -567,7 +572,7 @@ function App(){
     }else setBPwdErr(true);
   }
   function submitAPwd(){
-    if(aPwd===cfg.adminPassword){setAf({...DEF,...cfg,qualCheckItems:cfg.qualCheckItems||DEF.qualCheckItems,statusOptions:cfg.statusOptions||DEF.statusOptions,recruitUnits:cfg.recruitUnits||DEF.recruitUnits});setNi({units:"",battalions:"",companies:""});setEditIdx({});setEditVal({});setView("admin");pushState({page:"admin"},"後台管理");setAPwd("");}
+    if(aPwd===cfg.adminPassword){setAf({...DEF,...cfg,qualCheckItems:cfg.qualCheckItems||DEF.qualCheckItems,statusOptions:cfg.statusOptions||DEF.statusOptions,recruitUnits:cfg.recruitUnits||DEF.recruitUnits,customFields:cfg.customFields||DEF.customFields});setNi({units:"",battalions:"",companies:""});setEditIdx({});setEditVal({});setView("admin");pushState({page:"admin"},"後台管理");setAPwd("");}
     else setAPwdErr(true);
   }
   function moveArr(arr,i,dir){const a=[...arr];const j=i+dir;if(j<0||j>=a.length)return arr;[a[i],a[j]]=[a[j],a[i]];return a;}
@@ -663,6 +668,37 @@ function App(){
         ),
         e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditQualItem({...q});setShowEditQual(true);}},"✏️"),
         e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,qualCheckItems:p.qualCheckItems.filter((_,j)=>j!==i)}))},"🗑️")
+      ))
+    );
+  }
+
+  // ── Custom Fields Editor (admin) ─────────────────────────────────────────────
+  function customFieldsEditor(){
+    const items=af.customFields||[];
+    const typeLabel={text:"文字",date:"日期",select:"下拉選擇"};
+    const widthLabel={half:"半行（並排）",full:"整行"};
+    return e("div",{style:{...S.card,marginBottom:10}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+        e("div",{style:S.slbl},"自訂基本資料欄位"),
+        e("button",{style:S.btn("primary","sm"),onClick:()=>{
+          setEditCFItem({id:uid(),label:"",type:"text",options:[],width:"half",_new:true});
+          setCfOptionInput("");setShowEditCF(true);
+        }},"＋ 新增欄位")
+      ),
+      items.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:13,marginBottom:8}},"（尚無自訂欄位）"),
+      ...items.map((f,i)=>e("div",{key:f.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:8}},
+        e("div",{style:{display:"flex",flexDirection:"column",gap:2,flexShrink:0}},
+          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===0?0.2:1},disabled:i===0,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,-1)}))},"▲"),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===items.length-1?0.2:1},disabled:i===items.length-1,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,1)}))},"▼")
+        ),
+        e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:8,padding:"8px 10px"}},
+          e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},f.label||"（未命名）"),
+          e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},typeLabel[f.type]||f.type," · ",widthLabel[f.width]||f.width,
+            f.type==="select"&&f.options?.length?(" · "+f.options.length+"個選項"):""
+          )
+        ),
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditCFItem({...f});setCfOptionInput("");setShowEditCF(true);}},"✏️"),
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,customFields:p.customFields.filter((_,j)=>j!==i)}))},"🗑️")
       ))
     );
   }
@@ -810,6 +846,7 @@ function App(){
       listEd("companies","連別"),
       statusEditor(),
       qualEditor(),
+      customFieldsEditor(),
       e("div",{style:{...S.card,marginBottom:10}},
         e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
           e("div",{style:S.slbl},"意見回饋紀錄"),
@@ -822,7 +859,7 @@ function App(){
             e("span",{style:{fontSize:10,color:"var(--txt3)"}},fb.createdAt)
           ),
           fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},fb.name),
-          e("div",{style:{fontSize:13,color:"#cbd5e1",lineHeight:1.7,whiteSpace:"pre-wrap"}},fb.content)
+          e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},fb.content)
         ))
       ),
       e("div",{style:{height:48}})
@@ -882,6 +919,55 @@ function App(){
             if(editQualItem._new)setAf(p=>({...p,qualCheckItems:[...(p.qualCheckItems||[]),{...editQualItem,_new:undefined}]}));
             else setAf(p=>({...p,qualCheckItems:p.qualCheckItems.map(q=>q.id===editQualItem.id?{...editQualItem,_new:undefined}:q)}));
             setShowEditQual(false);
+          }},"儲存")
+        )
+      )
+    ),
+    showEditCF&&editCFItem&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditCF(false)},
+      e("div",{style:S.mBox},
+        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editCFItem._new?"新增欄位":"編輯欄位"),
+        e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"欄位名稱"),
+          e("input",{style:S.inp,placeholder:"例：兵種志願、血型…",value:editCFItem.label||"",onChange:ev=>setEditCFItem(p=>({...p,label:ev.target.value}))})
+        ),
+        e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"輸入類型"),
+          e("div",{style:{display:"flex",gap:8}},
+            ...[["text","📝 文字"],["date","📅 日期"],["select","📋 下拉"]].map(([v,lbl])=>e("button",{key:v,
+              style:{...S.btn(editCFItem.type===v?"primary":"ghost","sm"),flex:1},
+              onClick:()=>setEditCFItem(p=>({...p,type:v}))
+            },lbl))
+          )
+        ),
+        editCFItem.type==="select"&&e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"選項清單"),
+          ...(editCFItem.options||[]).map((opt,i)=>e("div",{key:i,style:{display:"flex",gap:6,marginBottom:6}},
+            e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:7,padding:"7px 10px",fontSize:13,color:"var(--txt)"}},opt),
+            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"4px 8px"},onClick:()=>setEditCFItem(p=>({...p,options:p.options.filter((_,j)=>j!==i)}))},"✕")
+          )),
+          e("div",{style:{display:"flex",gap:6}},
+            e("input",{style:{...S.inp,flex:1},placeholder:"新增選項…",value:cfOptionInput,onChange:ev=>setCfOptionInput(ev.target.value),
+              onKeyDown:ev=>{if(ev.key==="Enter"&&cfOptionInput.trim()){setEditCFItem(p=>({...p,options:[...(p.options||[]),cfOptionInput.trim()]}));setCfOptionInput("");}}}),
+            e("button",{style:S.btn("primary","sm"),onClick:()=>{if(!cfOptionInput.trim())return;setEditCFItem(p=>({...p,options:[...(p.options||[]),cfOptionInput.trim()]}));setCfOptionInput("");}},"＋")
+          )
+        ),
+        e("div",{style:{marginBottom:20}},
+          e("label",{style:S.lbl},"版面寬度"),
+          e("div",{style:{display:"flex",gap:8}},
+            ...[["half","⬜⬜ 半行（可與下一欄並排）"],["full","⬜ 整行"]].map(([v,lbl])=>e("button",{key:v,
+              style:{...S.btn(editCFItem.width===v?"primary":"ghost","sm"),flex:1,textAlign:"left"},
+              onClick:()=>setEditCFItem(p=>({...p,width:v}))
+            },lbl))
+          )
+        ),
+        e("div",{style:{display:"flex",gap:10}},
+          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditCF(false)},"取消"),
+          e("button",{style:{...S.btn("primary"),flex:1},onClick:()=>{
+            if(!editCFItem.label.trim())return;
+            const item={...editCFItem,_new:undefined};
+            if(editCFItem._new)setAf(p=>({...p,customFields:[...(p.customFields||[]),item]}));
+            else setAf(p=>({...p,customFields:(p.customFields||[]).map(f=>f.id===item.id?item:f)}));
+            setShowEditCF(false);
           }},"儲存")
         )
       )
@@ -1094,7 +1180,7 @@ function App(){
             e("span",{style:{fontSize:10,color:"var(--txt3)"}},fb.createdAt)
           ),
           fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},fb.name),
-          e("div",{style:{fontSize:13,color:"#cbd5e1",lineHeight:1.6}},fb.content)
+          e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.6}},fb.content)
         ))
       ),
       e("div",{style:{height:40}})
@@ -1499,7 +1585,7 @@ function App(){
               ? e("div",{style:{display:"flex",gap:8}},
                   e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setBasicEditing(false);setBasicDraft(null);}},"✕ 取消"),
                   e("button",{style:S.btn("primary","sm"),onClick:()=>{
-                    setTf(p=>({...p,...basicDraft}));setDirty(true);
+                    setTf(p=>({...p,...basicDraft,customData:{...(p.customData||{}),...(basicDraft.customData||{})}}));setDirty(true);
                     setBasicEditing(false);setBasicDraft(null);
                   }},"✓ 確定")
                 )
@@ -1543,7 +1629,19 @@ function App(){
                   )
                 ),
                 basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作單位"),e("input",{style:S.inp,placeholder:"例：台積電",value:basicDraft.workPlace||"",onChange:ev=>setBasicDraft(p=>({...p,workPlace:ev.target.value}))})),
-                basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作年資（年）"),e("input",{style:S.inp,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))}))
+                basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作年資（年）"),e("input",{style:S.inp,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))})),
+                // 自訂欄位編輯
+                ...(cfg?.customFields||[]).map(f=>e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
+                  e("label",{style:S.lbl},f.label),
+                  f.type==="date"
+                    ? e("input",{style:S.inp,type:"date",value:basicDraft.customData?.[f.id]||"",onChange:ev=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:ev.target.value}}))})
+                    : f.type==="select"
+                    ? e("select",{style:S.sel,value:basicDraft.customData?.[f.id]||"",onChange:ev=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:ev.target.value}}))},
+                        e("option",{value:""},"— 請選擇 —"),
+                        ...(f.options||[]).map(o=>e("option",{key:o,value:o},o))
+                      )
+                    : e("input",{style:S.inp,placeholder:"請輸入"+f.label,value:basicDraft.customData?.[f.id]||"",onChange:ev=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:ev.target.value}}))})
+                ))
               )
             : e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}},
                 ...[
@@ -1556,6 +1654,11 @@ function App(){
                 ].map(([lbl,val])=>e("div",{key:lbl},
                   e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},lbl),
                   e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},val)
+                )),
+                // 自訂欄位唯讀顯示
+                ...(cfg?.customFields||[]).map(f=>e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},f.label),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},(tf.customData?.[f.id])||"—")
                 ))
               )
         ),// end 基本資料 card
@@ -1732,7 +1835,7 @@ function App(){
                       logSt&&e("div",{style:{marginBottom:log.note?8:0}},
                         e("span",{style:{...S.tag(logSt.color),fontSize:12}},logSt.emoji+" "+logSt.label+(logSt.hint?" · "+logSt.hint:""))
                       ),
-                      log.note&&e("div",{className:"log-content",style:{fontSize:13,color:"#cbd5e1",lineHeight:1.7,whiteSpace:"pre-wrap"}},log.note),
+                      log.note&&e("div",{className:"log-content",style:{fontSize:13,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},log.note),
                       log.contact&&e("div",{style:{marginTop:8,paddingTop:8,borderTop:"1px solid var(--border)"}},e("span",{style:{fontSize:11,color:"var(--txt3)"}},"📱 "+log.contact))
                     );
                   })
