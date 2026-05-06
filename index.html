@@ -303,12 +303,49 @@ function App(){
   },[isDark]);
 
   const toastRef=useRef(null);
-  // 手機省電後自動重整
+  const lastActiveRef=useRef(Date.now());
+  // 白屏防護 + 離開超過10分鐘強制重整
   useEffect(()=>{
-    function onVis(){if(document.visibilityState==="visible"&&view==="loading")window.location.reload();}
+    function onVis(){
+      if(document.visibilityState==="hidden"){lastActiveRef.current=Date.now();return;}
+      if(document.visibilityState==="visible"){
+        const rootEmpty=!(document.getElementById("root")?.firstChild);
+        const away=Date.now()-lastActiveRef.current;
+        if(rootEmpty||view==="loading"||(away>600000)){window.location.reload();}
+      }
+    }
     document.addEventListener("visibilitychange",onVis);
     return()=>document.removeEventListener("visibilitychange",onVis);
   },[view]);
+  // Pull-to-refresh（從頂部下拉觸發重整，跳過輸入框）
+  useEffect(()=>{
+    let startY=0,pulling=false;
+    const ind=document.getElementById("ptr-indicator");
+    function ts(e){
+      if(window.scrollY>5)return;
+      const tag=e.target.tagName.toLowerCase();
+      if(tag==="input"||tag==="textarea"||tag==="select")return;
+      startY=e.touches[0].clientY;pulling=true;
+    }
+    function tm(e){
+      if(!pulling)return;
+      if(e.touches[0].clientY-startY>60&&ind)ind.classList.add("show");
+    }
+    function te(e){
+      if(!pulling)return;
+      pulling=false;
+      if(ind)ind.classList.remove("show");
+      if(e.changedTouches[0].clientY-startY>80)window.location.reload();
+    }
+    document.addEventListener("touchstart",ts,{passive:true});
+    document.addEventListener("touchmove",tm,{passive:true});
+    document.addEventListener("touchend",te,{passive:true});
+    return()=>{
+      document.removeEventListener("touchstart",ts);
+      document.removeEventListener("touchmove",tm);
+      document.removeEventListener("touchend",te);
+    };
+  },[]);
   function toast_(msg,type="ok"){setToast({msg,type});clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2500);}
 
   // ── Init ────────────────────────────────────────────────────────────────────
@@ -1431,20 +1468,19 @@ function App(){
       e("div",{style:S.hdr},
         e("button",{style:{...S.btn("ghost","sm"),fontSize:18,padding:"4px 10px"},onClick:()=>setShowMenu(true)},"≡"),
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 12px",fontSize:13},onClick:async()=>{
-          if(dirty)await saveTF();
+          if(dirty){await saveTF(true);toast_("已儲存 ✓");}
           setScrollToSeat(tf?.seat);
           setView("batch");
           const tab=batchTab||"list";
           const tabTitle={"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢","visit":"📞 電訪及家訪名單"}[tab]||"梯次";
           document.title=tabTitle+" | 招募資訊整合管理系統";
           pushState({page:"batch",batchId:curBatch?.id,tab},tabTitle);
-        }},"← 返回"),
+        }},saving?"儲存中…":"← 返回"),
         e("div",{style:{flex:1,minWidth:0}},
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},tf.name||"（未填姓名）"),
           e("div",{style:{fontSize:11,color:"var(--txt3)"}},"#"+tf.seat)
         ),
-        dirty&&e("div",{style:{fontSize:10,color:"#f59e0b",fontWeight:700,marginRight:4,flexShrink:0}},"●"),
-        e("button",{style:{...S.btn("primary","sm"),minWidth:54},onClick:saveTF,disabled:saving},saving?"儲存…":"儲存")
+        dirty&&e("span",{style:{fontSize:12,color:"#f59e0b",fontWeight:700,flexShrink:0}},"● 未儲存")
       ),
 
       e("div",{style:{...S.sec,paddingTop:20}},
@@ -1612,14 +1648,14 @@ function App(){
                 e("div",{style:{marginBottom:14,paddingBottom:14,borderBottom:"1px solid var(--border)"}},
                   e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt2)",marginBottom:12,letterSpacing:"0.05em"}},"＋ 新增約談紀錄"),
                   e("div",{style:{display:"flex",flexDirection:"column",gap:12}},
-                    // 掌握單位：下拉 + 空白時才顯示新增輸入框
+                    // 約談單位：下拉 + 永遠顯示新增輸入框
                     e("div",null,
-                      e("label",{style:S.lbl},"掌握單位"),
-                      e("select",{style:S.sel,value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value,_newUnit:""}))},
+                      e("label",{style:S.lbl},"約談單位"),
+                      e("select",{style:S.sel,value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
                         e("option",{value:""},"請選擇單位"),
                         ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
                       ),
-                      !newItvw.unit&&e("div",{style:{display:"flex",gap:6,marginTop:8}},
+                      e("div",{style:{display:"flex",gap:6,marginTop:8}},
                         e("input",{style:{...S.inp,flex:1},placeholder:"輸入新單位名稱…",value:newItvw._newUnit||"",onChange:ev=>setNewItvw(p=>({...p,_newUnit:ev.target.value}))}),
                         e("button",{style:S.btn("primary","sm"),onClick:async()=>{
                           const v=(newItvw._newUnit||"").trim();
