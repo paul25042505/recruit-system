@@ -35,16 +35,22 @@ select option{background:var(--bg2);color:var(--txt);}
 textarea{font-family:'Noto Sans TC',sans-serif;resize:vertical;}
 input,select{min-height:44px;}
 textarea{min-height:80px;}
-input[type=date]{
-  width:100%;min-width:0;max-width:100%;
-  box-sizing:border-box;display:block;
-  min-height:44px;line-height:1.4;
-  overflow:hidden;
+input[type=date],input[type=date]:focus{
   -webkit-appearance:none;appearance:none;
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  box-sizing:border-box!important;display:block!important;
+  min-height:44px;line-height:1.4;overflow:hidden;
+  position:relative;
 }
-input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.4em;}
+/* iOS Safari：阻止日期文字溢出容器 */
+input[type=date]::-webkit-date-and-time-value{
+  text-align:left;width:100%;min-height:1.4em;display:block;
+}
 input[type=date]::-webkit-inner-spin-button{display:none;}
-input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.4);flex-shrink:0;}
+input[type=date]::-webkit-calendar-picker-indicator{
+  filter:invert(0.4);flex-shrink:0;margin-left:auto;
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+}
 html.light input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}
 .hs::-webkit-scrollbar{display:none;}
 input,textarea,select{-webkit-user-select:text!important;user-select:text!important;pointer-events:auto!important;touch-action:manipulation;cursor:text;}
@@ -1120,7 +1126,7 @@ function App(){
           })(),
           e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"10px 0 8px"}},
             e("div",{style:{fontSize:12,color:"var(--txt3)"}},"顯示 "+trainees.length+" 人"),
-            e("button",{style:S.btn("primary","sm"),onClick:()=>{setNewTName("");setShowAT(true);}},"＋ 新增訓員")
+            
           ),
           trainees.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:40}},"無符合條件的訓員"),
           scrollToSeat!==null&&e(ScrollAnchor,{seat:scrollToSeat,onDone:()=>setScrollToSeat(null)}),
@@ -1289,7 +1295,7 @@ function App(){
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"時段"),
               e("select",{style:S.sel,value:queryPeriod||"",onChange:ev=>{setQueryPeriod(ev.target.value);setQuerySubmitted(false);}},
-                e("option",{value:""},"全部時段"),e("option",{value:"上午"},"上午"),e("option",{value:"下午"},"下午"),e("option",{value:"晚上"},"晚上")
+                e("option",{value:""},"— 全部時段 —"),e("option",{value:"上午"},"上午"),e("option",{value:"下午"},"下午"),e("option",{value:"晚上"},"晚上")
               )
             ),
             e("div",{style:{display:"flex",gap:8,marginTop:4}},
