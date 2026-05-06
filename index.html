@@ -35,8 +35,16 @@ select option{background:var(--bg2);color:var(--txt);}
 textarea{font-family:'Noto Sans TC',sans-serif;resize:vertical;}
 input,select{min-height:44px;}
 textarea{min-height:80px;}
-input[type=date]{min-height:44px;line-height:1.4;}
-input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.4);}
+input[type=date]{
+  width:100%;min-width:0;max-width:100%;
+  box-sizing:border-box;display:block;
+  min-height:44px;line-height:1.4;
+  overflow:hidden;
+  -webkit-appearance:none;appearance:none;
+}
+input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.4em;}
+input[type=date]::-webkit-inner-spin-button{display:none;}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.4);flex-shrink:0;}
 html.light input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6);}
 .hs::-webkit-scrollbar{display:none;}
 input,textarea,select{-webkit-user-select:text!important;user-select:text!important;pointer-events:auto!important;touch-action:manipulation;cursor:text;}
@@ -1272,11 +1280,11 @@ function App(){
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"起始日期"),
-              e("input",{style:S.inp,type:"date",value:queryDateFrom||"",onChange:ev=>{setQueryDateFrom(ev.target.value);setQuerySubmitted(false);}})
+              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",value:queryDateFrom||"",onChange:ev=>{setQueryDateFrom(ev.target.value);setQuerySubmitted(false);}})
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"結束日期"),
-              e("input",{style:S.inp,type:"date",value:queryDateTo||"",onChange:ev=>{setQueryDateTo(ev.target.value);setQuerySubmitted(false);}})
+              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",value:queryDateTo||"",onChange:ev=>{setQueryDateTo(ev.target.value);setQuerySubmitted(false);}})
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"時段"),
