@@ -114,6 +114,8 @@ const DEF={
   battalions:["第一營","第二營","第三營","特勤營","後勤營"],
   companies:["（無）","第一連","第二連","第三連","第四連"],
   recruitUnits:["陸軍步兵旅","海軍陸戰隊","空軍作戰指揮部","憲兵指揮部"],
+  // 協訓單位詳細資料：{id, name, recruiters:[{id,rank,name,contact}]}
+  recruitUnitProfiles:[],
   statusOptions:[
     {id:1,emoji:"❌",label:"資格不符",color:"#ef4444",subReasons:["酒駕前科","吸毒前科","學歷不符","近三個月就診身心科"],hasNote:true},
     {id:2,emoji:"🚫",label:"無意願",color:"#f97316",subReasons:[],hasNote:true},
@@ -295,6 +297,13 @@ function App(){
   // 後台梯次編輯
   const [showEditBatch,setShowEditBatch]=useState(false);
   const [editBatchData,setEditBatchData]=useState(null);
+  // 協訓單位管理
+  const [unitProfiles,setUnitProfiles]=useState([]);
+  const [showEditUnit,setShowEditUnit]=useState(false);
+  const [editUnitData,setEditUnitData]=useState(null);
+  const [showEditRecruiter,setShowEditRecruiter]=useState(false);
+  const [editRecruiterData,setEditRecruiterData]=useState(null);
+  const [editRecruiterUnitId,setEditRecruiterUnitId]=useState(null);
 
   // 深淺色模式
   const [isDark,setIsDark]=useState(()=>{
@@ -364,7 +373,22 @@ function App(){
         const [s,b,fbRaw]=await Promise.all([fsGet("settings/global"),fsList("batches"),fsGet("feedback/list")]);
         setFeedbackList(fbRaw||[]);
         const mergeHints=opts=>opts.map(s=>{const d=DEF.statusOptions.find(x=>x.id===s.id);return(d?.hint&&!s.hint)?{...s,hint:d.hint}:s;});
-        const settings=s?{...DEF,...s,qualCheckItems:s.qualCheckItems||DEF.qualCheckItems,statusOptions:mergeHints(s.statusOptions||DEF.statusOptions),recruitUnits:s.recruitUnits||DEF.recruitUnits}:DEF;
+        const settings=s?{...DEF,...s,qualCheckItems:s.qualCheckItems||DEF.qualCheckItems,statusOptions:mergeHints(s.statusOptions||DEF.statusOptions),recruitUnits:s.recruitUnits||DEF.recruitUnits,recruitUnitProfiles:s.recruitUnitProfiles||DEF.recruitUnitProfiles}:DEF;
+        // 把 recruitUnits 裡有但 recruitUnitProfiles 沒有的單位補進去
+        const existingNames=(settings.recruitUnitProfiles||[]).map(p=>p.name);
+        const missing=(settings.recruitUnits||[]).filter(n=>!existingNames.includes(n));
+        const mergedProfiles=[...(settings.recruitUnitProfiles||[]),...missing.map(n=>({id:uid(),name:n,recruiters:[]}))];
+        // 依筆畫排序（zh-TW locale）
+        const sortedProfiles=[...mergedProfiles].sort((a,b)=>a.name.localeCompare(b.name,"zh-TW",{sensitivity:"base"}));
+        if(missing.length>0){
+          // 有補充才寫回 Firebase
+          const syncCfg={...settings,recruitUnitProfiles:sortedProfiles,recruitUnits:[...new Set([...sortedProfiles.map(p=>p.name)])]};
+          await fsSet("settings/global",syncCfg);
+          setCfg(syncCfg);
+        } else {
+          setCfg(settings);
+        }
+        setUnitProfiles(sortedProfiles);
         setCfg(settings);
         const patched=await Promise.all(b.map(async batch=>{
           const keys=(batch.schedule||[]).map(s=>s.key);
@@ -394,7 +418,7 @@ function App(){
     setSaving(true);
     try{
       const id=uid(),count=Math.max(0,parseInt(nb.traineeCount)||0);
-      const trainees=Array.from({length:count},(_,i)=>({id:uid(),seat:i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",statusId:null,qualCheck:{},scheduleAtt:{}}));
+      const trainees=Array.from({length:count},(_,i)=>({id:uid(),seat:i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{}}));
       const batch={id,...nb,traineeCount:count,createdAt:todayStr(),schedule:DEF_SCHED.map(s=>({...s})),trainees};
       await fsSet("batches/"+id,batch);
       setBatches(p=>[batch,...p]);
@@ -414,7 +438,7 @@ function App(){
     const name=newTName.trim();
     if(!name){toast_("請輸入姓名","err");return;}
     const max=Math.max(0,...(curBatch.trainees||[]).map(t=>t.seat||0));
-    const t={id:uid(),seat:max+1,name,education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",statusId:null,qualCheck:{},scheduleAtt:{}};
+    const t={id:uid(),seat:max+1,name,education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{}};
     try{await patchBatch({trainees:[...(curBatch.trainees||[]),t]});setNewTName("");setShowAT(false);toast_("已新增 ✓");}
     catch(err){toast_(err.message,"err");}
   }
@@ -425,7 +449,7 @@ function App(){
     let trainees=[...cur];
     if(n>cur.length){
       const max=Math.max(0,...cur.map(t=>t.seat||0));
-      for(let i=0;i<n-cur.length;i++) trainees.push({id:uid(),seat:max+i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",statusId:null,qualCheck:{},scheduleAtt:{}});
+      for(let i=0;i<n-cur.length;i++) trainees.push({id:uid(),seat:max+i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{}});
     }else{trainees=cur.slice(0,n);}
     setSaving(true);
     try{await patchBatch({trainees,traineeCount:n});setShowEC(false);toast_("已更新 ✓");}
@@ -499,9 +523,23 @@ function App(){
     if(!name.trim())return;
     if((cfg.recruitUnits||[]).includes(name.trim()))return;
     const newUnits=[...(cfg.recruitUnits||[]),name.trim()];
-    const newCfg={...cfg,recruitUnits:newUnits};
+    // 同步加到 unitProfiles
+    const existsInProfile=(cfg.recruitUnitProfiles||[]).some(p=>p.name===name.trim());
+    const newProfiles=existsInProfile?cfg.recruitUnitProfiles||[]:[...(cfg.recruitUnitProfiles||[]),{id:uid(),name:name.trim(),recruiters:[]}];
+    const newCfg={...cfg,recruitUnits:newUnits,recruitUnitProfiles:newProfiles};
     await fsSet("settings/global",newCfg);
     setCfg(newCfg);
+    setUnitProfiles(newProfiles);
+  }
+  async function saveUnitProfiles(profiles){
+    // 依筆畫排序後存入
+    const sorted=[...profiles].sort((a,b)=>a.name.localeCompare(b.name,"zh-TW",{sensitivity:"base"}));
+    const names=sorted.map(p=>p.name);
+    const merged=[...new Set([...names,...(cfg.recruitUnits||[])])].sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
+    const newCfg={...cfg,recruitUnitProfiles:sorted,recruitUnits:merged};
+    await fsSet("settings/global",newCfg);
+    setCfg(newCfg);
+    setUnitProfiles(sorted);
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -544,7 +582,7 @@ function App(){
     }else setBPwdErr(true);
   }
   function submitAPwd(){
-    if(aPwd===cfg.adminPassword){setAf({...DEF,...cfg,qualCheckItems:cfg.qualCheckItems||DEF.qualCheckItems,statusOptions:cfg.statusOptions||DEF.statusOptions,recruitUnits:cfg.recruitUnits||DEF.recruitUnits,customFields:cfg.customFields||DEF.customFields});setNi({units:"",battalions:"",companies:""});setEditIdx({});setEditVal({});setView("admin");pushState({page:"admin"},"後台管理");setAPwd("");}
+    if(aPwd===cfg.adminPassword){setAf({...DEF,...cfg,qualCheckItems:cfg.qualCheckItems||DEF.qualCheckItems,statusOptions:cfg.statusOptions||DEF.statusOptions,recruitUnits:cfg.recruitUnits||DEF.recruitUnits,customFields:cfg.customFields||DEF.customFields,recruitUnitProfiles:cfg.recruitUnitProfiles||DEF.recruitUnitProfiles});setNi({units:"",battalions:"",companies:""});setEditIdx({});setEditVal({});setView("admin");pushState({page:"admin"},"後台管理");setAPwd("");}
     else setAPwdErr(true);
   }
   function moveArr(arr,i,dir){const a=[...arr];const j=i+dir;if(j<0||j>=a.length)return arr;[a[i],a[j]]=[a[j],a[i]];return a;}
@@ -771,6 +809,7 @@ function App(){
         e("div",{style:{padding:"8px 0",flex:1}},
           ...[
             {icon:"🏠",label:"梯次列表",onClick:()=>{setShowMenu(false);setView("home");}},
+            {icon:"🏢",label:"協訓單位管理",onClick:()=>{setShowMenu(false);setView("unitMgmt");}},
             {icon:"💬",label:"意見回饋",onClick:()=>{setShowMenu(false);setView("feedback");}},
           ].map(({icon,label,onClick})=>e("div",{key:label,style:{display:"flex",alignItems:"center",gap:14,padding:"14px 20px",cursor:"pointer",borderBottom:"1px solid var(--border2)"},onClick},
             e("span",{style:{fontSize:20}},icon),
@@ -1168,7 +1207,7 @@ function App(){
                 e("div",{style:{display:"flex",flexWrap:"wrap",gap:"3px 8px",marginTop:5}},
                   ...segs.map(s=>e("div",{key:s.id,style:{display:"flex",alignItems:"center",gap:3}},
                     e("div",{style:{width:7,height:7,borderRadius:"50%",background:s.color,flexShrink:0}}),
-                    e("span",{style:{fontSize:10,color:s.color,fontWeight:700}},s.label+" "+s.count)
+                    e("span",{style:{fontSize:11,color:s.color,fontWeight:700}},s.label+" "+s.count)
                   ))
                 )
               );
@@ -1241,6 +1280,148 @@ function App(){
         ))
       ),
       e("div",{style:{height:40}})
+    )
+  );
+
+  if(view==="unitMgmt") return e("div",{style:S.app},
+    e(Toast),e(MenuOverlay),
+    e("div",{style:S.hdr},
+      e("button",{style:{...S.btn("ghost","sm"),fontSize:18,padding:"4px 10px"},onClick:()=>setShowMenu(true)},"≡"),
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"🏢 協訓單位管理"))
+    ),
+    e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:{marginBottom:12}},
+        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
+          e("div",{style:{fontSize:14,color:"var(--txt3)"}},"共 "+unitProfiles.length+" 個協訓單位，依筆畫排序"),
+          e("button",{style:S.btn("primary","sm"),onClick:()=>{setEditUnitData({id:uid(),name:"",recruiters:[],_new:true});setShowEditUnit(true);}},"＋ 新增單位")
+        ),
+        (()=>{
+          // 計算後台有但尚未匯入的單位
+          const existingNames=unitProfiles.map(p=>p.name);
+          const notImported=(cfg?.recruitUnits||[]).filter(n=>!existingNames.includes(n));
+          if(!notImported.length)return null;
+          return e("div",{style:{background:"#f59e0b15",border:"1px solid #f59e0b44",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}},
+            e("div",{style:{flex:1,fontSize:12,color:"#f59e0b"}},"後台有 "+notImported.length+" 個單位尚未匯入："+notImported.join("、")),
+            e("button",{style:{...S.btn("primary","sm"),flexShrink:0},onClick:async()=>{
+              const newOnes=notImported.map(n=>({id:uid(),name:n,recruiters:[]}));
+              await saveUnitProfiles([...unitProfiles,...newOnes]);
+              toast_("已匯入 "+notImported.length+" 個單位 ✓");
+            }},"一鍵匯入")
+          );
+        })()
+      ),
+      unitProfiles.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
+        e("div",{style:{fontSize:36,marginBottom:12}},"🏢"),
+        e("div",{style:{fontSize:14}},"尚無協訓單位，點上方新增")
+      ),
+      ...unitProfiles.map(unit=>e("div",{key:unit.id,style:{...S.card,marginBottom:10}},
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}},
+          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},unit.name),
+          e("div",{style:{display:"flex",gap:6}},
+            e("button",{style:{...S.btn("ghost","sm")},onClick:()=>{setEditUnitData({...unit});setShowEditUnit(true);}},"✏️ 編輯"),
+            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:async()=>{
+              if(!window.confirm("確定刪除「"+unit.name+"」？"))return;
+              const profiles=unitProfiles.filter(u=>u.id!==unit.id);
+              await saveUnitProfiles(profiles);
+              toast_("已刪除");
+            }},"🗑️")
+          )
+        ),
+        // 招募員列表
+        e("div",{style:{marginBottom:8}},
+          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
+            e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt3)"}},"招募員（"+( unit.recruiters?.length||0)+"人）"),
+            e("button",{style:{...S.btn("primary","sm")},onClick:()=>{
+              setEditRecruiterData({id:uid(),rank:"",name:"",contact:"",_new:true});
+              setEditRecruiterUnitId(unit.id);
+              setShowEditRecruiter(true);
+            }},"＋ 新增招募員")
+          ),
+          (unit.recruiters||[]).length===0&&e("div",{style:{fontSize:13,color:"var(--txt3)",padding:"8px 0"}},"尚無招募員"),
+          ...(unit.recruiters||[]).map(r=>e("div",{key:r.id,style:{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+            e("div",{style:{flex:1,minWidth:0}},
+              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},r.rank?" "+r.rank+" "+r.name:r.name),
+              r.contact&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},"📱 "+r.contact)
+            ),
+            e("button",{style:{...S.btn("ghost","sm"),padding:"3px 8px"},onClick:()=>{
+              setEditRecruiterData({...r});
+              setEditRecruiterUnitId(unit.id);
+              setShowEditRecruiter(true);
+            }},"✏️"),
+            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"3px 8px"},onClick:async()=>{
+              const updated=unitProfiles.map(u=>u.id===unit.id?{...u,recruiters:(u.recruiters||[]).filter(x=>x.id!==r.id)}:u);
+              await saveUnitProfiles(updated);
+              toast_("已刪除");
+            }},"✕")
+          ))
+        )
+      )),
+      e("div",{style:{height:40}})
+    ),
+    // 新增/編輯單位 Modal
+    showEditUnit&&editUnitData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditUnit(false)},
+      e("div",{style:{...S.mBox,maxHeight:"50vh"}},
+        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editUnitData._new?"新增協訓單位":"編輯單位名稱"),
+        e("div",{style:{marginBottom:20}},
+          e("label",{style:S.lbl},"單位名稱"),
+          e("input",{style:S.inp,placeholder:"例：特訓中心、302旅2營…",value:editUnitData.name||"",autoFocus:true,
+            onChange:ev=>setEditUnitData(p=>({...p,name:ev.target.value})),
+            onKeyDown:ev=>ev.key==="Enter"&&document.getElementById("saveUnitBtn")?.click()
+          })
+        ),
+        e("div",{style:{display:"flex",gap:10}},
+          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditUnit(false)},"取消"),
+          e("button",{id:"saveUnitBtn",style:{...S.btn("primary"),flex:1},onClick:async()=>{
+            if(!editUnitData.name.trim())return;
+            let profiles;
+            if(editUnitData._new){
+              profiles=[...unitProfiles,{id:editUnitData.id,name:editUnitData.name.trim(),recruiters:[]}];
+            } else {
+              profiles=unitProfiles.map(u=>u.id===editUnitData.id?{...u,name:editUnitData.name.trim()}:u);
+            }
+            await saveUnitProfiles(profiles);
+            setShowEditUnit(false);
+            toast_("已儲存 ✓");
+          }},"儲存")
+        )
+      )
+    ),
+    // 新增/編輯招募員 Modal
+    showEditRecruiter&&editRecruiterData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditRecruiter(false)},
+      e("div",{style:{...S.mBox,maxHeight:"60vh"}},
+        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editRecruiterData._new?"新增招募員":"編輯招募員"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 12px",marginBottom:16}},
+          e("div",null,
+            e("label",{style:S.lbl},"職稱／階級"),
+            e("input",{style:S.inp,placeholder:"例：上士、中士…",value:editRecruiterData.rank||"",onChange:ev=>setEditRecruiterData(p=>({...p,rank:ev.target.value}))})
+          ),
+          e("div",null,
+            e("label",{style:S.lbl},"姓名 *"),
+            e("input",{style:S.inp,placeholder:"姓名",value:editRecruiterData.name||"",onChange:ev=>setEditRecruiterData(p=>({...p,name:ev.target.value}))})
+          ),
+          e("div",{style:{gridColumn:"span 2"}},
+            e("label",{style:S.lbl},"聯絡方式"),
+            e("input",{style:S.inp,placeholder:"電話 / LINE",value:editRecruiterData.contact||"",onChange:ev=>setEditRecruiterData(p=>({...p,contact:ev.target.value}))})
+          )
+        ),
+        e("div",{style:{display:"flex",gap:10}},
+          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditRecruiter(false)},"取消"),
+          e("button",{style:{...S.btn("primary"),flex:1},onClick:async()=>{
+            if(!editRecruiterData.name.trim())return;
+            const r={...editRecruiterData,_new:undefined,name:editRecruiterData.name.trim()};
+            const profiles=unitProfiles.map(u=>{
+              if(u.id!==editRecruiterUnitId)return u;
+              const recruiters=editRecruiterData._new
+                ?[...(u.recruiters||[]),r]
+                :(u.recruiters||[]).map(x=>x.id===r.id?r:x);
+              return {...u,recruiters};
+            });
+            await saveUnitProfiles(profiles);
+            setShowEditRecruiter(false);
+            toast_("已儲存 ✓");
+          }},"儲存")
+        )
+      )
     )
   );
 
@@ -1326,8 +1507,24 @@ function App(){
                   ].filter(Boolean);
                   return info.length>0&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2,lineHeight:1.5}},info.join(" · "));
                 })(),
-                t.holdUnit&&e("div",{style:{marginTop:4,display:"inline-flex",alignItems:"center",gap:5,background:"#f59e0b15",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 8px"}},
-                  e("span",{style:{fontSize:10,fontWeight:800,color:"#f59e0b"}},"🔒 "+t.holdUnit)
+                e("div",{style:{marginTop:4,display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}},
+                  t.holdUnit&&e("div",{style:{display:"inline-flex",alignItems:"center",gap:5,background:"#f59e0b15",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 8px"}},
+                    e("span",{style:{fontSize:10,fontWeight:800,color:"#f59e0b"}},"🔒 "+t.holdUnit)
+                  ),
+                  (()=>{
+                    const logs=t.interviewLogs||[];
+                    const last=logs[logs.length-1];
+                    // 優先用 date，沒有再用 createdAt
+                    const dateStr=last?.date||last?.createdAt;
+                    if(!dateStr)return null;
+                    // 解析日期（支援 YYYY-MM-DD 和 zh-TW 格式）
+                    const parsed=new Date(dateStr.replace(/[年月]/g,"-").replace(/日/,"").replace(/\//g,"-"));
+                    const diffDays=isNaN(parsed)?null:Math.floor((Date.now()-parsed)/(1000*60*60*24));
+                    const label=diffDays===null?"有紀錄":diffDays<=0?"今天":diffDays===1?"昨天":diffDays+"天前";
+                    return e("div",{style:{display:"inline-flex",alignItems:"center",gap:3,background:"var(--bg3)",borderRadius:6,padding:"2px 7px"}},
+                      e("span",{style:{fontSize:10,color:"var(--txt3)"}},"🕐 上次約談 "+label)
+                    );
+                  })()
                 )
               ),
               (()=>{
@@ -1358,57 +1555,96 @@ function App(){
               ))
             )
           ),
-          // 月曆視覺化
+          // 月曆視覺化（橫向滑動，只顯示今天及之後的月份）
           (()=>{
-            const events=sched.filter(s=>s.date).map(s=>({...s})).sort((a,b)=>a.date.localeCompare(b.date));
-            if(!events.length)return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"20px 0",fontSize:13}},"尚無設定日期，請在上方填入期程");
-            // 找出年月範圍
-            const dates=events.map(s=>new Date(s.date));
-            const minD=new Date(Math.min(...dates));
-            const maxD=new Date(Math.max(...dates));
-            const months=[];
-            let cur=new Date(minD.getFullYear(),minD.getMonth(),1);
-            const end=new Date(maxD.getFullYear(),maxD.getMonth(),1);
-            while(cur<=end){months.push(new Date(cur));cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
+            const todayStr2=new Date().toISOString().slice(0,10);
+            const todayD=new Date(todayStr2);
+            const allEvents=sched.filter(s=>s.date).map(s=>({...s})).sort((a,b)=>a.date.localeCompare(b.date));
+            if(!allEvents.length)return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"20px 0",fontSize:13}},"尚無設定日期，請在上方填入期程");
             const eventColors=["#f59e0b","#3b82f6","#22c55e","#ef4444","#a855f7","#f97316","#10b981","#ec4899","#06b6d4","#84cc16","#eab308"];
             const eventMap={};
-            events.forEach((ev,i)=>{eventMap[ev.date]={...ev,color:eventColors[i%eventColors.length]};});
+            allEvents.forEach((ev,i)=>{eventMap[ev.date]={...ev,color:eventColors[i%eventColors.length]};});
+            // 只顯示含今天或之後有活動的月份，且包含今天當月
+            const todayMonthKey=todayD.getFullYear()+"-"+todayD.getMonth();
+            const monthSet=new Set();
+            monthSet.add(todayMonthKey);
+            allEvents.forEach(ev=>{
+              const d=new Date(ev.date);
+              if(d>=new Date(todayD.getFullYear(),todayD.getMonth(),1)){
+                monthSet.add(d.getFullYear()+"-"+d.getMonth());
+              }
+            });
+            const months=[...monthSet].sort().map(k=>{const [y,m]=k.split("-");return new Date(+y,+m,1);});
+            // 未來活動清單（今天含在內）
+            const futureEvents=allEvents.filter(ev=>ev.date>=todayStr2);
             return e("div",null,
-              ...months.map(m=>{
-                const yr=m.getFullYear(),mo=m.getMonth();
-                const firstDay=new Date(yr,mo,1).getDay();
-                const daysInMonth=new Date(yr,mo+1,0).getDate();
-                const todayStr2=new Date().toISOString().slice(0,10);
-                return e("div",{key:yr+"-"+mo,style:{...S.card,marginBottom:10}},
-                  e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:10,textAlign:"center"}},yr+"年"+(mo+1)+"月"),
-                  e("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:8}},
-                    ...["日","一","二","三","四","五","六"].map(d=>e("div",{key:d,style:{textAlign:"center",fontSize:11,color:"var(--txt3)",fontWeight:700,padding:"4px 0"}},d))
-                  ),
-                  e("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}},
-                    ...Array.from({length:firstDay},(_,i)=>e("div",{key:"e"+i})),
-                    ...Array.from({length:daysInMonth},(_,i)=>{
-                      const d=i+1;
-                      const dateStr=yr+"-"+String(mo+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
-                      const ev=eventMap[dateStr];
-                      const isToday=dateStr===todayStr2;
-                      return e("div",{key:d,style:{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"3px 1px",borderRadius:6,background:ev?ev.color+"22":isToday?"var(--bg3)":"transparent",border:isToday?"1px solid var(--border)":"1px solid transparent"}},
-                        e("div",{style:{fontSize:12,fontWeight:isToday||ev?800:400,color:ev?ev.color:isToday?"var(--txt)":"var(--txt2)"}},d),
-                        ev&&e("div",{style:{width:"6px",height:"6px",borderRadius:"50%",background:ev.color,marginTop:1,flexShrink:0}})
-                      );
-                    })
-                  ),
-                  // 當月事件列表
-                  e("div",{style:{marginTop:8,display:"flex",flexDirection:"column",gap:4}},
-                    ...events.filter(ev=>ev.date.startsWith(yr+"-"+String(mo+1).padStart(2,"0"))).map((ev,i)=>
-                      e("div",{key:i,style:{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:7,background:eventMap[ev.date]?.color+"15",border:"1px solid "+eventMap[ev.date]?.color+"33"}},
-                        e("div",{style:{width:8,height:8,borderRadius:"50%",background:eventMap[ev.date]?.color,flexShrink:0}}),
-                        e("div",{style:{fontSize:13,fontWeight:700,color:eventMap[ev.date]?.color,minWidth:50,flexShrink:0}},ev.date.slice(5).replace("-","/")),
-                        e("div",{style:{fontSize:13,color:"var(--txt)",fontWeight:500}},ev.label)
-                      )
+              // 橫向滑動月曆
+              e("div",{className:"hs",style:{display:"flex",gap:12,overflowX:"auto",paddingBottom:8,marginBottom:12}},
+                ...months.map(m=>{
+                  const yr=m.getFullYear(),mo=m.getMonth();
+                  const firstDay=new Date(yr,mo,1).getDay();
+                  const daysInMonth=new Date(yr,mo+1,0).getDate();
+                  const moKey=yr+"-"+String(mo+1).padStart(2,"0");
+                  return e("div",{key:yr+"-"+mo,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:"12px",flexShrink:0,width:"calc(100vw - 64px)",maxWidth:360}},
+                    e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:8,textAlign:"center"}},yr+"年"+(mo+1)+"月"),
+                    e("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:4}},
+                      ...["日","一","二","三","四","五","六"].map(d=>e("div",{key:d,style:{textAlign:"center",fontSize:10,color:"var(--txt3)",fontWeight:700,padding:"3px 0"}},d))
+                    ),
+                    e("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1}},
+                      ...Array.from({length:firstDay},(_,i)=>e("div",{key:"e"+i})),
+                      ...Array.from({length:daysInMonth},(_,i)=>{
+                        const d=i+1;
+                        const dateStr=moKey+"-"+String(d).padStart(2,"0");
+                        const ev=eventMap[dateStr];
+                        const isToday=dateStr===todayStr2;
+                        const isPast=dateStr<todayStr2;
+                        const bg=isToday&&!ev?"linear-gradient(135deg,#f59e0b,#ef4444)":ev?ev.color+"28":"transparent";
+                        const col=isToday&&!ev?"#fff":ev?ev.color:isPast?"var(--txt3)":"var(--txt2)";
+                        return e("div",{key:d,style:{aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:isToday?50:4,background:bg,border:ev&&!isToday?"1px solid "+ev.color+"55":"none",boxShadow:isToday?"0 2px 8px rgba(245,158,11,0.4)":"none",opacity:isPast&&!ev&&!isToday?0.35:1}},
+                          e("div",{style:{fontSize:11,fontWeight:isToday||ev?800:400,color:col,lineHeight:1}},d),
+                          ev&&e("div",{style:{width:"4px",height:"4px",borderRadius:"50%",background:isToday?"rgba(255,255,255,0.9)":ev.color,marginTop:1}})
+                        );
+                      })
+                    ),
+                    // 當月事件小列表
+                    allEvents.filter(ev=>ev.date.startsWith(moKey)).length>0&&e("div",{style:{marginTop:8,borderTop:"1px solid var(--border2)",paddingTop:6,display:"flex",flexDirection:"column",gap:3}},
+                      ...allEvents.filter(ev=>ev.date.startsWith(moKey)).map((ev,i)=>{
+                        const isPastEv=ev.date<todayStr2;
+                        return e("div",{key:i,style:{display:"flex",alignItems:"center",gap:6,opacity:isPastEv?0.45:1}},
+                          e("div",{style:{width:6,height:6,borderRadius:"50%",background:eventMap[ev.date]?.color,flexShrink:0}}),
+                          e("span",{style:{fontSize:11,fontWeight:700,color:eventMap[ev.date]?.color,minWidth:34}},ev.date.slice(5).replace("-","/")),
+                          e("span",{style:{fontSize:11,color:"var(--txt)",fontWeight:isPastEv?400:600}},ev.label),
+                          isPastEv&&e("span",{style:{fontSize:10,color:"var(--txt3)"}},"已過")
+                        );
+                      })
                     )
-                  )
-                );
-              })
+                  );
+                })
+              ),
+              // 未來活動清單
+              futureEvents.length>0&&e("div",{style:{...S.card,marginBottom:0}},
+                e("div",{style:{fontSize:13,fontWeight:800,color:"#f59e0b",marginBottom:10}},"📅 即將到來的活動"),
+                e("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+                  ...futureEvents.map((ev,i)=>{
+                    const diffDays=Math.floor((new Date(ev.date)-todayD)/(1000*60*60*24));
+                    const when=diffDays===0?"今天":diffDays===1?"明天":diffDays+"天後";
+                    const c=eventMap[ev.date]?.color||"#f59e0b";
+                    return e("div",{key:i,style:{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",borderRadius:8,background:c+"12",border:"1px solid "+c+"33"}},
+                      e("div",{style:{width:36,height:36,borderRadius:8,background:c+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
+                        e("div",{style:{textAlign:"center"}},
+                          e("div",{style:{fontSize:11,fontWeight:800,color:c,lineHeight:1}},ev.date.slice(8)),
+                          e("div",{style:{fontSize:9,color:c,lineHeight:1,marginTop:1}},ev.date.slice(5,7)+"月")
+                        )
+                      ),
+                      e("div",{style:{flex:1,minWidth:0}},
+                        e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},ev.label),
+                        e("div",{style:{fontSize:11,color:c,fontWeight:700,marginTop:2}},when)
+                      )
+                    );
+                  })
+                )
+              ),
+              futureEvents.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"12px 0",fontSize:13}},"✅ 所有活動已過期")
             );
           })(),
           e("div",{style:{height:40}})
@@ -1867,8 +2103,32 @@ function App(){
                         }},"＋ 新增")
                       )
                     ),
-                    // 招募員 + 聯絡方式（各佔一行，手機友善）
-                    e("div",null,e("label",{style:S.lbl},"招募員級職姓名"),e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})),
+                    // 招募員：依選取的約談單位過濾，有就顯示下拉
+                    e("div",null,
+                      e("label",{style:S.lbl},"招募員級職姓名"),
+                      (()=>{
+                        const unitProfile=(cfg?.recruitUnitProfiles||[]).find(u=>u.name===newItvw.unit);
+                        const recruiters=unitProfile?.recruiters||[];
+                        if(recruiters.length>0){
+                          return e(React.Fragment,null,
+                            e("select",{style:{...S.sel,marginBottom:6},value:newItvw.interviewer,
+                              onChange:ev=>{
+                                const r=recruiters.find(x=>(x.rank?" "+x.rank+" "+x.name:x.name)===ev.target.value);
+                                setNewItvw(p=>({...p,interviewer:ev.target.value,contact:r?.contact||p.contact}));
+                              }
+                            },
+                              e("option",{value:""},"— 選擇招募員 —"),
+                              ...recruiters.map(r=>{
+                                const label=r.rank?" "+r.rank+" "+r.name:r.name;
+                                return e("option",{key:r.id,value:label},label+(r.contact?" （"+r.contact+"）":""));
+                              })
+                            ),
+                            e("input",{style:S.inp,placeholder:"或手動輸入…",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})
+                          );
+                        }
+                        return e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))});
+                      })()
+                    ),
                     e("div",null,e("label",{style:S.lbl},"聯絡方式"),e("input",{style:S.inp,placeholder:"電話 / LINE",value:newItvw.contact,onChange:ev=>setNewItvw(p=>({...p,contact:ev.target.value}))})),
                     // 訪談日期
                     e("div",null,
