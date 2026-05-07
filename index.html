@@ -673,33 +673,94 @@ function App(){
   }
 
   // ── Custom Fields Editor (admin) ─────────────────────────────────────────────
+  // 固定欄位定義（不可移動/刪除，只供預覽排版參考）
+  const FIXED_FIELDS=[
+    {id:"_seat",label:"座號",type:"number",width:"half",fixed:true},
+    {id:"_name",label:"姓名",type:"text",width:"half",fixed:true},
+    {id:"_education",label:"畢業學歷",type:"select",width:"half",fixed:true},
+    {id:"_school",label:"學校",type:"text",width:"half",fixed:true},
+    {id:"_department",label:"科系",type:"text",width:"half",fixed:true},
+    {id:"_city",label:"居住城市",type:"select",width:"half",fixed:true},
+    {id:"_district",label:"區/鄉鎮市",type:"select",width:"half",fixed:true},
+    {id:"_workExp",label:"工作經驗",type:"select",width:"half",fixed:true},
+  ];
+  const TYPE_META={
+    text:{icon:"📝",label:"文字"},
+    number:{icon:"🔢",label:"數字"},
+    date:{icon:"📅",label:"日期"},
+    select:{icon:"📋",label:"下拉選擇"},
+    radio:{icon:"🔘",label:"單選"},
+    checkbox:{icon:"☑️",label:"多選"},
+    textarea:{icon:"📄",label:"長文字"},
+    phone:{icon:"📞",label:"電話"},
+    email:{icon:"📧",label:"Email"},
+    url:{icon:"🔗",label:"網址"},
+  };
+  function cfPreviewField(f,isFixed){
+    const meta=TYPE_META[f.type]||{icon:"📝",label:f.type};
+    return e("div",{
+      style:{
+        background:isFixed?"var(--bg3)":"var(--inp-bg)",
+        border:"1px solid "+(isFixed?"var(--border2)":"#f59e0b44"),
+        borderRadius:8,padding:"8px 10px",
+        gridColumn:f.width==="full"?"span 2":"auto",
+        opacity:isFixed?0.6:1,
+      }
+    },
+      e("div",{style:{fontSize:11,color:isFixed?"var(--txt3)":"#f59e0b",fontWeight:700,marginBottom:3}},
+        isFixed?"🔒 "+f.label:meta.icon+" "+f.label
+      ),
+      e("div",{style:{fontSize:12,color:"var(--txt3)"}},isFixed?"固定欄位":meta.label+(f.required?" · 必填":"")+(f.placeholder?" · "+f.placeholder:""))
+    );
+  }
   function customFieldsEditor(){
     const items=af.customFields||[];
-    const typeLabel={text:"文字",date:"日期",select:"下拉選擇"};
-    const widthLabel={half:"半行（並排）",full:"整行"};
+    const allFields=[...FIXED_FIELDS,...items];
+    // 計算預覽格線（每兩個half合一行）
     return e("div",{style:{...S.card,marginBottom:10}},
-      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
         e("div",{style:S.slbl},"自訂基本資料欄位"),
         e("button",{style:S.btn("primary","sm"),onClick:()=>{
-          setEditCFItem({id:uid(),label:"",type:"text",options:[],width:"half",_new:true});
+          setEditCFItem({id:uid(),label:"",type:"text",options:[],width:"half",required:false,placeholder:"",_new:true});
           setCfOptionInput("");setShowEditCF(true);
         }},"＋ 新增欄位")
       ),
-      items.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:13,marginBottom:8}},"（尚無自訂欄位）"),
-      ...items.map((f,i)=>e("div",{key:f.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:8}},
-        e("div",{style:{display:"flex",flexDirection:"column",gap:2,flexShrink:0}},
-          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===0?0.2:1},disabled:i===0,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,-1)}))},"▲"),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===items.length-1?0.2:1},disabled:i===items.length-1,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,1)}))},"▼")
-        ),
-        e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:8,padding:"8px 10px"}},
-          e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},f.label||"（未命名）"),
-          e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},typeLabel[f.type]||f.type," · ",widthLabel[f.width]||f.width,
-            f.type==="select"&&f.options?.length?(" · "+f.options.length+"個選項"):""
-          )
-        ),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditCFItem({...f});setCfOptionInput("");setShowEditCF(true);}},"✏️"),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,customFields:p.customFields.filter((_,j)=>j!==i)}))},"🗑️")
-      ))
+      // 版面預覽
+      e("div",{style:{marginBottom:14}},
+        e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:6,fontWeight:700}},"版面預覽"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
+          ...allFields.map(f=>cfPreviewField(f,!!f.fixed))
+        )
+      ),
+      // 固定欄位說明
+      e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:10,padding:"6px 10px",background:"var(--bg3)",borderRadius:7}},"🔒 灰色為系統固定欄位（座號、姓名等），橘色框為你新增的自訂欄位，可拖排順序"),
+      // 自訂欄位列表
+      items.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:13,marginBottom:8,textAlign:"center",padding:"12px 0"}},"尚無自訂欄位，點上方「＋ 新增欄位」"),
+      ...items.map((f,i)=>{
+        const meta=TYPE_META[f.type]||{icon:"📝",label:f.type};
+        return e("div",{key:f.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:6}},
+          e("div",{style:{display:"flex",flexDirection:"column",gap:2,flexShrink:0}},
+            e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===0?0.2:1},disabled:i===0,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,-1)}))},"▲"),
+            e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===items.length-1?0.2:1},disabled:i===items.length-1,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,1)}))},"▼")
+          ),
+          e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:8,padding:"8px 10px",border:"1px solid #f59e0b33"}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:6}},
+              e("span",{style:{fontSize:14}},meta.icon),
+              e("div",{style:{flex:1}},
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},f.label||"（未命名）"),
+                e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},
+                  meta.label,
+                  " · ",(f.width==="full"?"整行":"半行"),
+                  f.required?" · ✳️必填":"",
+                  f.type==="select"||f.type==="radio"||f.type==="checkbox"?(" · "+( f.options?.length||0)+"個選項"):""
+                )
+              )
+            )
+          ),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditCFItem({...f});setCfOptionInput("");setShowEditCF(true);}},"✏️"),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,customFields:p.customFields.filter((_,j)=>j!==i)}))},"🗑️")
+        );
+      })
     );
   }
 
@@ -926,20 +987,35 @@ function App(){
     showEditCF&&editCFItem&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditCF(false)},
       e("div",{style:S.mBox},
         e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editCFItem._new?"新增欄位":"編輯欄位"),
+        // 欄位名稱
         e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"欄位名稱"),
-          e("input",{style:S.inp,placeholder:"例：兵種志願、血型…",value:editCFItem.label||"",onChange:ev=>setEditCFItem(p=>({...p,label:ev.target.value}))})
+          e("label",{style:S.lbl},"欄位名稱 *"),
+          e("input",{style:S.inp,placeholder:"例：兵種志願、血型、緊急聯絡人…",value:editCFItem.label||"",onChange:ev=>setEditCFItem(p=>({...p,label:ev.target.value}))})
         ),
+        // 說明文字
+        e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"說明文字（選填）"),
+          e("input",{style:S.inp,placeholder:"顯示在欄位下方的補充說明",value:editCFItem.desc||"",onChange:ev=>setEditCFItem(p=>({...p,desc:ev.target.value}))})
+        ),
+        // 輸入類型
         e("div",{style:{marginBottom:12}},
           e("label",{style:S.lbl},"輸入類型"),
-          e("div",{style:{display:"flex",gap:8}},
-            ...[["text","📝 文字"],["date","📅 日期"],["select","📋 下拉"]].map(([v,lbl])=>e("button",{key:v,
-              style:{...S.btn(editCFItem.type===v?"primary":"ghost","sm"),flex:1},
-              onClick:()=>setEditCFItem(p=>({...p,type:v}))
-            },lbl))
+          e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
+            ...Object.entries({text:"📝 文字",number:"🔢 數字",date:"📅 日期",phone:"📞 電話",email:"📧 Email",url:"🔗 網址",select:"📋 下拉選擇",radio:"🔘 單選",checkbox:"☑️ 多選",textarea:"📄 長文字"}).map(([v,lbl])=>
+              e("button",{key:v,
+                style:{...S.btn(editCFItem.type===v?"primary":"ghost","sm"),justifyContent:"flex-start",fontSize:12},
+                onClick:()=>setEditCFItem(p=>({...p,type:v}))
+              },lbl)
+            )
           )
         ),
-        editCFItem.type==="select"&&e("div",{style:{marginBottom:12}},
+        // 文字/數字/電話/Email/URL：Placeholder
+        (["text","number","phone","email","url","textarea"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},
+          e("label",{style:S.lbl},"預設提示文字（Placeholder）"),
+          e("input",{style:S.inp,placeholder:"例：請輸入…",value:editCFItem.placeholder||"",onChange:ev=>setEditCFItem(p=>({...p,placeholder:ev.target.value}))})
+        ),
+        // 下拉/單選/多選：選項清單
+        (["select","radio","checkbox"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},
           e("label",{style:S.lbl},"選項清單"),
           ...(editCFItem.options||[]).map((opt,i)=>e("div",{key:i,style:{display:"flex",gap:6,marginBottom:6}},
             e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:7,padding:"7px 10px",fontSize:13,color:"var(--txt)"}},opt),
@@ -951,14 +1027,23 @@ function App(){
             e("button",{style:S.btn("primary","sm"),onClick:()=>{if(!cfOptionInput.trim())return;setEditCFItem(p=>({...p,options:[...(p.options||[]),cfOptionInput.trim()]}));setCfOptionInput("");}},"＋")
           )
         ),
-        e("div",{style:{marginBottom:20}},
+        // 版面寬度
+        e("div",{style:{marginBottom:12}},
           e("label",{style:S.lbl},"版面寬度"),
           e("div",{style:{display:"flex",gap:8}},
-            ...[["half","⬜⬜ 半行（可與下一欄並排）"],["full","⬜ 整行"]].map(([v,lbl])=>e("button",{key:v,
-              style:{...S.btn(editCFItem.width===v?"primary":"ghost","sm"),flex:1,textAlign:"left"},
+            ...[["half","⬜⬜ 半行"],["full","⬜ 整行"]].map(([v,lbl])=>e("button",{key:v,
+              style:{...S.btn(editCFItem.width===v?"primary":"ghost","sm"),flex:1},
               onClick:()=>setEditCFItem(p=>({...p,width:v}))
             },lbl))
           )
+        ),
+        // 必填
+        e("div",{style:{marginBottom:20,display:"flex",alignItems:"center",gap:10}},
+          e("label",{style:{...S.lbl,marginBottom:0}},"必填欄位"),
+          e("button",{
+            style:{...S.btn(editCFItem.required?"primary":"ghost","sm")},
+            onClick:()=>setEditCFItem(p=>({...p,required:!p.required}))
+          },editCFItem.required?"✅ 是":"○ 否")
         ),
         e("div",{style:{display:"flex",gap:10}},
           e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditCF(false)},"取消"),
@@ -1630,18 +1715,54 @@ function App(){
                 ),
                 basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作單位"),e("input",{style:S.inp,placeholder:"例：台積電",value:basicDraft.workPlace||"",onChange:ev=>setBasicDraft(p=>({...p,workPlace:ev.target.value}))})),
                 basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作年資（年）"),e("input",{style:S.inp,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))})),
-                // 自訂欄位編輯
-                ...(cfg?.customFields||[]).map(f=>e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
-                  e("label",{style:S.lbl},f.label),
-                  f.type==="date"
-                    ? e("input",{style:S.inp,type:"date",value:basicDraft.customData?.[f.id]||"",onChange:ev=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:ev.target.value}}))})
-                    : f.type==="select"
-                    ? e("select",{style:S.sel,value:basicDraft.customData?.[f.id]||"",onChange:ev=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:ev.target.value}}))},
-                        e("option",{value:""},"— 請選擇 —"),
-                        ...(f.options||[]).map(o=>e("option",{key:o,value:o},o))
-                      )
-                    : e("input",{style:S.inp,placeholder:"請輸入"+f.label,value:basicDraft.customData?.[f.id]||"",onChange:ev=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:ev.target.value}}))})
-                ))
+                // 自訂欄位編輯（支援全部類型）
+                ...(cfg?.customFields||[]).map(f=>{
+                  const val=basicDraft.customData?.[f.id];
+                  const setVal=v=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:v}}));
+                  let input;
+                  if(f.type==="date")
+                    input=e("input",{style:S.inp,type:"date",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="number")
+                    input=e("input",{style:S.inp,type:"number",placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="phone")
+                    input=e("input",{style:S.inp,type:"tel",placeholder:f.placeholder||"例：0912345678",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="email")
+                    input=e("input",{style:S.inp,type:"email",placeholder:f.placeholder||"例：abc@mail.com",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="url")
+                    input=e("input",{style:S.inp,type:"url",placeholder:f.placeholder||"https://",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="textarea")
+                    input=e("textarea",{style:{...S.inp,minHeight:72,lineHeight:1.6},placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="select")
+                    input=e("select",{style:S.sel,value:val||"",onChange:ev=>setVal(ev.target.value)},
+                      e("option",{value:""},"— 請選擇 —"),
+                      ...(f.options||[]).map(o=>e("option",{key:o,value:o},o))
+                    );
+                  else if(f.type==="radio")
+                    input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},
+                      ...(f.options||[]).map(o=>e("button",{key:o,
+                        style:{...S.btn(val===o?"primary":"ghost","sm"),fontSize:13},
+                        onClick:()=>setVal(val===o?"":o)
+                      },o))
+                    );
+                  else if(f.type==="checkbox")
+                    input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},
+                      ...(f.options||[]).map(o=>{
+                        const arr=(val||"").split(",").filter(Boolean);
+                        const checked=arr.includes(o);
+                        return e("button",{key:o,
+                          style:{...S.btn(checked?"primary":"ghost","sm"),fontSize:13},
+                          onClick:()=>{const a=checked?arr.filter(x=>x!==o):[...arr,o];setVal(a.join(","));}
+                        },(checked?"☑ ":"○ ")+o);
+                      })
+                    );
+                  else
+                    input=e("input",{style:S.inp,placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  return e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
+                    e("label",{style:S.lbl},f.label+(f.required?" *":"")),
+                    f.desc&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},f.desc),
+                    input
+                  );
+                })
               )
             : e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}},
                 ...[
@@ -1656,10 +1777,16 @@ function App(){
                   e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},val)
                 )),
                 // 自訂欄位唯讀顯示
-                ...(cfg?.customFields||[]).map(f=>e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},f.label),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},(tf.customData?.[f.id])||"—")
-                ))
+                ...(cfg?.customFields||[]).map(f=>{
+                  const val=tf.customData?.[f.id]||"";
+                  const display=f.type==="checkbox"
+                    ? (val?val.split(",").join("、"):"—")
+                    : (val||"—");
+                  return e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
+                    e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},f.label),
+                    e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500,whiteSpace:"pre-wrap"}},display)
+                  );
+                })
               )
         ),// end 基本資料 card
         e("div",{style:{height:16}})
