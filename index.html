@@ -322,35 +322,7 @@ function App(){
     document.addEventListener("visibilitychange",onVis);
     return()=>document.removeEventListener("visibilitychange",onVis);
   },[view]);
-  // Pull-to-refresh（從頂部下拉觸發重整，跳過輸入框）
-  useEffect(()=>{
-    let startY=0,pulling=false;
-    const ind=document.getElementById("ptr-indicator");
-    function ts(e){
-      if(window.scrollY>5)return;
-      const tag=e.target.tagName.toLowerCase();
-      if(tag==="input"||tag==="textarea"||tag==="select")return;
-      startY=e.touches[0].clientY;pulling=true;
-    }
-    function tm(e){
-      if(!pulling)return;
-      if(e.touches[0].clientY-startY>60&&ind)ind.classList.add("show");
-    }
-    function te(e){
-      if(!pulling)return;
-      pulling=false;
-      if(ind)ind.classList.remove("show");
-      if(e.changedTouches[0].clientY-startY>80)window.location.reload();
-    }
-    document.addEventListener("touchstart",ts,{passive:true});
-    document.addEventListener("touchmove",tm,{passive:true});
-    document.addEventListener("touchend",te,{passive:true});
-    return()=>{
-      document.removeEventListener("touchstart",ts);
-      document.removeEventListener("touchmove",tm);
-      document.removeEventListener("touchend",te);
-    };
-  },[]);
+
   function toast_(msg,type="ok"){setToast({msg,type});clearTimeout(toastRef.current);toastRef.current=setTimeout(()=>setToast(null),2500);}
 
   // ── Init ────────────────────────────────────────────────────────────────────
@@ -1651,7 +1623,7 @@ function App(){
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},tf.name||"（未填姓名）"),
           e("div",{style:{fontSize:11,color:"var(--txt3)"}},"#"+tf.seat)
         ),
-        dirty&&e("span",{style:{fontSize:12,color:"#f59e0b",fontWeight:700,flexShrink:0}},"● 未儲存")
+
       ),
 
       e("div",{style:{...S.sec,paddingTop:20}},
