@@ -35,6 +35,8 @@ select option{background:var(--bg2);color:var(--txt);}
 textarea{font-family:'Noto Sans TC',sans-serif;resize:vertical;}
 input,select{min-height:44px;}
 textarea{min-height:80px;}
+/* date placeholder text */
+input[type=date][data-ph]:not(:valid)::before{content:attr(data-ph);color:var(--txt3);pointer-events:none;}
 input[type=date],input[type=date]:focus{
   -webkit-appearance:none;appearance:none;
   width:100%!important;min-width:0!important;max-width:100%!important;
@@ -1101,7 +1103,7 @@ function App(){
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"報到日"),
-            e("input",{style:S.inp,type:"date",value:editBatchData._reportDate||"",onChange:ev=>setEditBatchData(p=>({...p,_reportDate:ev.target.value}))})
+            e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editBatchData._reportDate||"",onChange:ev=>setEditBatchData(p=>({...p,_reportDate:ev.target.value}))})
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"梯次密碼"),
@@ -1549,7 +1551,7 @@ function App(){
               ...sched.map((s,i)=>e("div",{key:s.key||i},
                 e("label",{style:S.lbl},s.label),
                 e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-                  e("input",{style:{...S.inp,flex:1},type:"date",value:s.date||"",onChange:ev=>{const ns=sched.map((x,j)=>j===i?{...x,date:ev.target.value}:x);patchBatch({schedule:ns});}}),
+                  e("input",{style:{...S.inp,flex:1},type:"date",placeholder:"YYYY-MM-DD",value:s.date||"",onChange:ev=>{const ns=sched.map((x,j)=>j===i?{...x,date:ev.target.value}:x);patchBatch({schedule:ns});}}),
                   s.date&&e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433",flexShrink:0},onClick:()=>{const ns=sched.map((x,j)=>j===i?{...x,date:""}:x);patchBatch({schedule:ns});}},"✕")
                 )
               ))
@@ -1702,11 +1704,11 @@ function App(){
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"起始日期"),
-              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",value:queryDateFrom||"",onChange:ev=>{setQueryDateFrom(ev.target.value);setQuerySubmitted(false);}})
+              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",placeholder:"YYYY-MM-DD",value:queryDateFrom||"",onChange:ev=>{setQueryDateFrom(ev.target.value);setQuerySubmitted(false);}})
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"結束日期"),
-              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",value:queryDateTo||"",onChange:ev=>{setQueryDateTo(ev.target.value);setQuerySubmitted(false);}})
+              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",placeholder:"YYYY-MM-DD",value:queryDateTo||"",onChange:ev=>{setQueryDateTo(ev.target.value);setQuerySubmitted(false);}})
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"時段"),
@@ -1884,13 +1886,13 @@ function App(){
                 )
               : e("button",{style:S.btn("ghost","sm"),onClick:()=>{setBasicDraft({name:tf.name,education:tf.education,dropoutSemester:tf.dropoutSemester,school:tf.school,department:tf.department,city:tf.city,district:tf.district,workExp:tf.workExp,workPlace:tf.workPlace,workYears:tf.workYears});setBasicEditing(true);}},"✏️ 編輯")
           ),
-          // 座號：永遠唯讀
-          e("div",{style:{marginBottom:12}},
-            e("label",{style:S.lbl},"座號"),
-            e("div",{style:{...S.inp,background:"var(--bg3)",color:"var(--txt3)",cursor:"not-allowed",display:"flex",alignItems:"center"}},"#"+tf.seat+" （不可修改）")
-          ),
+          // 座號放入 grid，佔半行
           basicEditing&&basicDraft
             ? e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}},
+                e("div",null,
+                  e("label",{style:S.lbl},"座號"),
+                  e("div",{style:{...S.inp,background:"var(--bg3)",color:"var(--txt3)",cursor:"not-allowed",display:"flex",alignItems:"center"}},"#"+tf.seat+" （不可修改）")
+                ),
                 e("div",null,e("label",{style:S.lbl},"姓名"),e("input",{style:S.inp,value:basicDraft.name||"",placeholder:"請輸入",onChange:ev=>setBasicDraft(p=>({...p,name:ev.target.value}))})),
                 e("div",null,e("label",{style:S.lbl},"畢業學歷"),
                   e("select",{style:S.sel,value:basicDraft.education||"",onChange:ev=>setBasicDraft(p=>({...p,education:ev.target.value,dropoutSemester:""}))},
@@ -1929,7 +1931,7 @@ function App(){
                   const setVal=v=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:v}}));
                   let input;
                   if(f.type==="date")
-                    input=e("input",{style:S.inp,type:"date",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    input=e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:val||"",onChange:ev=>setVal(ev.target.value)});
                   else if(f.type==="number")
                     input=e("input",{style:S.inp,type:"number",placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
                   else if(f.type==="phone")
@@ -1974,6 +1976,7 @@ function App(){
               )
             : e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}},
                 ...[
+                  ["座號","#"+tf.seat],
                   ["姓名",tf.name||"（未填）"],
                   ["學歷",tf.education||"—"],
                   ["學校",tf.school||"—"],
@@ -2011,7 +2014,8 @@ function App(){
               ),
               medDate&&expItem?.date&&e("span",{style:S.tag(medExpired?"#ef4444":"#22c55e")},medExpired?"⚠️ 已過期":"✅ 有效")
             ),
-            e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",display:"block"},type:"date",value:qa.medicalDate||"",onChange:ev=>uqa({medicalDate:ev.target.value})}),
+            e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",display:"block"},type:"date",placeholder:"YYYY-MM-DD",value:qa.medicalDate||"",onChange:ev=>uqa({medicalDate:ev.target.value})}),
+            e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:3}},"格式：年-月-日，例：2026-05-04"),
             qa.medicalDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>uqa({medicalDate:""})},"✕ 清除日期")
           ),
           ...qualItems.map(({id,label,desc})=>e("div",{key:id,style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
@@ -2133,7 +2137,7 @@ function App(){
                     // 訪談日期
                     e("div",null,
                       e("label",{style:S.lbl},"訪談日期"),
-                      e("input",{style:S.inp,type:"date",value:newItvw.date,onChange:ev=>setNewItvw(p=>({...p,date:ev.target.value}))})
+                      e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:newItvw.date,onChange:ev=>setNewItvw(p=>({...p,date:ev.target.value}))})
                     ),
                     // 時段
                     e("div",null,
@@ -2164,12 +2168,12 @@ function App(){
                     // 電訪/家訪日期（意願狀態下方，依選擇顯示）
                     (newItvw.statusId===4||newItvw.statusId===5)&&e("div",null,
                       e("label",{style:S.lbl},"📞 電訪日期"),
-                      e("input",{style:S.inp,type:"date",value:tf.phoneVisitDate||"",onChange:ev=>{setTf(p=>({...p,phoneVisitDate:ev.target.value}));setDirty(true);}}),
+                      e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:tf.phoneVisitDate||"",onChange:ev=>{setTf(p=>({...p,phoneVisitDate:ev.target.value}));setDirty(true);}}),
                       tf.phoneVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setTf(p=>({...p,phoneVisitDate:""}));setDirty(true);}},"✕ 清除電訪日期")
                     ),
                     newItvw.statusId===5&&e("div",null,
                       e("label",{style:S.lbl},"🏠 家訪日期"),
-                      e("input",{style:S.inp,type:"date",value:tf.homeVisitDate||"",onChange:ev=>{setTf(p=>({...p,homeVisitDate:ev.target.value}));setDirty(true);}}),
+                      e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:tf.homeVisitDate||"",onChange:ev=>{setTf(p=>({...p,homeVisitDate:ev.target.value}));setDirty(true);}}),
                       tf.homeVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setTf(p=>({...p,homeVisitDate:""}));setDirty(true);}},"✕ 清除家訪日期")
                     )
                   ),
@@ -2229,7 +2233,7 @@ function App(){
             // 訪談日期
             e("div",null,
               e("label",{style:S.lbl},"訪談日期"),
-              e("input",{style:S.inp,type:"date",value:editLogData.date||"",onChange:ev=>setEditLogData(p=>({...p,date:ev.target.value}))})
+              e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editLogData.date||"",onChange:ev=>setEditLogData(p=>({...p,date:ev.target.value}))})
             ),
             // 時段
             e("div",null,
@@ -2254,13 +2258,13 @@ function App(){
             // 電訪日期（中意願或高意願才顯示）
             (editLogData.statusId===4||editLogData.statusId===5)&&e("div",null,
               e("label",{style:S.lbl},"📞 電訪日期"),
-              e("input",{style:S.inp,type:"date",value:editLogData.phoneVisitDate||"",onChange:ev=>setEditLogData(p=>({...p,phoneVisitDate:ev.target.value}))}),
+              e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editLogData.phoneVisitDate||"",onChange:ev=>setEditLogData(p=>({...p,phoneVisitDate:ev.target.value}))}),
               editLogData.phoneVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setEditLogData(p=>({...p,phoneVisitDate:""}))},"✕ 清除電訪日期")
             ),
             // 家訪日期（高意願才顯示）
             editLogData.statusId===5&&e("div",null,
               e("label",{style:S.lbl},"🏠 家訪日期"),
-              e("input",{style:S.inp,type:"date",value:editLogData.homeVisitDate||"",onChange:ev=>setEditLogData(p=>({...p,homeVisitDate:ev.target.value}))}),
+              e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editLogData.homeVisitDate||"",onChange:ev=>setEditLogData(p=>({...p,homeVisitDate:ev.target.value}))}),
               editLogData.homeVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setEditLogData(p=>({...p,homeVisitDate:""}))},"✕ 清除家訪日期")
             ),
             // 約談內容
