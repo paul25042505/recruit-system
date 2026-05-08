@@ -301,6 +301,7 @@ function App(){
   const [editBatchData,setEditBatchData]=useState(null);
   // 協訓單位管理
   const [unitProfiles,setUnitProfiles]=useState([]);
+  const [unitSearch,setUnitSearch]=useState("");
   const [showEditUnit,setShowEditUnit]=useState(false);
   const [editUnitData,setEditUnitData]=useState(null);
   const [showEditRecruiter,setShowEditRecruiter]=useState(false);
@@ -1297,6 +1298,7 @@ function App(){
           e("div",{style:{fontSize:14,color:"var(--txt3)"}},"共 "+unitProfiles.length+" 個協訓單位，依筆畫排序"),
           e("button",{style:S.btn("primary","sm"),onClick:()=>{setEditUnitData({id:uid(),name:"",recruiters:[],_new:true});setShowEditUnit(true);}},"＋ 新增單位")
         ),
+        e("input",{style:{...S.inp,marginBottom:8},placeholder:"🔍 搜尋單位名稱或招募員姓名…",value:unitSearch,onChange:ev=>setUnitSearch(ev.target.value)}),
         (()=>{
           // 計算後台有但尚未匯入的單位
           const existingNames=unitProfiles.map(p=>p.name);
@@ -1316,7 +1318,13 @@ function App(){
         e("div",{style:{fontSize:36,marginBottom:12}},"🏢"),
         e("div",{style:{fontSize:14}},"尚無協訓單位，點上方新增")
       ),
-      ...unitProfiles.map(unit=>e("div",{key:unit.id,style:{...S.card,marginBottom:10}},
+      ...(unitSearch
+        ? unitProfiles.filter(u=>
+            u.name.includes(unitSearch)||
+            (u.recruiters||[]).some(r=>(r.rank||"").includes(unitSearch)||(r.name||"").includes(unitSearch))
+          )
+        : unitProfiles
+      ).map(unit=>e("div",{key:unit.id,style:{...S.card,marginBottom:10}},
         e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}},
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},unit.name),
           e("div",{style:{display:"flex",gap:6}},
@@ -1559,7 +1567,8 @@ function App(){
           ),
           // 月曆視覺化（橫向滑動，只顯示今天及之後的月份）
           (()=>{
-            const todayStr2=new Date().toISOString().slice(0,10);
+            const _td=new Date();
+            const todayStr2=_td.getFullYear()+"-"+String(_td.getMonth()+1).padStart(2,"0")+"-"+String(_td.getDate()).padStart(2,"0");
             const todayD=new Date(todayStr2);
             const allEvents=sched.filter(s=>s.date).map(s=>({...s})).sort((a,b)=>a.date.localeCompare(b.date));
             if(!allEvents.length)return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"20px 0",fontSize:13}},"尚無設定日期，請在上方填入期程");
@@ -1975,19 +1984,48 @@ function App(){
                 })
               )
             : e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}},
-                ...[
-                  ["座號","#"+tf.seat],
-                  ["姓名",tf.name||"（未填）"],
-                  ["學歷",tf.education||"—"],
-                  ["學校",tf.school||"—"],
-                  ["科系",tf.department||"—"],
-                  ["城市",(tf.city&&tf.district?tf.city+tf.district:tf.city||tf.district||"—")],
-                  ["工作",tf.workExp==="有"?(tf.workPlace||(tf.workYears?tf.workYears+"年":"有工作")):"無"],
-                ].map(([lbl,val])=>e("div",{key:lbl},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},lbl),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},val)
-                )),
-                // 自訂欄位唯讀顯示
+                // 固定欄位：完全對應編輯模式排版
+                e("div",{key:"seat"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"座號"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},"#"+tf.seat)
+                ),
+                e("div",{key:"name"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"姓名"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.name||"（未填）")
+                ),
+                e("div",{key:"edu"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"畢業學歷"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.education||"—")
+                ),
+                e("div",{key:"school"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},tf.education==="高中職肄業"?"肄業學期":"學校"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.dropoutSemester||tf.school||"—")
+                ),
+                e("div",{key:"dept"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"科系"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.department||"—")
+                ),
+                e("div",{key:"city"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"居住城市"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.city||"—")
+                ),
+                e("div",{key:"district"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"區 / 鄉鎮市"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.district||"—")
+                ),
+                e("div",{key:"workexp"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"工作經驗"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.workExp||"—")
+                ),
+                tf.workExp==="有"&&e("div",{key:"workplace"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"工作單位"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.workPlace||"—")
+                ),
+                tf.workExp==="有"&&e("div",{key:"workyears"},
+                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"工作年資"),
+                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.workYears?tf.workYears+"年":"—")
+                ),
+                // 自訂欄位唯讀顯示（照 width 設定排版）
                 ...(cfg?.customFields||[]).map(f=>{
                   const val=tf.customData?.[f.id]||"";
                   const display=f.type==="checkbox"
@@ -2111,7 +2149,7 @@ function App(){
                     e("div",null,
                       e("label",{style:S.lbl},"招募員級職姓名"),
                       (()=>{
-                        const unitProfile=(cfg?.recruitUnitProfiles||[]).find(u=>u.name===newItvw.unit);
+                        const unitProfile=(unitProfiles||[]).find(u=>u.name===newItvw.unit);
                         const recruiters=unitProfile?.recruiters||[];
                         if(recruiters.length>0){
                           return e(React.Fragment,null,
@@ -2161,7 +2199,7 @@ function App(){
                             background:newItvw.statusId===s.id?s.color+"28":"transparent",
                             color:newItvw.statusId===s.id?s.color:"var(--txt3)",
                             border:"2px solid "+(newItvw.statusId===s.id?s.color+"99":"var(--border)")},
-                          onClick:()=>{if(qa.result)setNewItvw(p=>({...p,statusId:s.id}));}
+                          onClick:()=>{if(qa.result)setNewItvw(p=>({...p,statusId:p.statusId===s.id?null:s.id}));}
                         },e("div",null,s.emoji+" "+s.label,newItvw.statusId===s.id&&s.hint&&e("div",{style:{fontSize:11,color:s.color,marginTop:3,fontWeight:400,lineHeight:1.3}},s.hint))))
                       )
                     ),
