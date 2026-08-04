@@ -1746,12 +1746,13 @@ function App(){
       e(Icon,{n:"chevR",s:16,c:danger?"#ef444466":"var(--txt3)"})
     );
   }
-  if(view==="more") return e("div",{style:S.app},
+  if(view==="more") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(WatermarkOverlay),e(Toast),
     e("div",{style:S.hdr},
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"更多"))
     ),
-    e("div",{style:{...S.sec,paddingTop:16},className:"has-bnav"},
+    e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav"},
+    e("div",{style:{...S.sec,paddingTop:16}},
       // 身分卡
       e("div",{style:{...S.card,marginBottom:16,borderTop:"3px solid #f59e0b"}},
         e("div",{style:{display:"flex",alignItems:"center",gap:14}},
@@ -1792,7 +1793,7 @@ function App(){
         e(MoreNavRow,{icon:"logout",label:"登出帳號",sub:userProfile?.googleEmail||"",onClick:signOutUser,danger:true})
       ),
       e("div",{style:{textAlign:"center",fontSize:11,color:"var(--txt3)",opacity:0.7,paddingBottom:8,letterSpacing:"0.05em"}},"v",APP_VERSION)
-    ),
+    )),
     e(BottomNav)
   );
 
@@ -2436,7 +2437,7 @@ function App(){
     )
   );
 
-  if(view==="home") return e("div",{style:S.app},
+  if(view==="home") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(WatermarkOverlay),e(Toast),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
@@ -2445,7 +2446,8 @@ function App(){
         e("div",{style:{fontSize:10,color:"var(--txt3)"}},batches.length+" 個梯次")
       ),
     ),
-    e("div",{style:S.sec,className:"has-bnav"},
+    e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav"},
+    e("div",{style:{...S.sec,paddingTop:16}},
       batches.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"60px 0"}},e(Icon,{n:"list",s:40,c:"var(--txt3)"}),e("div",{style:{fontSize:14,marginTop:10}},"尚無梯次")),
       ...batches.map(b=>{
         const st=bStats(b),hc=b.company&&b.company!=="（無）";
@@ -2492,11 +2494,11 @@ function App(){
           )
         );
       }),
-      e("div",{style:{height:88}}) // 留空間給 FAB + 底部導覽
-    ),
+      e("div",{style:{height:24}})
+    )),
     // 浮動新增按鈕（FAB）
     e("button",{
-      style:{position:"fixed",right:20,bottom:76,width:54,height:54,borderRadius:"50%",
+      style:{position:"fixed",right:20,bottom:"calc(80px + max(env(safe-area-inset-bottom,0px),16px))",width:54,height:54,borderRadius:"50%",
         background:"linear-gradient(135deg,#f59e0b,#ef4444)",border:"none",
         boxShadow:"0 4px 20px rgba(245,158,11,0.45)",cursor:"pointer",
         display:"flex",alignItems:"center",justifyContent:"center",zIndex:50},
