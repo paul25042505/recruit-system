@@ -74,7 +74,6 @@ button{touch-action:manipulation;cursor:pointer;}
 /* 下拉重新整理動畫 */
 @keyframes ptr-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 /* V2: 優先級 */
-.prio-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 /* V2: 追蹤日期標記 */
 .badge-overdue{display:inline-flex;align-items:center;gap:3px;background:#ef444420;border:1px solid #ef444444;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:#ef4444;}
 .badge-today{display:inline-flex;align-items:center;gap:3px;background:#f59e0b20;border:1px solid #f59e0b44;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:#f59e0b;}
@@ -859,7 +858,7 @@ function App(){
     setSaving(true);
     try{
       const id=uid(),count=Math.max(0,parseInt(nb.traineeCount)||0);
-      const trainees=Array.from({length:count},(_,i)=>({id:uid(),seat:i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},priority:3,nextFollowUpDate:""}));
+      const trainees=Array.from({length:count},(_,i)=>({id:uid(),seat:i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},nextFollowUpDate:""}));
       const batch={id,...nb,traineeCount:count,createdAt:todayStr(),schedule:DEF_SCHED.map(s=>({...s})),trainees};
       await fsSet("batches/"+id,batch);
       setBatches(p=>[batch,...p]);
@@ -879,7 +878,7 @@ function App(){
     const name=newTName.trim();
     if(!name){toast_("請輸入姓名","err");return;}
     const max=Math.max(0,...(curBatch.trainees||[]).map(t=>t.seat||0));
-    const t={id:uid(),seat:max+1,name,education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},priority:3,nextFollowUpDate:""};
+    const t={id:uid(),seat:max+1,name,education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},nextFollowUpDate:""};
     try{await patchBatch({trainees:[...(curBatch.trainees||[]),t]});setNewTName("");setShowAT(false);toast_("已新增 ✓");}
     catch(err){toast_(err.message,"err");}
   }
@@ -890,7 +889,7 @@ function App(){
     let trainees=[...cur];
     if(n>cur.length){
       const max=Math.max(0,...cur.map(t=>t.seat||0));
-      for(let i=0;i<n-cur.length;i++) trainees.push({id:uid(),seat:max+i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},priority:3,nextFollowUpDate:""});
+      for(let i=0;i<n-cur.length;i++) trainees.push({id:uid(),seat:max+i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},nextFollowUpDate:""});
     }else{trainees=cur.slice(0,n);}
     setSaving(true);
     try{await patchBatch({trainees,traineeCount:n});setShowEC(false);toast_("已更新 ✓");}
@@ -1015,13 +1014,13 @@ function App(){
       const ms=fst==="all"||(fst==="null"&&!latestStId)||String(latestStId)===fst;
       return mq&&ms;
     });
-    // V2: 排序 — 逾期追蹤 > 今日追蹤 > 高優先 > 中優先 > 一般優先 > seat
+    // 排序 — 逾期追蹤 > 今日追蹤 > seat
     return filtered.sort((a,b)=>{
       const score=t=>{
         const fu=t.nextFollowUpDate;
-        if(fu&&fu<tdISO)return 0;     // 逾期
-        if(fu===tdISO)return 1;        // 今日
-        return (t.priority||3)+1;      // 2→優先1, 3→優先2, 4→一般3
+        if(fu&&fu<tdISO)return 0;
+        if(fu===tdISO)return 1;
+        return 2;
       };
       const d=score(a)-score(b);
       if(d!==0)return d;
@@ -2638,13 +2637,10 @@ function App(){
           trainees.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:40}},"無符合條件的訓員"),
           scrollToSeat!==null&&e(ScrollAnchor,{seat:scrollToSeat,onDone:()=>setScrollToSeat(null)}),
           ...trainees.map(t=>{
-            const prioColors={1:"#ef4444",2:"#f59e0b",3:"#22c55e"};
-            const prioColor=prioColors[t.priority||3]||"#22c55e";
             const tdISO=isoToday();
             const fu=t.nextFollowUpDate;
             const fuBadge=fu?(fu<tdISO?e("span",{className:"badge-overdue"},"⚠ 逾期 "+fu):fu===tdISO?e("span",{className:"badge-today"},"🔔 今日追蹤"):e("span",{className:"badge-future"},"📅 "+fu)):null;
             return e("div",{key:t.id,id:"trainee-seat-"+t.seat,style:{...S.card,cursor:"pointer",padding:"10px 12px",display:"flex",alignItems:"center",gap:10},onClick:()=>openT(t)},
-              e("div",{className:"prio-dot",style:{background:prioColor,alignSelf:"flex-start",marginTop:6}}),
               e("div",{style:{width:34,height:34,background:"var(--bg3)",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--txt3)",flexShrink:0}},t.seat||"?"),
               e("div",{style:{flex:1,minWidth:0}},
                 e("div",{style:{fontSize:14,fontWeight:700,color:t.name?"var(--txt)":"var(--txt3)"}},t.name||"（未填姓名）"),
@@ -3008,7 +3004,7 @@ function App(){
       e("div",{style:{...S.sec,paddingTop:20}},
         // Tab Bar
         e("div",{className:"hs",style:{display:"flex",gap:0,marginBottom:14,background:"var(--inp-bg)",borderRadius:10,padding:3,overflowX:"auto"}},
-          ...[["basic","📋 基本資料"],["qual","✅ 資格審查"],["will","💬 意願訪談"],["timeline","📅 時間軸"],["priority","⭐ 優先級"]].map(([tab,lbl])=>
+          ...[["basic","📋 基本資料"],["qual","✅ 資格審查"],["will","💬 意願訪談"],["timeline","📅 時間軸"],["priority","📅 追蹤"]].map(([tab,lbl])=>
             e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:12,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:traineeTab===tab?"var(--bg3)":"transparent",color:traineeTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>setTraineeTab(tab)},lbl)
           )
         ),
@@ -3413,25 +3409,8 @@ function App(){
         e("div",{style:{height:24}})
         ),// end timeline tab
 
-        // ── 優先級 + 下次追蹤 tab ─────────────────────────────────────────────
+        // ── 下次追蹤 tab ──────────────────────────────────────────────────────
         traineeTab==="priority"&&e(React.Fragment,null,
-        e("div",{style:{...S.card,marginBottom:10}},
-          e("div",{style:S.slbl},"▍ 案件優先級"),
-          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:4}},
-            ...[
-              {p:1,label:"🔴 高優先",color:"#ef4444"},
-              {p:2,label:"🟡 中",color:"#f59e0b"},
-              {p:3,label:"🟢 一般",color:"#22c55e"},
-            ].map(({p,label,color})=>e("button",{key:p,
-              style:{padding:"12px 6px",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",
-                background:(tf.priority||3)===p?color+"22":"transparent",
-                color:(tf.priority||3)===p?color:"var(--txt3)",
-                border:"2px solid "+((tf.priority||3)===p?color+"88":"var(--border)")},
-              onClick:()=>{setTf(p2=>({...p2,priority:p}));setDirty(true);}
-            },label))
-          ),
-          e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:4}},"優先級影響訓員列表排序順序")
-        ),
         e("div",{style:{...S.card,marginBottom:10}},
           e("div",{style:S.slbl},"▍ 下次追蹤日期"),
           e("div",{style:{marginBottom:8}},
