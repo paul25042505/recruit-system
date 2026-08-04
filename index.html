@@ -92,7 +92,7 @@ import {
   doc,getDoc,setDoc,deleteDoc,collection,getDocs
 } from"firebase/firestore";
 import {
-  getAuth,GoogleAuthProvider,signInWithRedirect,getRedirectResult,onAuthStateChanged,signOut as fbSignOut
+  getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut as fbSignOut
 } from"firebase/auth";
 
 // ═══ FIREBASE SDK + 離線快取 ═════════════════════════════════════════════════
@@ -416,14 +416,6 @@ function App(){
     },5000);
     return()=>clearTimeout(t);
   },[]);
-  // 處理 iOS Safari redirect 登入後的錯誤回調（獨立 effect，不干擾 auth 狀態）
-  useEffect(()=>{
-    getRedirectResult(_auth).catch(err=>{
-      if(err?.code&&err.code!=="auth/no-auth-event"&&err.code!=="auth/null-user"){
-        toast_(err.message||"登入失敗","err");
-      }
-    });
-  },[]);
   // 主要 auth 狀態監聽
   useEffect(()=>{
     return onAuthStateChanged(_auth,async user=>{
@@ -443,8 +435,12 @@ function App(){
 
   // ── Auth helpers ────────────────────────────────────────────────────────────
   async function signInGoogle(){
-    try{await signInWithRedirect(_auth,_gProvider);}
-    catch(err){toast_(err.message||"登入失敗","err");}
+    try{await signInWithPopup(_auth,_gProvider);}
+    catch(err){
+      if(err?.code!=="auth/popup-closed-by-user"&&err?.code!=="auth/cancelled-popup-request"){
+        toast_(err.message||String(err.code)||"登入失敗","err");
+      }
+    }
   }
   async function signOutUser(){
     await fbSignOut(_auth);
