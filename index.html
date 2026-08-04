@@ -445,6 +445,8 @@ function App(){
 
   const toastRef=useRef(null);
   const lastActiveRef=useRef(Date.now());
+  const refreshRef=useRef(null);
+  refreshRef.current=loadAppData; // 每次 render 更新，讓 PTR 能呼叫最新版本
   // 白屏防護 + 離開超過10分鐘強制重整
   useEffect(()=>{
     function onVis(){
@@ -633,25 +635,32 @@ function App(){
     wrap.appendChild(icon);
     document.body.appendChild(wrap);
 
-    let startY=0,startEl=null,active=false,locked=false;
+    let startY=0,startEl=null,active=false,locked=false,atTop=false;
+
+    // 判斷觸摸起點是否在頁面最頂部（window + 所有可捲動祖先都為 0）
+    function isAtTop(el){
+      if((window.scrollY||document.documentElement.scrollTop||0)>5)return false;
+      let n=el;
+      while(n&&n!==document.documentElement){
+        const ov=getComputedStyle(n).overflowY;
+        if((ov==="auto"||ov==="scroll")&&n.scrollHeight>n.clientHeight+2&&n.scrollTop>5)return false;
+        n=n.parentElement;
+      }
+      return true;
+    }
 
     function onStart(e){
       if(locked)return;
       startY=e.touches[0].clientY;
       startEl=e.target;
       active=false;
+      atTop=isAtTop(e.target); // 觸摸開始時就決定，不在 onMove 反覆判斷
     }
 
     function onMove(e){
-      if(locked)return;
+      if(locked||!atTop)return; // 未在頂部則完全不響應
       const dy=e.touches[0].clientY-startY;
       if(dy<=0){if(active){wrap.style.height="0";icon.style.transform="";active=false;}return;}
-      // 往上找可捲動祖先，若已捲動則不啟動
-      let el=startEl;
-      while(el&&el!==document.body){
-        if(el.scrollTop>0)return;
-        el=el.parentElement;
-      }
       active=true;
       const d=Math.min(dy*0.45,THRESHOLD*1.6);
       const prog=Math.min(d/THRESHOLD,1);
@@ -662,6 +671,15 @@ function App(){
       if(dy>10)e.preventDefault();
     }
 
+    function reset(){
+      locked=false;
+      icon.style.animation="";
+      icon.style.color="var(--txt3)";
+      wrap.style.transition="height 0.22s";
+      wrap.style.height="0";
+      setTimeout(()=>{wrap.style.transition="";icon.style.transform="";},230);
+    }
+
     function onEnd(){
       if(!active)return;
       active=false;
@@ -670,15 +688,10 @@ function App(){
         locked=true;
         icon.style.cssText+=";animation:ptr-spin 0.55s linear infinite;color:#f59e0b;";
         wrap.style.height="56px";
-        // 清除快取並強制重整
+        // 軟刷新：重新讀 Firestore 資料，不 reload 頁面，不觸發 auth 流程
         setTimeout(async()=>{
-          try{
-            if("caches"in window){
-              const keys=await caches.keys();
-              await Promise.all(keys.map(k=>caches.delete(k)));
-            }
-          }catch(_){}
-          window.location.reload(true);
+          try{await refreshRef.current();}catch(_){}
+          reset();
         },450);
       }else{
         wrap.style.transition="height 0.22s";
