@@ -88,7 +88,7 @@ import React,{useState,useEffect,useRef,useMemo} from"react";
 import {createRoot} from"react-dom/client";
 import {initializeApp} from"firebase/app";
 import {
-  initializeFirestore,persistentLocalCache,
+  getFirestore,
   doc,getDoc,setDoc,deleteDoc,collection,getDocs
 } from"firebase/firestore";
 import {
@@ -101,7 +101,7 @@ const _fbApp=initializeApp({
   authDomain:"recruitment-sys-d1d78.firebaseapp.com",
   projectId:"recruitment-sys-d1d78",
 });
-const _db=initializeFirestore(_fbApp,{localCache:persistentLocalCache()});
+const _db=getFirestore(_fbApp);
 const _auth=getAuth(_fbApp);
 const _gProvider=new GoogleAuthProvider();
 
@@ -409,19 +409,29 @@ function App(){
   }
 
   // ── Auth state ──────────────────────────────────────────────────────────────
+  // 安全逾時：5秒內 onAuthStateChanged 沒觸發就強制跳登入畫面
   useEffect(()=>{
-    // 處理 iOS Safari redirect 登入後的回調
+    const t=setTimeout(()=>{
+      setAuthReady(cur=>{if(!cur){setView("login");return true;}return cur;});
+    },5000);
+    return()=>clearTimeout(t);
+  },[]);
+  // 處理 iOS Safari redirect 登入後的錯誤回調（獨立 effect，不干擾 auth 狀態）
+  useEffect(()=>{
     getRedirectResult(_auth).catch(err=>{
-      if(err?.code&&err.code!=="auth/no-auth-event"){
+      if(err?.code&&err.code!=="auth/no-auth-event"&&err.code!=="auth/null-user"){
         toast_(err.message||"登入失敗","err");
       }
     });
+  },[]);
+  // 主要 auth 狀態監聽
+  useEffect(()=>{
     return onAuthStateChanged(_auth,async user=>{
       setAuthReady(true);
       if(!user){setAuthUser(null);setUserProfile(null);setView("login");return;}
       setAuthUser(user);
       try{
-        await user.getIdToken(true); // force token refresh so Firestore gets valid auth
+        await user.getIdToken(true);
         const profile=await fsGetUser(user.uid);
         if(!profile){setUserProfile(null);setView("profileSetup");return;}
         setUserProfile(profile);
