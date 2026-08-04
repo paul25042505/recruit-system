@@ -1355,7 +1355,7 @@ function App(){
                 e("li",null,"貼入以下規則並發布：")
               ),
               e("pre",{style:{background:"#0a0f1e",border:"1px solid var(--border)",borderRadius:6,padding:"10px 12px",fontSize:11,color:"#f59e0b",marginTop:8,overflowX:"auto",textAlign:"left"}},
-"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}")
+"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}")
             )
           : e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:14,lineHeight:1.8}},"請確認網路連線，或重新整理再試。")
       )
