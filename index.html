@@ -473,7 +473,7 @@ function App(){
     const sortedProfiles=[...mergedProfiles].sort((a,b)=>a.name.localeCompare(b.name,"zh-TW",{sensitivity:"base"}));
     if(missing.length>0){
       const syncCfg={...settings,recruitUnitProfiles:sortedProfiles,recruitUnits:[...new Set([...sortedProfiles.map(p=>p.name)])]};
-      fsSet("settings/global",syncCfg).catch(()={}); // 非同步寫入，不阻塞載入
+      fsSet("settings/global",syncCfg).catch(()=>{}); // 非同步寫入，不阻塞載入
       setCfg(syncCfg);
     }else{setCfg(settings);}
     setUnitProfiles(sortedProfiles);
