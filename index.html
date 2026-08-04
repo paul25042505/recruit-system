@@ -99,18 +99,13 @@ button{touch-action:manipulation;cursor:pointer;}
 <div id="root"><div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0f1e;gap:0"><svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg><div style="font-size:13px;color:#4b6080;letter-spacing:0.1em;margin-top:12px">系統連線中…</div></div></div>
 <script>
 // 模組載入失敗時顯示提示（React 尚未掛載）
-window.addEventListener("error",function(e){
+function __showBootError(msg){
+  if(window.__riimsMounted)return; // React 已掛載，由 ErrorBoundary 處理
   var r=document.getElementById("root");
-  if(r&&!r.firstChild){
-    r.innerHTML='<div style="min-height:100vh;background:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:#e2e8f0;font-family:sans-serif;text-align:center"><div style="font-size:36px;margin-bottom:16px">⚠️</div><div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:8px">載入失敗</div><div style="font-size:11px;color:#94a3b8;background:#111827;border-radius:8px;padding:10px;max-width:320px;word-break:break-all;text-align:left;margin-bottom:16px">'+(e.message||"Script error")+'</div><button style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;border-radius:10px;padding:10px 24px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" onclick="location.reload()">重新載入</button></div>';
-  }
-},{once:true});
-window.addEventListener("unhandledrejection",function(e){
-  var r=document.getElementById("root");
-  if(r&&!r.firstChild){
-    var msg=(e.reason&&(e.reason.message||String(e.reason)))||"未知錯誤";
-    r.innerHTML='<div style="min-height:100vh;background:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:#e2e8f0;font-family:sans-serif;text-align:center"><div style="font-size:36px;margin-bottom:16px">⚠️</div><div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:8px">載入失敗</div><div style="font-size:11px;color:#94a3b8;background:#111827;border-radius:8px;padding:10px;max-width:320px;word-break:break-all;text-align:left;margin-bottom:16px">'+msg+'</div><button style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;border-radius:10px;padding:10px 24px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" onclick="location.reload()">重新載入</button></div>';
-  }},{once:true});
+  if(r){r.innerHTML='<div style="min-height:100vh;background:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:#e2e8f0;font-family:sans-serif;text-align:center"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"52\" height=\"52\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ef4444\" stroke-width=\"1.5\" style=\"margin-bottom:14px\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z\"/></svg><div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:8px">系統載入失敗</div><div style="font-size:11px;color:#94a3b8;background:#111827;border-radius:8px;padding:10px;max-width:320px;word-break:break-all;text-align:left;margin-bottom:16px">'+msg+'</div><button style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;border-radius:10px;padding:10px 24px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" onclick="location.reload()">重新載入</button></div>';}
+}
+window.addEventListener("error",function(ev){__showBootError(ev.message||"Script error");});
+window.addEventListener("unhandledrejection",function(ev){__showBootError((ev.reason&&(ev.reason.message||String(ev.reason)))||"未知錯誤");});
 </script>
 <script type="importmap">{"imports":{
   "react":"https://esm.sh/react@18",
@@ -255,6 +250,7 @@ async function fsSetUser(uid2,data){return setDoc(doc(_db,"users",uid2),{data:JS
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function pushNav(state){try{history.pushState(state,"","#");}catch(e){}}
 const todayStr=()=>new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"2-digit",day:"2-digit"});
+const isoToday=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
 const fmtSeq=s=>s?(/^\d+$/.test(s.trim())?`第${s.trim()}梯`:s):s;
 function pushState(state,title){
   try{
@@ -434,6 +430,7 @@ function App(){
   const [pf,setPf]=useState({name:"",rank:"",unit:"",subUnit:"",role:"recruiter",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
   const [pfSaving,setPfSaving]=useState(false);
   const [retrying,setRetrying]=useState(false);
+  const [loadingSlow,setLoadingSlow]=useState(false);
 
   // 主題：自動跟隨系統設定
   useEffect(()=>{
@@ -498,7 +495,8 @@ function App(){
     const t=setTimeout(()=>{
       setAuthReady(cur=>{if(!cur){setView("login");return true;}return cur;});
     },5000);
-    return()=>clearTimeout(t);
+    const ts=setTimeout(()=>setLoadingSlow(true),8000);
+    return()=>{clearTimeout(t);clearTimeout(ts);}
   },[]);
   // 主要 auth 狀態監聽
   useEffect(()=>{
@@ -914,7 +912,7 @@ function App(){
     return{total:t.length,rev:t.filter(x=>x.interviewLogs&&x.interviewLogs.length>0).length,conf:t.filter(x=>getStId(x)===6).length};
   }
   function filterT(){
-    const tdISO=todayStr();
+    const tdISO=isoToday();
     const filtered=(curBatch?.trainees||[]).filter(t=>{
       const q=sq.toLowerCase();
       const mq=!q||t.name?.toLowerCase().includes(q)||String(t.seat).includes(q);
@@ -1223,26 +1221,54 @@ function App(){
 
   // ── Views ────────────────────────────────────────────────────────────────────
 
-  if(!authReady||view==="loading") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(Icon,{n:"shield",s:60,c:"#f59e0b",w:1.2}),
-    e("div",{style:{color:"var(--txt3)",fontSize:13,letterSpacing:"0.1em"}},"系統連線中…")
+  if(!authReady||view==="loading") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh",gap:0}},
+    e(Icon,{n:"shield",s:56,c:"#f59e0b",w:1.2}),
+    e("div",{style:{color:"var(--txt3)",fontSize:13,letterSpacing:"0.1em",marginTop:14}},"系統連線中…"),
+    loadingSlow&&e("div",{style:{marginTop:28,display:"flex",flexDirection:"column",alignItems:"center",gap:10}},
+      e("div",{style:{fontSize:12,color:"var(--txt3)"}},"連線時間較長，可能是網路問題"),
+      e("button",{
+        style:{background:"linear-gradient(135deg,#f59e0b,#ef4444)",border:"none",borderRadius:10,padding:"9px 22px",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},
+        onClick:()=>window.location.reload()
+      },"重新載入"),
+      e("button",{
+        style:{background:"transparent",border:"1px solid var(--border)",borderRadius:10,padding:"8px 18px",color:"var(--txt3)",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},
+        onClick:()=>{setAuthReady(true);setView("login");}
+      },"前往登入頁")
+    )
   );
 
   // ── Login ──────────────────────────────────────────────────────────────────
-  if(view==="login") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh",padding:32}},
-    e("div",{style:{textAlign:"center",maxWidth:360,width:"100%"}},
-      e(Icon,{n:"shield",s:64,c:"#f59e0b",w:1.2}),
-      e("div",{style:{fontSize:22,fontWeight:900,color:"var(--txt)",letterSpacing:"0.06em",marginBottom:4}},"RIIMS"),
-      e("div",{style:{fontSize:13,color:"var(--txt3)",letterSpacing:"0.04em",marginBottom:40}},"招募資訊整合管理系統"),
-      e("button",{
-        style:{...S.btn("primary"),width:"100%",padding:"14px 0",fontSize:16,gap:10,borderRadius:14},
-        onClick:signInGoogle
-      },
-        e("span",{style:{fontSize:20}},"G"),
-        "使用 Google 帳號登入"
-      ),
-      e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:20,lineHeight:1.8}},"僅限授權人員使用。登入即代表同意系統使用規範。"),
-      e("div",{style:{fontSize:10,color:"var(--txt3)",marginTop:12,opacity:0.5}},"v",APP_VERSION)
+  if(view==="login") return e("div",{style:{...S.app,minHeight:"100vh",display:"flex",flexDirection:"column"}},
+    e("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 24px"}},
+      e("div",{style:{width:"100%",maxWidth:380}},
+        // 識別標誌
+        e("div",{style:{textAlign:"center",marginBottom:40}},
+          e("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:80,height:80,borderRadius:24,background:"linear-gradient(135deg,#1e2d45,#0a0f1e)",border:"1px solid var(--border)",marginBottom:16}},
+            e(Icon,{n:"shield",s:44,c:"#f59e0b",w:1.2})
+          ),
+          e("div",{style:{fontSize:24,fontWeight:900,color:"var(--txt)",letterSpacing:"0.06em",marginBottom:4}},"RIIMS"),
+          e("div",{style:{fontSize:12,color:"var(--txt3)",letterSpacing:"0.08em"}})
+        ),
+        // 登入卡片
+        e("div",{style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:18,padding:"24px 20px",marginBottom:16}},
+          e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)",marginBottom:4}},"歡迎回來"),
+          e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:20}},"請使用授權的 Google 帳號登入系統"),
+          e("button",{
+            style:{display:"flex",alignItems:"center",justifyContent:"center",gap:12,width:"100%",padding:"13px 0",fontSize:15,fontWeight:700,background:"#fff",color:"#1f2937",border:"1px solid #d1d5db",borderRadius:12,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},
+            onClick:signInGoogle
+          },
+            e("svg",{width:20,height:20,viewBox:"0 0 48 48"},
+              e("path",{fill:"#4285F4",d:"M44.5 20H24v8.5h11.8C34.7 33.9 29.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-21.5 0-1.4-.1-2.7-.5-4.5z"}),
+              e("path",{fill:"#34A853",d:"M6.3 14.7l7 5.1C15 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.4 6.3 14.7z"}),
+              e("path",{fill:"#FBBC05",d:"M24 46c5.5 0 10.4-1.9 14.2-5l-6.6-5.4C29.6 37.2 26.9 38 24 38c-5.1 0-9.4-3.4-10.9-8l-7 5.4C9.5 42 16.3 46 24 46z"}),
+              e("path",{fill:"#EA4335",d:"M44.5 20H24v8.5h11.8c-.8 2.5-2.4 4.6-4.4 6.1l6.6 5.4C42 36.5 45 30.8 45 24c0-1.4-.1-2.7-.5-4z"})
+            ),
+            "以 Google 帳號登入"
+          )
+        ),
+        e("div",{style:{fontSize:11,color:"var(--txt3)",textAlign:"center",lineHeight:1.8}},"僅限授權人員使用．登入即代表同意系統使用規範"),
+        e("div",{style:{fontSize:10,color:"var(--txt3)",textAlign:"center",marginTop:8,opacity:0.4}},"v",APP_VERSION)
+      )
     )
   );
 
@@ -1348,7 +1374,7 @@ function App(){
 
   // ── Dashboard V2 (Work Center) ─────────────────────────────────────────────
   if(view==="dashboard"){
-    const todayISO=todayStr();
+    const todayISO=isoToday();
     // 效期計算
     function licenseStatus(profile){
       if(!profile?.licenseExpiryDate)return null;
@@ -2407,7 +2433,7 @@ function App(){
           ...trainees.map(t=>{
             const prioColors={1:"#ef4444",2:"#f59e0b",3:"#22c55e"};
             const prioColor=prioColors[t.priority||3]||"#22c55e";
-            const tdISO=todayStr();
+            const tdISO=isoToday();
             const fu=t.nextFollowUpDate;
             const fuBadge=fu?(fu<tdISO?e("span",{className:"badge-overdue"},"⚠ 逾期 "+fu):fu===tdISO?e("span",{className:"badge-today"},"🔔 今日追蹤"):e("span",{className:"badge-future"},"📅 "+fu)):null;
             return e("div",{key:t.id,id:"trainee-seat-"+t.seat,style:{...S.card,cursor:"pointer",padding:"10px 12px",display:"flex",alignItems:"center",gap:10},onClick:()=>openT(t)},
@@ -3387,6 +3413,7 @@ class ErrorBoundary extends React.Component{
   }
 }
 
+window.__riimsMounted=true;
 createRoot(document.getElementById("root")).render(
   React.createElement(ErrorBoundary,null,React.createElement(App))
 );
