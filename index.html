@@ -74,10 +74,6 @@ button{touch-action:manipulation;cursor:pointer;}
 /* 下拉重新整理動畫 */
 @keyframes ptr-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 /* V2: 優先級 */
-/* V2: 追蹤日期標記 */
-.badge-overdue{display:inline-flex;align-items:center;gap:3px;background:#ef444420;border:1px solid #ef444444;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:#ef4444;}
-.badge-today{display:inline-flex;align-items:center;gap:3px;background:#f59e0b20;border:1px solid #f59e0b44;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:#f59e0b;}
-.badge-future{display:inline-flex;align-items:center;gap:3px;background:#3b82f615;border:1px solid #3b82f644;border-radius:6px;padding:2px 7px;font-size:10px;color:#64748b;}
 /* V2: 底部浮動選單 */
 .bsheet-ov{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.55);}
 .bsheet{position:absolute;bottom:0;left:0;right:0;background:var(--menu);border-radius:20px 20px 0 0;padding:20px 16px calc(24px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow-y:auto;}
@@ -429,9 +425,6 @@ function App(){
   // 待審核用戶列表（管理員用）
   const [pendingUsers,setPendingUsers]=useState([]);
   // V2: 追蹤提醒 bottom sheet
-  const [showFollowUp,setShowFollowUp]=useState(false);
-  const [followUpTarget,setFollowUpTarget]=useState(null);
-  const [followUpDate,setFollowUpDate]=useState("");
   // V2: 最近案件（localStorage 快取）
   const [recentCases,setRecentCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("riims_recent")||"[]");}catch{return[];}});
   // V2: 優先級快速設定
@@ -858,7 +851,7 @@ function App(){
     setSaving(true);
     try{
       const id=uid(),count=Math.max(0,parseInt(nb.traineeCount)||0);
-      const trainees=Array.from({length:count},(_,i)=>({id:uid(),seat:i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},nextFollowUpDate:""}));
+      const trainees=Array.from({length:count},(_,i)=>({id:uid(),seat:i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},}));
       const batch={id,...nb,traineeCount:count,createdAt:todayStr(),schedule:DEF_SCHED.map(s=>({...s})),trainees};
       await fsSet("batches/"+id,batch);
       setBatches(p=>[batch,...p]);
@@ -878,7 +871,7 @@ function App(){
     const name=newTName.trim();
     if(!name){toast_("請輸入姓名","err");return;}
     const max=Math.max(0,...(curBatch.trainees||[]).map(t=>t.seat||0));
-    const t={id:uid(),seat:max+1,name,education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},nextFollowUpDate:""};
+    const t={id:uid(),seat:max+1,name,education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},};
     try{await patchBatch({trainees:[...(curBatch.trainees||[]),t]});setNewTName("");setShowAT(false);toast_("已新增 ✓");}
     catch(err){toast_(err.message,"err");}
   }
@@ -889,7 +882,7 @@ function App(){
     let trainees=[...cur];
     if(n>cur.length){
       const max=Math.max(0,...cur.map(t=>t.seat||0));
-      for(let i=0;i<n-cur.length;i++) trainees.push({id:uid(),seat:max+i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},nextFollowUpDate:""});
+      for(let i=0;i<n-cur.length;i++) trainees.push({id:uid(),seat:max+i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],holdUnit:"",holdNote:"",memo:"",statusId:null,qualCheck:{},scheduleAtt:{},});
     }else{trainees=cur.slice(0,n);}
     setSaving(true);
     try{await patchBatch({trainees,traineeCount:n});setShowEC(false);toast_("已更新 ✓");}
@@ -949,8 +942,6 @@ function App(){
       await patchBatch({trainees:(curBatch.trainees||[]).map(t=>t.id===updated.id?updated:t)});
       setNewItvw({unit:"",date:"",period:"",interviewer:"",contact:"",note:"",statusId:null});
       setDirty(false);toast_("約談紀錄已新增 ✓");
-      // V2: 提示設定下次追蹤日期
-      setFollowUpTarget({...updated});setFollowUpDate("");setShowFollowUp(true);
     }catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
   }
@@ -1014,18 +1005,7 @@ function App(){
       const ms=fst==="all"||(fst==="null"&&!latestStId)||String(latestStId)===fst;
       return mq&&ms;
     });
-    // 排序 — 逾期追蹤 > 今日追蹤 > seat
-    return filtered.sort((a,b)=>{
-      const score=t=>{
-        const fu=t.nextFollowUpDate;
-        if(fu&&fu<tdISO)return 0;
-        if(fu===tdISO)return 1;
-        return 2;
-      };
-      const d=score(a)-score(b);
-      if(d!==0)return d;
-      return (a.seat||0)-(b.seat||0);
-    });
+    return filtered.sort((a,b)=>(a.seat||0)-(b.seat||0));
   }
   function openT(t){
     const idx=(curBatch?.trainees||[]).findIndex(x=>x.id===t.id);
@@ -1495,9 +1475,7 @@ function App(){
     // 今日工作
     const needCall=allT.filter(t=>t.phoneVisitDate===todayISO).length;
     const needVisit=allT.filter(t=>t.homeVisitDate===todayISO).length;
-    const needFollow=allT.filter(t=>t.nextFollowUpDate===todayISO).length;
-    const overdueFollow=allT.filter(t=>t.nextFollowUpDate&&t.nextFollowUpDate<todayISO).length;
-    const totalWork=needCall+needVisit+needFollow+overdueFollow;
+    const totalWork=needCall+needVisit;
     // 漏斗統計
     const totalTrainees=allT.length;
     const totalConf=allT.filter(t=>getStId(t)===6).length;
@@ -1572,8 +1550,6 @@ function App(){
             ...[
               {label:"需電訪",count:needCall,color:"#3b82f6",icon:"📞",onClick:()=>setView("home")},
               {label:"需家訪",count:needVisit,color:"#a855f7",icon:"🏠",onClick:()=>setView("home")},
-              {label:"需追蹤",count:needFollow,color:"#f59e0b",icon:"🔔",onClick:()=>setView("home")},
-              {label:"已逾期",count:overdueFollow,color:"#ef4444",icon:"⚠",onClick:()=>setView("home")},
             ].map(tile=>e("div",{key:tile.label,className:"work-tile",onClick:tile.onClick,style:{borderTop:"3px solid "+(tile.count>0?tile.color:"var(--border)")}},
               e("div",{style:{fontSize:11,marginBottom:2}},tile.icon),
               e("div",{style:{fontSize:22,fontWeight:900,color:tile.count>0?tile.color:"var(--txt3)",fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}},tile.count),
@@ -2638,8 +2614,6 @@ function App(){
           scrollToSeat!==null&&e(ScrollAnchor,{seat:scrollToSeat,onDone:()=>setScrollToSeat(null)}),
           ...trainees.map(t=>{
             const tdISO=isoToday();
-            const fu=t.nextFollowUpDate;
-            const fuBadge=fu?(fu<tdISO?e("span",{className:"badge-overdue"},"⚠ 逾期 "+fu):fu===tdISO?e("span",{className:"badge-today"},"🔔 今日追蹤"):e("span",{className:"badge-future"},"📅 "+fu)):null;
             return e("div",{key:t.id,id:"trainee-seat-"+t.seat,style:{...S.card,cursor:"pointer",padding:"10px 12px",display:"flex",alignItems:"center",gap:10},onClick:()=>openT(t)},
               e("div",{style:{width:34,height:34,background:"var(--bg3)",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--txt3)",flexShrink:0}},t.seat||"?"),
               e("div",{style:{flex:1,minWidth:0}},
@@ -2654,7 +2628,6 @@ function App(){
                 })(),
                 e("div",{style:{marginTop:5,display:"flex",flexWrap:"wrap",gap:4,alignItems:"center"}},
                   t.holdUnit&&e("span",{style:{display:"inline-flex",alignItems:"center",gap:4,background:"#f59e0b12",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,color:"#f59e0b"}},"🔒 "+t.holdUnit),
-                  fuBadge,
                   (()=>{
                     const logs=t.interviewLogs||[];
                     const last=logs[logs.length-1];
@@ -3004,7 +2977,7 @@ function App(){
       e("div",{style:{...S.sec,paddingTop:20}},
         // Tab Bar
         e("div",{className:"hs",style:{display:"flex",gap:0,marginBottom:14,background:"var(--inp-bg)",borderRadius:10,padding:3,overflowX:"auto"}},
-          ...[["basic","📋 基本資料"],["qual","✅ 資格審查"],["will","💬 意願訪談"],["timeline","📅 時間軸"],["priority","📅 追蹤"]].map(([tab,lbl])=>
+          ...[["basic","📋 基本資料"],["qual","✅ 資格審查"],["will","💬 意願訪談"],["timeline","📅 時間軸"]].map(([tab,lbl])=>
             e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:12,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:traineeTab===tab?"var(--bg3)":"transparent",color:traineeTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>setTraineeTab(tab)},lbl)
           )
         ),
@@ -3389,7 +3362,6 @@ function App(){
               if(tf.phoneVisitDate) events.push({date:tf.phoneVisitDate,type:"call",icon:"📞",color:"#3b82f6",title:"電訪",note:""});
               if(tf.homeVisitDate) events.push({date:tf.homeVisitDate,type:"visit",icon:"🏠",color:"#a855f7",title:"家訪",note:""});
               if(tf.qualCheck?.result) events.push({date:tf.qualCheck.medicalDate||tf.createdAt,type:"qual",icon:tf.qualCheck.result==="pass"?"✅":tf.qualCheck.result==="fail"?"❌":"🔄",color:tf.qualCheck.result==="pass"?"#22c55e":tf.qualCheck.result==="fail"?"#ef4444":"#a855f7",title:"資格審查",note:{pass:"資格符合",fail:"資格不符",pending:"待確認"}[tf.qualCheck.result]});
-              if(tf.nextFollowUpDate) events.push({date:tf.nextFollowUpDate,type:"followup",icon:"🔔",color:"#f59e0b",title:"下次追蹤",note:""});
               events.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
               if(!events.length) return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"24px 0",fontSize:13}},"尚無歷程紀錄");
               return events.map((ev,i)=>e("div",{key:i,className:"tl-item"},
@@ -3409,77 +3381,6 @@ function App(){
         e("div",{style:{height:24}})
         ),// end timeline tab
 
-        // ── 下次追蹤 tab ──────────────────────────────────────────────────────
-        traineeTab==="priority"&&e(React.Fragment,null,
-        e("div",{style:{...S.card,marginBottom:10}},
-          e("div",{style:S.slbl},"▍ 下次追蹤日期"),
-          e("div",{style:{marginBottom:8}},
-            e("input",{style:{...S.inp,width:"100%"},type:"date",value:tf.nextFollowUpDate||"",onChange:ev=>{setTf(p=>({...p,nextFollowUpDate:ev.target.value}));setDirty(true);}}),
-            tf.nextFollowUpDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setTf(p=>({...p,nextFollowUpDate:""}));setDirty(true);}},"✕ 清除追蹤日期")
-          ),
-          e("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-            ...[
-              {label:"明天",days:1},
-              {label:"三天後",days:3},
-              {label:"一週後",days:7},
-              {label:"兩週後",days:14},
-            ].map(({label,days})=>{
-              const d=new Date();d.setDate(d.getDate()+days);
-              const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-              return e("button",{key:label,style:{...S.btn("ghost","sm"),fontSize:12},onClick:()=>{setTf(p=>({...p,nextFollowUpDate:iso}));setDirty(true);}},label);
-            })
-          )
-        ),
-        e("button",{style:{...S.btn("primary"),width:"100%",margin:"0 0 10px"},onClick:()=>saveTF(true),disabled:saving},saving?"儲存中…":"✓ 儲存"),
-        e("div",{style:{height:24}})
-        ),// end priority tab
-      ),
-      // V2: 追蹤日期 bottom sheet（約談紀錄新增後觸發）
-      showFollowUp&&e("div",{className:"bsheet-ov",onClick:()=>setShowFollowUp(false)},
-        e("div",{className:"bsheet",onClick:ev=>ev.stopPropagation()},
-          e("div",{style:{textAlign:"center",marginBottom:16}},
-            e("div",{style:{width:36,height:4,background:"var(--border)",borderRadius:2,margin:"0 auto 14px"}}),
-            e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)"}},"設定下次聯絡時間"),
-            e("div",{style:{fontSize:12,color:"var(--txt3)",marginTop:4}},"約談完成後，設定下次追蹤日提醒")
-          ),
-          e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}},
-            ...[
-              {label:"明天",days:1},
-              {label:"三天後",days:3},
-              {label:"一週後",days:7},
-              {label:"兩週後",days:14},
-            ].map(({label,days})=>{
-              const d=new Date();d.setDate(d.getDate()+days);
-              const iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-              return e("button",{key:label,
-                style:{...S.btn("ghost"),padding:"12px 6px",fontSize:14,fontWeight:700},
-                onClick:async()=>{
-                  if(!followUpTarget||!curBatch)return;
-                  const updated={...followUpTarget,nextFollowUpDate:iso};
-                  setTf(updated);setDirty(false);
-                  try{await patchBatch({trainees:(curBatch.trainees||[]).map(t=>t.id===updated.id?updated:t)});toast_("已設定 "+label+" 追蹤 ✓");}
-                  catch(_){}
-                  setShowFollowUp(false);
-                }
-              },label);
-            })
-          ),
-          e("div",{style:{marginBottom:12}},
-            e("label",{style:S.lbl},"自訂日期"),
-            e("input",{style:S.inp,type:"date",value:followUpDate,onChange:ev=>setFollowUpDate(ev.target.value)})
-          ),
-          e("div",{style:{display:"flex",gap:10}},
-            e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowFollowUp(false)},"跳過"),
-            e("button",{style:{...S.btn("primary"),flex:1},onClick:async()=>{
-              if(!followUpDate||!followUpTarget||!curBatch){setShowFollowUp(false);return;}
-              const updated={...followUpTarget,nextFollowUpDate:followUpDate};
-              setTf(updated);setDirty(false);
-              try{await patchBatch({trainees:(curBatch.trainees||[]).map(t=>t.id===updated.id?updated:t)});toast_("已設定追蹤日期 ✓");}
-              catch(_){}
-              setShowFollowUp(false);
-            }},"確定")
-          )
-        )
       ),
       showEditLog&&editLogData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditLog(false)},
         e("div",{style:S.mBox},
