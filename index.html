@@ -76,6 +76,21 @@ button{touch-action:manipulation;cursor:pointer;}
 </head>
 <body>
 <div id="root"></div>
+<script>
+// 模組載入失敗時顯示提示（React 尚未掛載）
+window.addEventListener("error",function(e){
+  var r=document.getElementById("root");
+  if(r&&!r.firstChild){
+    r.innerHTML='<div style="min-height:100vh;background:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:#e2e8f0;font-family:sans-serif;text-align:center"><div style="font-size:36px;margin-bottom:16px">⚠️</div><div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:8px">載入失敗</div><div style="font-size:11px;color:#94a3b8;background:#111827;border-radius:8px;padding:10px;max-width:320px;word-break:break-all;text-align:left;margin-bottom:16px">'+(e.message||"Script error")+'</div><button style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;border-radius:10px;padding:10px 24px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" onclick="location.reload()">重新載入</button></div>';
+  }
+},{once:true});
+window.addEventListener("unhandledrejection",function(e){
+  var r=document.getElementById("root");
+  if(r&&!r.firstChild){
+    var msg=(e.reason&&(e.reason.message||String(e.reason)))||"未知錯誤";
+    r.innerHTML='<div style="min-height:100vh;background:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:#e2e8f0;font-family:sans-serif;text-align:center"><div style="font-size:36px;margin-bottom:16px">⚠️</div><div style="font-size:15px;font-weight:800;color:#ef4444;margin-bottom:8px">載入失敗</div><div style="font-size:11px;color:#94a3b8;background:#111827;border-radius:8px;padding:10px;max-width:320px;word-break:break-all;text-align:left;margin-bottom:16px">'+msg+'</div><button style="background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;border-radius:10px;padding:10px 24px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" onclick="location.reload()">重新載入</button></div>';
+  }},{once:true});
+</script>
 <script type="importmap">{"imports":{
   "react":"https://esm.sh/react@18",
   "react-dom/client":"https://esm.sh/react-dom@18/client",
@@ -122,7 +137,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const APP_VERSION="1.0.8";
+const APP_VERSION="1.0.9";
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
 const DEF={
@@ -403,7 +418,7 @@ function App(){
       if(document.visibilityState==="visible"){
         const rootEmpty=!(document.getElementById("root")?.firstChild);
         const away=Date.now()-lastActiveRef.current;
-        if(rootEmpty||view==="loading"||(away>600000)){window.location.reload();}
+        if(rootEmpty||(away>600000)){window.location.reload();}
       }
     }
     document.addEventListener("visibilitychange",onVis);
@@ -607,6 +622,7 @@ function App(){
     const canvas=document.createElement("canvas");
     canvas.width=320;canvas.height=160;
     const ctx=canvas.getContext("2d");
+    if(!ctx)return null;
     ctx.save();ctx.translate(160,80);ctx.rotate(-Math.PI/6);
     ctx.font="600 13px 'Noto Sans TC',sans-serif";
     const isDk=!document.documentElement.classList.contains("light");
@@ -2924,7 +2940,27 @@ function App(){
   return null;
 }
 
-createRoot(document.getElementById("root")).render(React.createElement(App));
+// 全域錯誤邊界：防止 React 崩潰時顯示空白畫面
+class ErrorBoundary extends React.Component{
+  constructor(p){super(p);this.state={err:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  render(){
+    if(this.state.err){
+      const msg=this.state.err?.message||String(this.state.err);
+      return React.createElement("div",{style:{minHeight:"100vh",background:"#0a0f1e",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,color:"#e2e8f0",fontFamily:"'Noto Sans TC',sans-serif",textAlign:"center"}},
+        React.createElement("div",{style:{fontSize:40,marginBottom:16}},"⚠️"),
+        React.createElement("div",{style:{fontSize:16,fontWeight:800,color:"#ef4444",marginBottom:8}},"應用程式發生錯誤"),
+        React.createElement("div",{style:{fontSize:11,color:"#94a3b8",background:"#111827",borderRadius:10,padding:"10px 14px",maxWidth:340,wordBreak:"break-all",textAlign:"left",marginBottom:16}},msg),
+        React.createElement("button",{style:{background:"linear-gradient(135deg,#f59e0b,#ef4444)",border:"none",borderRadius:10,padding:"10px 24px",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer"},onClick:()=>window.location.reload()},"重新載入")
+      );
+    }
+    return this.props.children;
+  }
+}
+
+createRoot(document.getElementById("root")).render(
+  React.createElement(ErrorBoundary,null,React.createElement(App))
+);
 </script>
 </body>
 </html>
