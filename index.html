@@ -741,11 +741,7 @@ function App(){
         locked=true;
         icon.style.cssText+=";animation:ptr-spin 0.55s linear infinite;color:#f59e0b;";
         wrap.style.height="56px";
-        // 軟刷新：重新讀 Firestore 資料，不 reload 頁面，不觸發 auth 流程
-        setTimeout(async()=>{
-          try{await refreshRef.current();}catch(_){}
-          reset();
-        },450);
+        setTimeout(()=>{window.location.reload();},450);
       }else{
         wrap.style.transition="height 0.22s";
         wrap.style.height="0";
