@@ -428,14 +428,11 @@ function App(){
   // 後台梯次編輯
   const [showEditBatch,setShowEditBatch]=useState(false);
   const [editBatchData,setEditBatchData]=useState(null);
-  // 協訓單位管理
+  // 協訓單位資料（招募員下拉選單使用）
   const [unitProfiles,setUnitProfiles]=useState([]);
-  const [unitSearch,setUnitSearch]=useState("");
-  const [showEditUnit,setShowEditUnit]=useState(false);
-  const [editUnitData,setEditUnitData]=useState(null);
-  const [showEditRecruiter,setShowEditRecruiter]=useState(false);
-  const [editRecruiterData,setEditRecruiterData]=useState(null);
-  const [editRecruiterUnitId,setEditRecruiterUnitId]=useState(null);
+  // 單位 tab：招募員按旅級單位分組
+  const [uvUsers,setUvUsers]=useState([]);
+  const [uvLoading,setUvLoading]=useState(false);
   // 更多頁文字欄位暫存（打字時不直接存檔，blur 才儲存）
   const [moreEdit,setMoreEdit]=useState({});
   // 更多頁子頁草稿
@@ -471,9 +468,14 @@ function App(){
     return()=>mq.removeEventListener("change",handler);
   },[]);
 
+  // 單位 tab：切換進來時載入招募員列表
+  useEffect(()=>{
+    if(view!=="unitView")return;
+    setUvLoading(true);
+    fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));
+  },[view]);
+
   const toastRef=useRef(null);
-  const refreshRef=useRef(null);
-  refreshRef.current=loadAppData; // 每次 render 更新，讓 PTR 能呼叫最新版本
   // 使用者有操作時更新活躍時間戳
   useEffect(()=>{if(view&&view!=="loading")touchActivity();},[view]);
   // 閒置 8 小時自動登出（背景回來時檢查 localStorage）
@@ -690,91 +692,15 @@ function App(){
   }
 
   // ── Pull-to-Refresh ─────────────────────────────────────────────────────────
-  useEffect(()=>{
-    // 建立指示器 DOM（固定在頂部，不影響 React render tree）
-    const THRESHOLD=72;
-    const wrap=document.createElement("div");
-    wrap.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999;display:flex;justify-content:center;align-items:flex-end;pointer-events:none;height:0;overflow:hidden;will-change:height;";
-    const icon=document.createElement("div");
-    icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21 12a9 9 0 1 1-3.1-6.8"/><polyline points="21 3 21 9 15 9"/></svg>';
-    icon.style.cssText="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 4px 16px rgba(0,0,0,0.28);background:var(--bg2);border:1.5px solid var(--border);color:var(--txt3);transition:transform 0.08s,color 0.12s;";
-    wrap.appendChild(icon);
-    document.body.appendChild(wrap);
-
-    let startY=0,startEl=null,active=false,locked=false,atTop=false;
-
-    // 判斷觸摸起點是否在頁面最頂部（window + 所有可捲動祖先都為 0）
-    function isAtTop(el){
-      if((window.scrollY||document.documentElement.scrollTop||0)>5)return false;
-      let n=el;
-      while(n&&n!==document.documentElement){
-        const ov=getComputedStyle(n).overflowY;
-        if((ov==="auto"||ov==="scroll")&&n.scrollHeight>n.clientHeight+2&&n.scrollTop>5)return false;
-        n=n.parentElement;
-      }
-      return true;
-    }
-
-    function onStart(e){
-      if(locked)return;
-      startY=e.touches[0].clientY;
-      startEl=e.target;
-      active=false;
-      atTop=isAtTop(e.target); // 觸摸開始時就決定，不在 onMove 反覆判斷
-    }
-
-    function onMove(e){
-      if(locked||!atTop)return; // 未在頂部則完全不響應
-      const dy=e.touches[0].clientY-startY;
-      if(dy<=0){if(active){wrap.style.height="0";icon.style.transform="";active=false;}return;}
-      active=true;
-      const d=Math.min(dy*0.45,THRESHOLD*1.6);
-      const prog=Math.min(d/THRESHOLD,1);
-      wrap.style.height=d+"px";
-      const ready=d>=THRESHOLD;
-      icon.style.transform=`scale(${0.55+prog*0.45}) rotate(${ready?180:prog*160}deg)`;
-      icon.style.color=ready?"#f59e0b":"var(--txt3)";
-      if(dy>10)e.preventDefault();
-    }
-
-    function reset(){
-      locked=false;
-      icon.style.animation="";
-      icon.style.color="var(--txt3)";
-      wrap.style.transition="height 0.22s";
-      wrap.style.height="0";
-      setTimeout(()=>{wrap.style.transition="";icon.style.transform="";},230);
-    }
-
-    function onEnd(){
-      if(!active)return;
-      active=false;
-      const h=parseFloat(wrap.style.height)||0;
-      if(h>=THRESHOLD){
-        locked=true;
-        icon.style.cssText+=";animation:ptr-spin 0.55s linear infinite;color:#f59e0b;";
-        wrap.style.height="56px";
-        setTimeout(()=>{window.location.reload();},450);
-      }else{
-        wrap.style.transition="height 0.22s";
-        wrap.style.height="0";
-        setTimeout(()=>{wrap.style.transition="";icon.style.transform="";icon.style.color="var(--txt3)";},230);
-      }
-    }
-
-    document.addEventListener("touchstart",onStart,{passive:true});
-    document.addEventListener("touchmove",onMove,{passive:false});
-    document.addEventListener("touchend",onEnd);
-    document.addEventListener("touchcancel",onEnd);
-
-    return()=>{
-      document.removeEventListener("touchstart",onStart);
-      document.removeEventListener("touchmove",onMove);
-      document.removeEventListener("touchend",onEnd);
-      document.removeEventListener("touchcancel",onEnd);
-      if(wrap.parentNode)wrap.parentNode.removeChild(wrap);
-    };
-  },[]);
+  // 手動重新整理資料（不重載頁面）
+  const [refreshing,setRefreshing]=useState(false);
+  async function doRefresh(){
+    if(refreshing)return;
+    setRefreshing(true);
+    try{await loadAppData();toast_("資料已更新");}
+    catch(err){toast_(err?.message||"更新失敗","err");}
+    finally{setRefreshing(false);}
+  }
 
   // ── Watermark ───────────────────────────────────────────────────────────────
   const watermarkUrl=useMemo(()=>{
@@ -784,33 +710,33 @@ function App(){
     const now=new Date();
     const dateStr=now.getFullYear()+"/"+(now.getMonth()+1).toString().padStart(2,"0")+"/"+now.getDate().toString().padStart(2,"0")+" "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
     const canvas=document.createElement("canvas");
-    canvas.width=640;canvas.height=320;
+    canvas.width=300;canvas.height=150;
     const ctx=canvas.getContext("2d");
     if(!ctx)return null;
-    ctx.save();ctx.translate(320,160);ctx.rotate(-Math.PI/6);
-    ctx.font="700 20px 'Noto Sans TC',sans-serif";
+    ctx.save();ctx.translate(150,75);ctx.rotate(-Math.PI/6);
+    ctx.font="600 13px 'Noto Sans TC',sans-serif";
     const isDk=!document.documentElement.classList.contains("light");
-    ctx.fillStyle=isDk?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.055)";
+    ctx.fillStyle=isDk?"rgba(255,255,255,0.09)":"rgba(0,0,0,0.08)";
     ctx.textAlign="center";
-    ctx.fillText(unit,0,-32);ctx.fillText(rankName,0,4);ctx.fillText(dateStr,0,40);
+    ctx.fillText(unit,0,-20);ctx.fillText(rankName,0,4);ctx.fillText(dateStr,0,28);
     ctx.restore();
     return canvas.toDataURL();
   },[userProfile]);
 
   function WatermarkOverlay(){
     if(!watermarkUrl)return null;
-    return e("div",{className:"watermark-overlay",style:{backgroundImage:`url(${watermarkUrl})`,backgroundRepeat:"repeat",backgroundSize:"640px 320px"}});
+    return e("div",{className:"watermark-overlay",style:{backgroundImage:`url(${watermarkUrl})`,backgroundRepeat:"repeat",backgroundSize:"300px 150px"}});
   }
 
   // ── Bottom Navigation ───────────────────────────────────────────────────────
   function BottomNav(){
-    const mainViews=["dashboard","home","unitMgmt","feedback","more","admin","adminPwd"];
+    const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd"];
     if(!mainViews.includes(view))return null;
     const activeKey=(view==="admin"||view==="adminPwd")?"more":view;
     const tabs=[
       {key:"dashboard",icon:"home",label:"首頁"},
       {key:"home",icon:"list",label:"梯次"},
-      {key:"unitMgmt",icon:"building",label:"協訓"},
+      {key:"unitView",icon:"building",label:"單位"},
       {key:"feedback",icon:"chat",label:"回饋"},
       {key:"more",icon:"grid",label:"更多"},
     ];
@@ -986,16 +912,6 @@ function App(){
     await fsSet("settings/global",newCfg);
     setCfg(newCfg);
     setUnitProfiles(newProfiles);
-  }
-  async function saveUnitProfiles(profiles){
-    // 依筆畫排序後存入
-    const sorted=[...profiles].sort((a,b)=>a.name.localeCompare(b.name,"zh-TW",{sensitivity:"base"}));
-    const names=sorted.map(p=>p.name);
-    const merged=[...new Set([...names,...(cfg.recruitUnits||[])])].sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
-    const newCfg={...cfg,recruitUnitProfiles:sorted,recruitUnits:merged};
-    await fsSet("settings/global",newCfg);
-    setCfg(newCfg);
-    setUnitProfiles(sorted);
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -1282,7 +1198,7 @@ function App(){
         e("div",{style:{padding:"8px 0",flex:1}},
           ...[
             {icon:"home",label:"梯次列表",onClick:()=>{setShowMenu(false);setView("home");}},
-            {icon:"building",label:"協訓單位管理",onClick:()=>{setShowMenu(false);setView("unitMgmt");}},
+            {icon:"building",label:"單位目錄",onClick:()=>{setShowMenu(false);setView("unitView");}},
             {icon:"chat",label:"意見回饋",onClick:()=>{setShowMenu(false);setView("feedback");}},
           ].map(({icon,label,onClick})=>e("div",{key:label,style:{display:"flex",alignItems:"center",gap:14,padding:"14px 20px",cursor:"pointer",borderBottom:"1px solid var(--border2)"},onClick},
             e(Icon,{n:icon,s:20,c:"var(--txt2)"}),
@@ -1544,6 +1460,9 @@ function App(){
             e(Icon,{n:"chat",s:18,c:"var(--txt3)"}),
             feedbackList.length>0&&e("span",{style:{position:"absolute",top:4,right:4,width:7,height:7,background:"#ef4444",borderRadius:"50%",border:"2px solid var(--hdr)"}})
           ),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:refreshing?0.5:1},onClick:doRefresh,disabled:refreshing,title:"重新整理"},
+            e(Icon,{n:"refresh",s:18,c:"var(--txt3)",style:refreshing?{animation:"ptr-spin 0.8s linear infinite"}:{}})
+          ),
           e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:signOutUser,title:"登出"},
             e(Icon,{n:"logout",s:18,c:"var(--txt3)"})
           )
@@ -1691,7 +1610,7 @@ function App(){
             ...[
               {icon:"list",ic:"#4a88d8",label:"梯次列表",sub:batches.length+"個梯次",bg:"rgba(74,136,216,0.12)",action:()=>setView("home")},
               {icon:"plus",ic:"#22c55e",label:"新增梯次",sub:"建立新梯次",bg:"rgba(34,197,94,0.12)",action:()=>setShowAB(true)},
-              {icon:"building",ic:"#a855f7",label:"協訓單位",sub:unitProfiles.length+"個單位",bg:"rgba(168,85,247,0.12)",action:()=>setView("unitMgmt")},
+              {icon:"people",ic:"#a855f7",label:"單位目錄",sub:uvUsers.length?"共"+uvUsers.length+"位":"查看所有招募員",bg:"rgba(168,85,247,0.12)",action:()=>setView("unitView")},
               {icon:"user",ic:"#f59e0b",label:"個人設定",sub:userProfile?.rank||"我的資料",bg:"rgba(245,158,11,0.12)",action:()=>setView("more")},
             ].map(tile=>e("div",{key:tile.label,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:"14px 12px 12px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"},onClick:tile.action},
               e("div",{style:{width:40,height:40,borderRadius:12,background:tile.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:tile.icon,s:20,c:tile.ic})),
@@ -1780,14 +1699,12 @@ function App(){
       // 系統
       e("div",{style:{...S.slbl,marginBottom:8}},"系統"),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
-        e(MoreNavRow,{icon:"people",label:"單位目錄",sub:"查看所有招募員名單",onClick:()=>setView("unitDir")}),
-        e("div",{style:{height:1,background:"var(--border)",marginLeft:64}}),
         e(MoreNavRow,{icon:"book",label:"功能介紹",sub:"使用說明・圖文教學",onClick:()=>setView("moreGuide")})
       ),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
         e(MoreNavRow,{icon:"cog",label:"後台管理",sub:"管理員限定",onClick:()=>{setAPwd("");setAPwdErr(false);setView("adminPwd");}}),
         e("div",{style:{height:1,background:"var(--border)",marginLeft:64}}),
-        e(MoreNavRow,{icon:"info",label:"關於系統",sub:"架構・版本・著作權",onClick:()=>setView("moreAbout")})
+        e(MoreNavRow,{icon:"info",label:"關於系統",sub:"版本・著作權",onClick:()=>setView("moreAbout")})
       ),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:20}},
         e(MoreNavRow,{icon:"logout",label:"登出帳號",sub:userProfile?.googleEmail||"",onClick:signOutUser,danger:true})
@@ -1894,69 +1811,51 @@ function App(){
     )
   );
 
-  // ── 單位目錄 ───────────────────────────────────────────────────────────────────
-  if(view==="unitDir"){
-    const [dirUsers,setDirUsers]=useState([]);
-    const [dirLoading,setDirLoading]=useState(true);
-    useEffect(()=>{
-      fsList("users").then(all=>{
-        setDirUsers((all||[]).filter(u=>u.status==="active"));
-        setDirLoading(false);
-      }).catch(()=>setDirLoading(false));
-    },[]);
+  // ── 單位 tab（招募員按旅級單位分組）────────────────────────────────────────────
+  if(view==="unitView"){
     const grouped={};
-    dirUsers.forEach(u=>{
+    uvUsers.forEach(u=>{
       const key=u.brigadeUnit||u.unit||"未填單位";
       if(!grouped[key])grouped[key]=[];
       grouped[key].push(u);
     });
-    const roleLabel=u=>{
-      const rs=u.roles||[u.role||"recruiter"];
-      if(rs.includes("coordinator")&&rs.includes("recruiter"))return"招募員・承辦";
-      if(rs.includes("coordinator"))return"招募承辦";
-      return"招募員";
-    };
-    const roleColor=u=>{
-      const rs=u.roles||[u.role||"recruiter"];
-      if(rs.includes("coordinator"))return"#f59e0b";
-      return"#3b82f6";
-    };
-    return e("div",{style:S.app},
-      e(Toast),
-      e("div",{style:{...S.hdr,justifyContent:"space-between"}},
-        e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("more")},e(Icon,{n:"chevL",s:18}),"返回"),
-        e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位目錄"),
-        e("div",{style:{width:60}})
+    const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
+    return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
+      e(WatermarkOverlay),e(Toast),
+      e("div",{style:S.hdr},
+        e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位")),
+        e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:uvLoading?0.4:1},onClick:()=>{setUvLoading(true);fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));},disabled:uvLoading},
+          e(Icon,{n:"refresh",s:18,c:"var(--txt3)"})
+        )
       ),
-      e("div",{style:{...S.sec,paddingTop:16,paddingBottom:32}},
-        dirLoading&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},"載入中…"),
-        !dirLoading&&Object.keys(grouped).length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},
-          e(Icon,{n:"users",s:36,c:"var(--txt3)"}),
-          e("div",{style:{marginTop:8}},"尚無已核准的成員")
-        ),
-        ...Object.entries(grouped).map(([unit,users])=>e("div",{key:unit,style:{...S.card,marginBottom:10,padding:0,overflow:"hidden"}},
-          e("div",{style:{padding:"10px 14px",background:"var(--bg3)",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid var(--border)"}},
-            e(Icon,{n:"building",s:14,c:"#f59e0b"}),
-            e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)"}}),
-            e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)"}}),
-            e("span",{style:{fontSize:13,fontWeight:800,color:"var(--txt)"}}),
-            e("span",{style:{fontSize:12,fontWeight:800,color:"#f59e0b"}},unit),
-            e("span",{style:{fontSize:11,color:"var(--txt3)",marginLeft:"auto"}},users.length+" 人")
+      e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav"},
+        e("div",{style:{...S.sec,paddingTop:16}},
+          uvLoading&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},"載入中…"),
+          !uvLoading&&sortedKeys.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
+            e(Icon,{n:"users",s:36,c:"var(--txt3)"}),
+            e("div",{style:{marginTop:8,fontSize:13}},"尚無已核准的成員")
           ),
-          ...users.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderBottom:i<users.length-1?"1px solid var(--border2)":"none"}},
-            e("div",{style:{width:36,height:36,borderRadius:"50%",background:"var(--bg3)",overflow:"hidden",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}},
-              u.googlePhotoURL
-                ?e("img",{src:u.googlePhotoURL,style:{width:"100%",height:"100%",objectFit:"cover"},referrerPolicy:"no-referrer"})
-                :e(Icon,{n:"user",s:18,c:"var(--txt3)"})
-            ),
-            e("div",{style:{flex:1,minWidth:0}},
-              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},(u.rank||"")+" "+(u.name||"")),
-              u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit)
-            ),
-            e("span",{style:{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:6,background:roleColor(u)+"18",color:roleColor(u),border:"1px solid "+roleColor(u)+"44"}},roleLabel(u))
-          ))
-        ))
-      )
+          ...sortedKeys.map(unit=>{
+            const users=grouped[unit];
+            return e("div",{key:unit,style:{...S.card,marginBottom:10,padding:0,overflow:"hidden"}},
+              e("div",{style:{padding:"10px 14px",background:"var(--bg3)",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid var(--border)"}},
+                e(Icon,{n:"building",s:14,c:"#f59e0b"}),
+                e("span",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",flex:1}},unit),
+                e("span",{style:{fontSize:11,color:"var(--txt3)"}},users.length+" 人")
+              ),
+              ...users.map((u,i)=>e("div",{key:u.uid||i,style:{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:i<users.length-1?"1px solid var(--border2)":"none"}},
+                e(Icon,{n:"user",s:16,c:"var(--txt3)"}),
+                e("div",{style:{flex:1,fontSize:13,fontWeight:600,color:"var(--txt)"}},
+                  (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
+                ),
+                u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)"}},u.battalionUnit)
+              ))
+            );
+          }),
+          e("div",{style:{height:16}})
+        )
+      ),
+      e(BottomNav)
     );
   }
 
@@ -2014,82 +1913,90 @@ function App(){
   );
 
   // ── 關於系統 ───────────────────────────────────────────────────────────────────
-  if(view==="moreAbout") return e("div",{style:S.app},
+  if(view==="moreAbout") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(Toast),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("more")},e(Icon,{n:"chevL",s:18}),"返回"),
       e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"關於系統"),
       e("div",{style:{width:60}})
     ),
-    e("div",{style:{...S.sec,paddingTop:16,paddingBottom:32}},
-      e("div",{style:{textAlign:"center",padding:"28px 0 24px"}},
-        e("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:72,height:72,borderRadius:"50%",background:"linear-gradient(135deg,#f59e0b,#ef4444)",boxShadow:"0 6px 24px rgba(245,158,11,0.35)",marginBottom:14}},
-          e(Icon,{n:"shield",s:32,c:"#fff",w:1.5})
+    e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"}},
+    e("div",{style:{...S.sec,paddingTop:24,paddingBottom:40}},
+      // ─ 應用圖示 + 名稱
+      e("div",{style:{textAlign:"center",marginBottom:28}},
+        e("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:88,height:88,borderRadius:26,background:"linear-gradient(145deg,#1e2d45,#0a0f1e)",border:"2px solid rgba(245,158,11,0.35)",boxShadow:"0 8px 32px rgba(0,0,0,0.4)",marginBottom:16}},
+          e(Icon,{n:"shield",s:44,c:"#f59e0b",w:1.3})
         ),
-        e("div",{style:{fontSize:24,fontWeight:900,color:"var(--txt)",letterSpacing:1}},"RIIMS"),
-        e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:10}},"招募資訊整合管理系統"),
-        e("span",{style:{display:"inline-block",background:"linear-gradient(90deg,#f59e0b22,#ef444422)",border:"1px solid #f59e0b55",borderRadius:20,padding:"3px 14px",fontSize:12,fontWeight:700,color:"#f59e0b"}},"v",APP_VERSION)
-      ),
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:12,display:"flex",alignItems:"center",gap:6}},
-          e(Icon,{n:"cog",s:15,c:"#f59e0b"}),"技術架構"
-        ),
-        ...[
-          ["前端框架","React 18（ESM，無需打包）"],
-          ["語言","JavaScript ES2022（原生模組）"],
-          ["身份驗證","Firebase Auth 10.12 — Google OAuth"],
-          ["資料庫","Cloud Firestore 10.12（即時同步）"],
-          ["部署平台","GitHub Pages（CI/CD 自動部署）"],
-          ["工作流程","GitHub Actions — 每次 push 自動發布"],
-        ].map(([k,v])=>e("div",{key:k,style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"7px 0",borderBottom:"1px solid var(--border)",gap:12}},
-          e("span",{style:{fontSize:12,color:"var(--txt3)",flexShrink:0}}),
-          e("span",{style:{fontSize:12,color:"var(--txt3)",minWidth:90,flexShrink:0}},k),
-          e("span",{style:{fontSize:12,color:"var(--txt)",textAlign:"right",fontWeight:600}},v)
-        ))
-      ),
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:12,display:"flex",alignItems:"center",gap:6}},
-          e(Icon,{n:"list",s:15,c:"#60a5fa"}),"Firestore 資料結構"
-        ),
-        ...[
-          ["settings/global","系統參數・梯次設定・單位設定"],
-          ["users/{uid}","個人資料・簽證・核准狀態"],
-          ["batches/{id}","梯次資訊・報名名單・排程"],
-          ["feedback/list","意見回饋紀錄"],
-        ].map(([k,v])=>e("div",{key:k,style:{padding:"8px 0",borderBottom:"1px solid var(--border)"}},
-          e("code",{style:{fontSize:11,color:"#f59e0b",background:"#f59e0b11",padding:"1px 5px",borderRadius:3}},k),
-          e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2,paddingLeft:2}},v)
-        ))
-      ),
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:12,display:"flex",alignItems:"center",gap:6}},
-          e(Icon,{n:"users",s:15,c:"#34d399"}),"功能模組"
-        ),
-        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
-          ...[
-            ["shield","身份驗證","Google 登入・閒置登出"],
-            ["clipboard","梯次管理","建立・編輯・封存梯次"],
-            ["user","人員管理","報名・審核・分配"],
-            ["calendar","排程追蹤","行程・出缺席管理"],
-            ["cog","後台管理","系統設定・帳號審核"],
-            ["megaphone","意見回饋","內部留言・通知"],
-          ].map(([ic,t,d])=>e("div",{key:t,style:{background:"var(--bg2)",borderRadius:8,padding:"10px 12px"}},
-            e("div",{style:{marginBottom:4}},e(Icon,{n:ic,s:18,c:"#60a5fa"})),
-            e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt)",marginBottom:2}},t),
-            e("div",{style:{fontSize:10,color:"var(--txt3)",lineHeight:1.4}},d)
-          ))
+        e("div",{style:{fontSize:28,fontWeight:900,color:"var(--txt)",letterSpacing:"0.06em",marginBottom:4}},"RIIMS"),
+        e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:14}},"招募資訊整合管理系統"),
+        e("div",{style:{display:"inline-flex",gap:6}},
+          e("span",{style:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,padding:"3px 14px",fontSize:11,fontWeight:700,color:"var(--txt3)"}},"v"+APP_VERSION),
+          e("span",{style:{background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:20,padding:"3px 14px",fontSize:11,fontWeight:700,color:"#f59e0b"}},"穩定版")
         )
       ),
-      e("div",{style:{textAlign:"center",padding:"24px 0 8px",borderTop:"1px solid var(--border)",marginTop:8}},
-        e("div",{style:{fontSize:12,color:"var(--txt3)",lineHeight:2.2}},
-          "© 2026 招募資訊整合管理系統（RIIMS）",
+      // ─ 系統資訊
+      e("div",{style:{...S.slbl,marginBottom:8}},"系統資訊"),
+      e("div",{style:{...S.card,padding:0,marginBottom:16}},
+        ...[
+          ["版本","v"+APP_VERSION],
+          ["BUILD","Web / PWA"],
+          ["發布日期","2025年"],
+          ["最後更新","2026年"],
+        ].map(([k,v],i,arr)=>e("div",{key:k,style:{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none"}},
+          e("span",{style:{fontSize:13,color:"var(--txt3)",flex:1}},k),
+          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},v)
+        ))
+      ),
+      // ─ 開發資訊
+      e("div",{style:{...S.slbl,marginBottom:8}},"開發資訊"),
+      e("div",{style:{...S.card,padding:0,marginBottom:16}},
+        ...[
+          ["開發單位","招募系統開發小組"],
+          ["系統維護","系統管理員"],
+          ["技術支援","Google Firebase / GitHub"],
+        ].map(([k,v],i,arr)=>e("div",{key:k,style:{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none"}},
+          e("span",{style:{fontSize:13,color:"var(--txt3)",flex:1}},k),
+          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},v)
+        ))
+      ),
+      // ─ 法律資訊
+      e("div",{style:{...S.slbl,marginBottom:8}},"法律資訊"),
+      e("div",{style:{...S.card,padding:0,marginBottom:16}},
+        ...[
+          {label:"使用條款",icon:"clipboard",color:"#3b82f6"},
+          {label:"隱私政策",icon:"lock",color:"#22c55e"},
+          {label:"資訊安全說明",icon:"shield",color:"#f59e0b"},
+          {label:"開源授權",icon:"book",color:"#a855f7"},
+        ].map((item,i,arr)=>e("div",{key:item.label,style:{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none",cursor:"default"}},
+          e("div",{style:{width:32,height:32,borderRadius:8,background:item.color+"15",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
+            e(Icon,{n:item.icon,s:16,c:item.color})
+          ),
+          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)",flex:1}},item.label),
+          e(Icon,{n:"chevR",s:14,c:"var(--txt3)"})
+        ))
+      ),
+      // ─ 支援
+      e("div",{style:{...S.slbl,marginBottom:8}},"支援"),
+      e("div",{style:{...S.card,padding:0,marginBottom:24}},
+        e("div",{style:{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",cursor:"default"}},
+          e("div",{style:{width:32,height:32,borderRadius:8,background:"rgba(245,158,11,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
+            e(Icon,{n:"list",s:16,c:"#f59e0b"})
+          ),
+          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)",flex:1}},"更新紀錄"),
+          e(Icon,{n:"chevR",s:14,c:"var(--txt3)"})
+        )
+      ),
+      // ─ 著作權
+      e("div",{style:{textAlign:"center",padding:"20px 0 8px",borderTop:"1px solid var(--border2)"}},
+        e("div",{style:{fontSize:12,color:"var(--txt3)",lineHeight:2}},
+          "© 2025–2026 招募資訊整合管理系統",
           e("br"),
           "本系統為軍事招募專用平台，僅限授權人員使用",
           e("br"),
-          "保留所有權利"
+          "All rights reserved"
         )
       )
-    )
+    ))
   );
 
   if(view==="error"){
@@ -2571,155 +2478,6 @@ function App(){
     e(BottomNav)
   );
 
-  if(view==="unitMgmt") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(Toast),
-    e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
-      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"協訓單位管理"))
-    ),
-    e("div",{style:{...S.sec,paddingTop:16},className:"has-bnav"},
-      e("div",{style:{marginBottom:12}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
-          e("div",{style:{fontSize:14,color:"var(--txt3)"}},"共 "+unitProfiles.length+" 個協訓單位，依筆畫排序"),
-          e("button",{style:S.btn("primary","sm"),onClick:()=>{setEditUnitData({id:uid(),name:"",recruiters:[],_new:true});setShowEditUnit(true);}},"＋ 新增單位")
-        ),
-        e("input",{style:{...S.inp,marginBottom:8},placeholder:"搜尋單位名稱或招募員姓名…",value:unitSearch,onChange:ev=>setUnitSearch(ev.target.value)}),
-        (()=>{
-          // 計算後台有但尚未匯入的單位
-          const existingNames=unitProfiles.map(p=>p.name);
-          const notImported=(cfg?.recruitUnits||[]).filter(n=>!existingNames.includes(n));
-          if(!notImported.length)return null;
-          return e("div",{style:{background:"#f59e0b15",border:"1px solid #f59e0b44",borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}},
-            e("div",{style:{flex:1,fontSize:12,color:"#f59e0b"}},"後台有 "+notImported.length+" 個單位尚未匯入："+notImported.join("、")),
-            e("button",{style:{...S.btn("primary","sm"),flexShrink:0},onClick:async()=>{
-              const newOnes=notImported.map(n=>({id:uid(),name:n,recruiters:[]}));
-              await saveUnitProfiles([...unitProfiles,...newOnes]);
-              toast_("已匯入 "+notImported.length+" 個單位 ✓");
-            }},"一鍵匯入")
-          );
-        })()
-      ),
-      unitProfiles.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
-        e(Icon,{n:"building",s:36,c:"var(--txt3)"}),
-        e("div",{style:{fontSize:14}},"尚無協訓單位，點上方新增")
-      ),
-      ...(unitSearch
-        ? unitProfiles.filter(u=>
-            u.name.includes(unitSearch)||
-            (u.recruiters||[]).some(r=>(r.rank||"").includes(unitSearch)||(r.name||"").includes(unitSearch))
-          )
-        : unitProfiles
-      ).map(unit=>e("div",{key:unit.id,style:{...S.card,marginBottom:10}},
-        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}},
-          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},unit.name),
-          e("div",{style:{display:"flex",gap:6}},
-            e("button",{style:{...S.btn("ghost","sm")},onClick:()=>{setEditUnitData({...unit});setShowEditUnit(true);}},"編輯"),
-            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:async()=>{
-              if(!window.confirm("確定刪除「"+unit.name+"」？"))return;
-              const profiles=unitProfiles.filter(u=>u.id!==unit.id);
-              await saveUnitProfiles(profiles);
-              toast_("已刪除");
-            }},e(Icon,{n:"trash",s:15}))
-          )
-        ),
-        // 招募員列表
-        e("div",{style:{marginBottom:8}},
-          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
-            e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt3)"}},"招募員（"+( unit.recruiters?.length||0)+"人）"),
-            e("button",{style:{...S.btn("primary","sm")},onClick:()=>{
-              setEditRecruiterData({id:uid(),rank:"",name:"",contact:"",_new:true});
-              setEditRecruiterUnitId(unit.id);
-              setShowEditRecruiter(true);
-            }},"＋ 新增招募員")
-          ),
-          (unit.recruiters||[]).length===0&&e("div",{style:{fontSize:13,color:"var(--txt3)",padding:"8px 0"}},"尚無招募員"),
-          ...(unit.recruiters||[]).map(r=>e("div",{key:r.id,style:{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
-            e("div",{style:{flex:1,minWidth:0}},
-              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},r.rank?" "+r.rank+" "+r.name:r.name),
-              r.contact&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},r.contact)
-            ),
-            e("button",{style:{...S.btn("ghost","sm"),padding:"3px 8px"},onClick:()=>{
-              setEditRecruiterData({...r});
-              setEditRecruiterUnitId(unit.id);
-              setShowEditRecruiter(true);
-            }},e(Icon,{n:"pencil",s:15})),
-            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"3px 8px"},onClick:async()=>{
-              const updated=unitProfiles.map(u=>u.id===unit.id?{...u,recruiters:(u.recruiters||[]).filter(x=>x.id!==r.id)}:u);
-              await saveUnitProfiles(updated);
-              toast_("已刪除");
-            }},"✕")
-          ))
-        )
-      )),
-      e("div",{style:{height:40}})
-    ),
-    // 新增/編輯單位 Modal
-    showEditUnit&&editUnitData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditUnit(false)},
-      e("div",{style:{...S.mBox,maxHeight:"50vh"}},
-        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editUnitData._new?"新增協訓單位":"編輯單位名稱"),
-        e("div",{style:{marginBottom:20}},
-          e("label",{style:S.lbl},"單位名稱"),
-          e("input",{style:S.inp,placeholder:"例：特訓中心、302旅2營…",value:editUnitData.name||"",autoFocus:true,
-            onChange:ev=>setEditUnitData(p=>({...p,name:ev.target.value})),
-            onKeyDown:ev=>ev.key==="Enter"&&document.getElementById("saveUnitBtn")?.click()
-          })
-        ),
-        e("div",{style:{display:"flex",gap:10}},
-          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditUnit(false)},"取消"),
-          e("button",{id:"saveUnitBtn",style:{...S.btn("primary"),flex:1},onClick:async()=>{
-            if(!editUnitData.name.trim())return;
-            let profiles;
-            if(editUnitData._new){
-              profiles=[...unitProfiles,{id:editUnitData.id,name:editUnitData.name.trim(),recruiters:[]}];
-            } else {
-              profiles=unitProfiles.map(u=>u.id===editUnitData.id?{...u,name:editUnitData.name.trim()}:u);
-            }
-            await saveUnitProfiles(profiles);
-            setShowEditUnit(false);
-            toast_("已儲存 ✓");
-          }},"儲存")
-        )
-      )
-    ),
-    // 新增/編輯招募員 Modal
-    showEditRecruiter&&editRecruiterData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditRecruiter(false)},
-      e("div",{style:{...S.mBox,maxHeight:"60vh"}},
-        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editRecruiterData._new?"新增招募員":"編輯招募員"),
-        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 12px",marginBottom:16}},
-          e("div",null,
-            e("label",{style:S.lbl},"職稱／階級"),
-            e("input",{style:S.inp,placeholder:"例：上士、中士…",value:editRecruiterData.rank||"",onChange:ev=>setEditRecruiterData(p=>({...p,rank:ev.target.value}))})
-          ),
-          e("div",null,
-            e("label",{style:S.lbl},"姓名 *"),
-            e("input",{style:S.inp,placeholder:"姓名",value:editRecruiterData.name||"",onChange:ev=>setEditRecruiterData(p=>({...p,name:ev.target.value}))})
-          ),
-          e("div",{style:{gridColumn:"span 2"}},
-            e("label",{style:S.lbl},"聯絡方式"),
-            e("input",{style:S.inp,placeholder:"電話 / LINE",value:editRecruiterData.contact||"",onChange:ev=>setEditRecruiterData(p=>({...p,contact:ev.target.value}))})
-          )
-        ),
-        e("div",{style:{display:"flex",gap:10}},
-          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditRecruiter(false)},"取消"),
-          e("button",{style:{...S.btn("primary"),flex:1},onClick:async()=>{
-            if(!editRecruiterData.name.trim())return;
-            const r={...editRecruiterData,_new:undefined,name:editRecruiterData.name.trim()};
-            const profiles=unitProfiles.map(u=>{
-              if(u.id!==editRecruiterUnitId)return u;
-              const recruiters=editRecruiterData._new
-                ?[...(u.recruiters||[]),r]
-                :(u.recruiters||[]).map(x=>x.id===r.id?r:x);
-              return {...u,recruiters};
-            });
-            await saveUnitProfiles(profiles);
-            setShowEditRecruiter(false);
-            toast_("已儲存 ✓");
-          }},"儲存")
-        )
-      )
-    ),
-    e(BottomNav)
-  );
 
   if(view==="batch"&&curBatch){
     const trainees=filterT();
