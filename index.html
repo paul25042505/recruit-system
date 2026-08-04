@@ -88,7 +88,7 @@ import React,{useState,useEffect,useRef,useMemo} from"react";
 import {createRoot} from"react-dom/client";
 import {initializeApp} from"firebase/app";
 import {
-  getFirestore,enableIndexedDbPersistence,
+  initializeFirestore,persistentLocalCache,
   doc,getDoc,setDoc,deleteDoc,collection,getDocs
 } from"firebase/firestore";
 import {
@@ -101,11 +101,9 @@ const _fbApp=initializeApp({
   authDomain:"recruitment-sys-d1d78.firebaseapp.com",
   projectId:"recruitment-sys-d1d78",
 });
-const _db=getFirestore(_fbApp);
+const _db=initializeFirestore(_fbApp,{localCache:persistentLocalCache()});
 const _auth=getAuth(_fbApp);
 const _gProvider=new GoogleAuthProvider();
-// 啟用離線快取（IndexedDB），斷網照常顯示上次資料
-enableIndexedDbPersistence(_db).catch(()=>{});
 
 async function fsGet(p){
   const snap=await getDoc(doc(_db,...p.split("/")));
@@ -417,6 +415,7 @@ function App(){
       if(!user){setAuthUser(null);setUserProfile(null);setView("login");return;}
       setAuthUser(user);
       try{
+        await user.getIdToken(true); // force token refresh so Firestore gets valid auth
         const profile=await fsGetUser(user.uid);
         if(!profile){setUserProfile(null);setView("profileSetup");return;}
         setUserProfile(profile);
@@ -463,6 +462,7 @@ function App(){
     setRetrying(true);
     setErrMsg("");
     try{
+      await user.getIdToken(true);
       const profile=await fsGetUser(user.uid);
       if(!profile){setUserProfile(null);setView("profileSetup");return;}
       setUserProfile(profile);
