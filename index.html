@@ -351,6 +351,7 @@ function App(){
   // 個人資料設定表單
   const [pf,setPf]=useState({name:"",rank:"",unit:"",subUnit:"",role:"recruiter",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
   const [pfSaving,setPfSaving]=useState(false);
+  const [retrying,setRetrying]=useState(false);
 
   // 主題：自動跟隨系統設定
   useEffect(()=>{
@@ -454,6 +455,21 @@ function App(){
     await fsSetUser(authUser.uid,up);
     setUserProfile(up);
     toast_("資料已更新 ✓");
+  }
+  async function retryConnection(){
+    if(retrying)return;
+    const user=authUser;
+    if(!user){setView("login");return;}
+    setRetrying(true);
+    setErrMsg("");
+    try{
+      const profile=await fsGetUser(user.uid);
+      if(!profile){setUserProfile(null);setView("profileSetup");return;}
+      setUserProfile(profile);
+      await loadAppData();
+      setView("dashboard");
+    }catch(err){setErrMsg(err?.message||String(err));}
+    finally{setRetrying(false);}
   }
 
   // ── Pull-to-Refresh ─────────────────────────────────────────────────────────
@@ -1340,22 +1356,34 @@ function App(){
   if(view==="error"){
     const isPermErr=errMsg&&(errMsg.includes("permission")||errMsg.includes("Missing or insufficient"));
     return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh",padding:24}},
-      e("div",{style:{textAlign:"center",maxWidth:380}},
+      e("div",{style:{textAlign:"center",maxWidth:400,width:"100%"}},
         e("div",{style:{fontSize:52,marginBottom:10}},"⚠️"),
         e("div",{style:{color:"#ef4444",fontWeight:800,fontSize:16,marginBottom:8}},"連線失敗"),
-        errMsg&&e("div",{style:{background:"var(--bg2)",border:"1px solid #ef444433",borderRadius:10,padding:12,fontSize:12,color:"#fca5a5",wordBreak:"break-all",textAlign:"left",marginBottom:16}},errMsg),
-        e("button",{style:{...S.btn("primary"),padding:"12px 28px"},onClick:()=>window.location.reload()},"🔄 重新整理"),
+        authUser&&e("div",{style:{background:"#16a34a22",border:"1px solid #16a34a55",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#4ade80",marginBottom:12,textAlign:"left"}},
+          "✓ 已登入：",e("span",{style:{fontWeight:700}},authUser.email||authUser.displayName)
+        ),
+        errMsg&&e("div",{style:{background:"var(--bg2)",border:"1px solid #ef444433",borderRadius:10,padding:12,fontSize:12,color:"#fca5a5",wordBreak:"break-all",textAlign:"left",marginBottom:14}},errMsg),
+        e("div",{style:{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",marginBottom:4}},
+          e("button",{
+            style:{...S.btn("primary"),padding:"12px 24px",opacity:retrying?0.6:1},
+            onClick:retryConnection,
+            disabled:retrying
+          },retrying?"連線中…":"🔄 重試連線"),
+          e("button",{style:{...S.btn("ghost"),padding:"12px 20px"},onClick:()=>window.location.reload()},"重新整理"),
+          e("button",{style:{...S.btn("ghost"),padding:"12px 20px",color:"#ef4444",borderColor:"#ef444433"},onClick:signOutUser},"登出")
+        ),
         isPermErr
           ? e("div",{style:{marginTop:18,background:"var(--bg2)",border:"1px solid #f59e0b44",borderRadius:10,padding:14,textAlign:"left"}},
               e("div",{style:{fontSize:12,fontWeight:700,color:"#f59e0b",marginBottom:8}},"🔧 修復步驟：Firestore 安全規則"),
               e("ol",{style:{fontSize:12,color:"var(--txt2)",paddingLeft:18,lineHeight:2}},
                 e("li",null,"前往 ",e("a",{href:"https://console.firebase.google.com/",target:"_blank",style:{color:"#60a5fa"}},"Firebase Console")),
                 e("li",null,"選擇專案 ",e("code",{style:{color:"#f59e0b",fontSize:11}},"recruitment-sys-d1d78")),
-                e("li",null,"Firestore Database → 規則"),
-                e("li",null,"貼入以下規則並發布：")
+                e("li",null,"Firestore Database → 規則（左側選單）"),
+                e("li",null,"貼入以下規則並點「發布」：")
               ),
-              e("pre",{style:{background:"#0a0f1e",border:"1px solid var(--border)",borderRadius:6,padding:"10px 12px",fontSize:11,color:"#f59e0b",marginTop:8,overflowX:"auto",textAlign:"left"}},
-"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}")
+              e("pre",{style:{background:"#0a0f1e",border:"1px solid var(--border)",borderRadius:6,padding:"10px 12px",fontSize:11,color:"#f59e0b",marginTop:8,overflowX:"auto",textAlign:"left",userSelect:"all"}},
+"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}"),
+              e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:10,lineHeight:1.7}},"發布後約 1 分鐘生效，之後點「重試連線」即可。")
             )
           : e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:14,lineHeight:1.8}},"請確認網路連線，或重新整理再試。")
       )
