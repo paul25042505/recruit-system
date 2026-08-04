@@ -92,7 +92,7 @@ import {
   doc,getDoc,setDoc,deleteDoc,collection,getDocs
 } from"firebase/firestore";
 import {
-  getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut as fbSignOut
+  getAuth,GoogleAuthProvider,signInWithRedirect,getRedirectResult,onAuthStateChanged,signOut as fbSignOut
 } from"firebase/auth";
 
 // ═══ FIREBASE SDK + 離線快取 ═════════════════════════════════════════════════
@@ -410,6 +410,12 @@ function App(){
 
   // ── Auth state ──────────────────────────────────────────────────────────────
   useEffect(()=>{
+    // 處理 iOS Safari redirect 登入後的回調
+    getRedirectResult(_auth).catch(err=>{
+      if(err?.code&&err.code!=="auth/no-auth-event"){
+        toast_(err.message||"登入失敗","err");
+      }
+    });
     return onAuthStateChanged(_auth,async user=>{
       setAuthReady(true);
       if(!user){setAuthUser(null);setUserProfile(null);setView("login");return;}
@@ -427,7 +433,7 @@ function App(){
 
   // ── Auth helpers ────────────────────────────────────────────────────────────
   async function signInGoogle(){
-    try{await signInWithPopup(_auth,_gProvider);}
+    try{await signInWithRedirect(_auth,_gProvider);}
     catch(err){toast_(err.message||"登入失敗","err");}
   }
   async function signOutUser(){
