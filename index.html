@@ -473,22 +473,22 @@ function App(){
     const sortedProfiles=[...mergedProfiles].sort((a,b)=>a.name.localeCompare(b.name,"zh-TW",{sensitivity:"base"}));
     if(missing.length>0){
       const syncCfg={...settings,recruitUnitProfiles:sortedProfiles,recruitUnits:[...new Set([...sortedProfiles.map(p=>p.name)])]};
-      await fsSet("settings/global",syncCfg);
+      fsSet("settings/global",syncCfg).catch(()={}); // 非同步寫入，不阻塞載入
       setCfg(syncCfg);
     }else{setCfg(settings);}
     setUnitProfiles(sortedProfiles);
-    setCfg(settings);
-    const patched=await Promise.all(b.map(async batch=>{
+    // 批次補齊 schedule 欄位：只計算需要更新的，寫入在背景執行不阻塞
+    const patched=b.map(batch=>{
       const keys=(batch.schedule||[]).map(s=>s.key);
       const miss=DEF_SCHED.filter(s=>!keys.includes(s.key));
       if(!miss.length)return batch;
       const up={...batch,schedule:[...(batch.schedule||[]),...miss.map(s=>({...s}))]};
-      await fsSet("batches/"+batch.id,up);
+      fsSet("batches/"+batch.id,up).catch(()=>{}); // 非同步寫入
       return up;
-    }));
+    });
     const sorted=patched.sort((a,z)=>(z.createdAt||"").localeCompare(a.createdAt||""));
     setBatches(sorted);
-    if(!s)await fsSet("settings/global",DEF);
+    if(!s)fsSet("settings/global",DEF).catch(()=>{}); // 非同步寫入
     return sorted;
   }
 
@@ -515,7 +515,6 @@ function App(){
         if(!done){setErrMsg("連線逾時（15s），請確認網路後重試");setView("error");}
       },15000);
       try{
-        await tout(user.getIdToken(true),8000,"Token 取得逾時");
         const profile=await tout(fsGetUser(user.uid),8000,"讀取個人資料逾時");
         if(!profile){setUserProfile(null);setView("profileSetup");done=true;return;}
         setUserProfile(profile);
