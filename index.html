@@ -906,10 +906,21 @@ function App(){
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
+  function getServiceGrad(unit){
+    if(!unit)return{a:"#c8a020",b:"#e8c040"};
+    if(unit.includes("陸軍"))return{a:"#4a8a3a",b:"#6aaa5a"};
+    if(unit.includes("海軍陸戰"))return{a:"#2a5a7a",b:"#4a8aaa"};
+    if(unit.includes("海軍"))return{a:"#1e6090",b:"#3a90c0"};
+    if(unit.includes("空軍"))return{a:"#1a70b0",b:"#3a9ada"};
+    if(unit.includes("憲兵"))return{a:"#7030a0",b:"#9050c0"};
+    if(unit.includes("海巡"))return{a:"#1a7890",b:"#3a98b0"};
+    if(unit.includes("後備"))return{a:"#806030",b:"#a08050"};
+    return{a:"#c8a020",b:"#e8c040"};
+  }
   function bStats(b){
     const t=b.trainees||[];
     function getStId(x){if(x.qualCheck?.result==="fail")return 1;const logs=x.interviewLogs||[];const last=logs[logs.length-1];const fallback=(x.qualCheck?.result==="pass"&&x.statusId===1)?null:x.statusId;return last?.statusId||fallback;}
-    return{total:t.length,rev:t.filter(x=>x.interviewLogs&&x.interviewLogs.length>0).length,conf:t.filter(x=>getStId(x)===6).length};
+    return{total:t.length,rev:t.filter(x=>x.interviewLogs&&x.interviewLogs.length>0).length,conf:t.filter(x=>getStId(x)===6).length,high:t.filter(x=>getStId(x)===5).length,none:t.filter(x=>!(x.interviewLogs||[]).length&&!getStId(x)).length};
   }
   function filterT(){
     const tdISO=isoToday();
@@ -2090,58 +2101,44 @@ function App(){
       ),
       batches.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"60px 0"}},e("div",{style:{fontSize:48,marginBottom:12}},"📋"),e("div",{style:{fontSize:14}},"尚無梯次")),
       ...batches.map(b=>{
-        const st=bStats(b),pct=st.total?Math.round(st.rev/st.total*100):0,hc=b.company&&b.company!=="（無）";
+        const st=bStats(b),hc=b.company&&b.company!=="（無）";
         const reportDate=(b.schedule||[]).find(s=>s.key==="report")?.date;
-        return e("div",{key:b.id,style:S.card},
-          e("div",{style:{display:"flex",alignItems:"flex-start",gap:8,marginBottom:10}},
-            e("div",{style:{flex:1,cursor:"pointer"},onClick:()=>{
-              try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"👥 訓員列表");return;}}catch(e){}
-              setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");}},
-              e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:6}},b.unit+"・"+b.battalion+(hc?"・"+b.company:"")+"・"+fmtSeq(b.sequence)),
-              e("div",{style:{display:"flex",flexWrap:"wrap",gap:5}},
-                e("span",{style:S.badge},"📅 "+(reportDate||"尚未設定報到日")),
-                e("span",{style:S.badge},"👤 "+st.total+" 人"),
-                st.conf>0&&e("span",{style:S.tag("#10b981")},"✅ "+st.conf)
+        const grad=getServiceGrad(b.unit);
+        const enterBatch=()=>{
+          try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"👥 訓員列表");return;}}catch(_){}
+          setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");
+        };
+        return e("div",{key:b.id,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden",marginBottom:10,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}},
+          // 服種色條
+          e("div",{style:{height:3,background:"linear-gradient(90deg,"+grad.a+","+grad.b+")"}}),
+          // 卡片主體
+          e("div",{style:{padding:"13px 14px",display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"},onClick:enterBatch},
+            e("div",{style:{flex:1,minWidth:0}},
+              e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:3,letterSpacing:"-0.01em",lineHeight:1.25}},b.unit),
+              e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:10}},b.battalion+(hc?"・"+b.company:"")),
+              e("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
+                e("span",{style:{fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:6,background:"var(--bg3)",color:"var(--txt2)",border:"1px solid var(--border2)"}},
+                  "📅 "+(reportDate||"待設定報到日")
+                )
               )
             ),
-            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent"},onClick:()=>{setDelTarget(b);setDelPwd("");setDelPwdErr(false);setShowDelBatch(true);}},e(Icon,{n:"trash",s:15}))
+            e("div",{style:{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:3}},
+              e("div",{style:{width:48,height:48,borderRadius:"50%",border:"2px solid "+grad.a,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}},
+                e("div",{style:{fontSize:18,fontWeight:900,lineHeight:1,color:grad.a,fontVariantNumeric:"tabular-nums"}},st.total),
+                e("div",{style:{fontSize:8,fontWeight:700,color:grad.a,opacity:0.75,letterSpacing:"0.03em"}},"人")
+              ),
+              st.conf>0&&e("div",{style:{fontSize:9,fontWeight:700,color:"#10b981",textAlign:"center"}},"✅ "+st.conf+" 確")
+            )
           ),
-          e("div",{style:{cursor:"pointer"},onClick:()=>{
-              try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"👥 訓員列表");return;}}catch(e){}
-              setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");}},
-            e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:5}},e("span",{style:{fontSize:11,color:"var(--txt3)"}},"訪談進度"),e("span",{style:{fontSize:11,color:"var(--txt3)"}},st.rev+" / "+st.total)),
-            e("div",{style:{height:4,background:"var(--bg3)",borderRadius:4,overflow:"hidden"}},e("div",{style:{height:"100%",width:pct+"%",background:"linear-gradient(90deg,#f59e0b,#ef4444)",borderRadius:4,transition:"width 0.4s"}})),
-            (()=>{
-              const allT=b.trainees||[];
-              if(!allT.length)return null;
-              function getStId(x){if(x.qualCheck?.result==="fail")return 1;const logs=x.interviewLogs||[];const last=logs[logs.length-1];const fallback=(x.qualCheck?.result==="pass"&&x.statusId===1)?null:x.statusId;return last?.statusId||fallback;}
-              const stDef=[
-                {id:6,color:"#10b981",label:"確簽"},
-                {id:5,color:"#22c55e",label:"高意願"},
-                {id:4,color:"#3b82f6",label:"中意願"},
-                {id:3,color:"#eab308",label:"低意願"},
-                {id:2,color:"#f97316",label:"無意願"},
-                {id:1,color:"#ef4444",label:"資格不符"},
-                {id:null,color:"#334155",label:"未訪談"},
-              ];
-              const counts={};
-              allT.forEach(t=>{const sid=getStId(t);const key=sid==null?"null":String(sid);counts[key]=(counts[key]||0)+1;});
-              const segs=stDef.map(s=>{const key=s.id==null?"null":String(s.id);return{...s,count:counts[key]||0};}).filter(s=>s.count>0);
-              const total=allT.length;
-              return e("div",null,
-                // 占比彩色條
-                e("div",{style:{display:"flex",height:6,borderRadius:4,overflow:"hidden",marginTop:6,gap:"1px"}},
-                  ...segs.map(s=>e("div",{key:s.id,title:s.label+" "+s.count+"人 ("+Math.round(s.count/total*100)+"%)",style:{flex:s.count,background:s.color,minWidth:2,transition:"flex 0.4s"}}))
-                ),
-                // 圖例
-                e("div",{style:{display:"flex",flexWrap:"wrap",gap:"3px 8px",marginTop:5}},
-                  ...segs.map(s=>e("div",{key:s.id,style:{display:"flex",alignItems:"center",gap:3}},
-                    e("div",{style:{width:7,height:7,borderRadius:"50%",background:s.color,flexShrink:0}}),
-                    e("span",{style:{fontSize:11,color:s.color,fontWeight:700}},s.label+" "+s.count)
-                  ))
-                )
-              );
-            })()
+          // 底列：梯次徽章 + 刪除 + 箭頭
+          e("div",{style:{padding:"6px 14px 10px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid var(--border2)",cursor:"pointer"},onClick:enterBatch},
+            e("div",{style:{fontSize:11,fontWeight:800,padding:"3px 10px",borderRadius:6,background:grad.a,color:"#fff",letterSpacing:"0.04em"}},fmtSeq(b.sequence)),
+            e("div",{style:{flex:1}}),
+            e("button",{
+              style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"3px 8px"},
+              onClick:ev=>{ev.stopPropagation();setDelTarget(b);setDelPwd("");setDelPwdErr(false);setShowDelBatch(true);}
+            },e(Icon,{n:"trash",s:14})),
+            e("span",{style:{color:"var(--txt3)",fontSize:18,marginLeft:2,lineHeight:1}})
           )
         );
       }),
@@ -2396,6 +2393,36 @@ function App(){
           )
         )
       ),
+      // ── 統計卡片（進入梯次後顯示）─────────────────────────────────────────
+      (()=>{
+        const bGrad=getServiceGrad(curBatch.unit);
+        const bs=bStats(curBatch);
+        const tiles=[
+          {label:"總人數",val:bs.total,color:"var(--txt)",sub:null},
+          {label:"已訪談",val:bs.rev,color:"#f59e0b",sub:bs.total?Math.round(bs.rev/bs.total*100)+"%":null},
+          {label:"高意願",val:bs.high,color:"#22c55e",sub:bs.rev&&bs.high?Math.round(bs.high/bs.rev*100)+"%":null},
+          {label:"確簽",val:bs.conf,color:"#10b981",sub:bs.total?Math.round(bs.conf/bs.total*100)+"%":null},
+          {label:"未接觸",val:bs.none,color:"var(--txt3)",sub:null},
+        ];
+        return e("div",{style:{padding:"0 16px 0",maxWidth:640,margin:"0 auto"}},
+          // 梯次色頂線
+          e("div",{style:{height:2,background:"linear-gradient(90deg,"+bGrad.a+","+bGrad.b+",transparent)",borderRadius:2,marginBottom:10}}),
+          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:2}},
+            ...tiles.map(t=>e("div",{key:t.label,style:{
+              background:"var(--bg2)",
+              border:"1px solid var(--border)",
+              borderRadius:12,
+              padding:"10px 4px 8px",
+              display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+              boxShadow:"0 1px 4px rgba(0,0,0,0.06)"
+            }},
+              e("div",{style:{fontSize:19,fontWeight:900,lineHeight:1,color:t.color,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}},t.val),
+              t.sub&&e("div",{style:{fontSize:9,color:bGrad.a,fontWeight:700,letterSpacing:"0.02em"}},t.sub),
+              e("div",{style:{fontSize:9,color:"var(--txt3)",fontWeight:600,textAlign:"center",marginTop:1}},t.label)
+            ))
+          )
+        );
+      })(),
       e("div",{style:S.sec},
 
         e("div",{className:"hs",style:{display:"flex",gap:0,marginBottom:12,background:"var(--inp-bg)",borderRadius:10,padding:3,overflowX:"auto"}},
