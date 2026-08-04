@@ -139,7 +139,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const APP_VERSION="1.1.1";
+const APP_VERSION="1.1.2";
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
 const DEF={
@@ -389,6 +389,8 @@ function App(){
   const [showEditRecruiter,setShowEditRecruiter]=useState(false);
   const [editRecruiterData,setEditRecruiterData]=useState(null);
   const [editRecruiterUnitId,setEditRecruiterUnitId]=useState(null);
+  // 更多頁文字欄位暫存（打字時不直接存檔，blur 才儲存）
+  const [moreEdit,setMoreEdit]=useState({});
 
   // 身分驗證
   const [authUser,setAuthUser]=useState(null);
@@ -1364,21 +1366,38 @@ function App(){
           )
         ),
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 10px",marginBottom:12}},
-          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"軍職姓名"),e("input",{style:S.inp,value:userProfile?.name||"",onChange:ev=>updateMyProfile({name:ev.target.value})})),
+          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"軍職姓名"),e("input",{
+            style:S.inp,
+            value:moreEdit.name!==undefined?moreEdit.name:(userProfile?.name||""),
+            onChange:ev=>setMoreEdit(d=>({...d,name:ev.target.value})),
+            onBlur:()=>{if(moreEdit.name!==undefined){updateMyProfile({name:moreEdit.name});setMoreEdit(d=>{const n={...d};delete n.name;return n;});}}
+          })),
           e("div",null,e("label",{style:S.lbl},"階級"),
             e("select",{style:S.sel,value:userProfile?.rank||"",onChange:ev=>updateMyProfile({rank:ev.target.value})},
               ...RANKS_ALL.map(r=>e("option",{key:r,value:r},r))
             )
           ),
           e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"單位全銜"),
-            e("input",{style:S.inp,placeholder:"例：陸軍司令部第一作戰區",value:userProfile?.unit||"",onChange:ev=>updateMyProfile({unit:ev.target.value,subUnit:""})})
+            e("input",{
+              style:S.inp,
+              placeholder:"例：陸軍司令部第一作戰區",
+              value:moreEdit.unit!==undefined?moreEdit.unit:(userProfile?.unit||""),
+              onChange:ev=>setMoreEdit(d=>({...d,unit:ev.target.value})),
+              onBlur:()=>{if(moreEdit.unit!==undefined){updateMyProfile({unit:moreEdit.unit,subUnit:""});setMoreEdit(d=>{const n={...d};delete n.unit;return n;});}}
+            })
           )
         )
       ),
       userProfile?.role==="recruiter"&&e("div",{style:{...S.card,marginBottom:10}},
         e("div",{style:S.slbl},"招募員簽證"),
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 10px"}},
-          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"證號"),e("input",{style:S.inp,value:userProfile?.licenseNo||"",onChange:ev=>updateMyProfile({licenseNo:ev.target.value})})),
+          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"證號"),e("input",{
+            style:S.inp,
+            value:moreEdit.licenseNo!==undefined?moreEdit.licenseNo:(userProfile?.licenseNo||""),
+            onChange:ev=>setMoreEdit(d=>({...d,licenseNo:ev.target.value})),
+            onBlur:()=>{if(moreEdit.licenseNo!==undefined){updateMyProfile({licenseNo:moreEdit.licenseNo});setMoreEdit(d=>{const n={...d};delete n.licenseNo;return n;});}},
+            placeholder:"例：ROC-2024-A-04821"
+          })),
           e("div",null,e("label",{style:S.lbl},"核發日期"),e("input",{style:S.inp,type:"date",value:userProfile?.licenseIssueDate||"",onChange:ev=>updateMyProfile({licenseIssueDate:ev.target.value})})),
           e("div",null,e("label",{style:S.lbl},"效期截止"),e("input",{style:S.inp,type:"date",value:userProfile?.licenseExpiryDate||"",onChange:ev=>updateMyProfile({licenseExpiryDate:ev.target.value})})),
           e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"招募類別"),
