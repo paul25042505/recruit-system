@@ -122,6 +122,8 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
+const APP_VERSION="1.0.6";
+
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
 const DEF={
   adminPassword:"admin1234",
@@ -1104,7 +1106,8 @@ function App(){
         e("span",{style:{fontSize:20}},"G"),
         "使用 Google 帳號登入"
       ),
-      e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:20,lineHeight:1.8}},"僅限授權人員使用。登入即代表同意系統使用規範。")
+      e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:20,lineHeight:1.8}},"僅限授權人員使用。登入即代表同意系統使用規範。"),
+      e("div",{style:{fontSize:10,color:"var(--txt3)",marginTop:12,opacity:0.5}},"v",APP_VERSION)
     )
   );
 
