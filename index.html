@@ -87,6 +87,7 @@ button{touch-action:manipulation;cursor:pointer;}
 .tl-item::before{content:"";position:absolute;left:9px;top:10px;bottom:0;width:2px;background:var(--border2);}
 .tl-item:last-child::before{display:none;}
 .tl-dot{position:absolute;left:0;top:3px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid var(--bg);flex-shrink:0;}
+@keyframes dot-pulse{0%,80%,100%{transform:scale(0.8);opacity:0.3}40%{transform:scale(1.2);opacity:1}}
 /* V2: skeleton */
 @keyframes sk-sh{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .skeleton{border-radius:8px;background:linear-gradient(90deg,var(--bg3) 25%,color-mix(in srgb,var(--bg3) 60%,var(--bg2)) 50%,var(--bg3) 75%);background-size:200% 100%;animation:sk-sh 1.5s ease-in-out infinite;}
@@ -495,24 +496,33 @@ function App(){
     const t=setTimeout(()=>{
       setAuthReady(cur=>{if(!cur){setView("login");return true;}return cur;});
     },5000);
-    const ts=setTimeout(()=>setLoadingSlow(true),8000);
+    const ts=setTimeout(()=>setLoadingSlow(true),6000);
     return()=>{clearTimeout(t);clearTimeout(ts);}
   },[]);
   // 主要 auth 狀態監聽
   useEffect(()=>{
+    // 每個 Firebase 呼叫的逾時包裝（避免無限等待）
+    function tout(p,ms,msg){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(msg)),ms))]);}
     return onAuthStateChanged(_auth,async user=>{
       setAuthReady(true);
       if(!user){setAuthUser(null);setUserProfile(null);setView("login");return;}
       setAuthUser(user);
+      // 整體 auth+load 流程設 15 秒上限
+      let done=false;
+      const overallTimer=setTimeout(()=>{
+        if(!done){setErrMsg("連線逾時（15s），請確認網路後重試");setView("error");}
+      },15000);
       try{
-        await user.getIdToken(true);
-        const profile=await fsGetUser(user.uid);
-        if(!profile){setUserProfile(null);setView("profileSetup");return;}
+        await tout(user.getIdToken(true),8000,"Token 取得逾時");
+        const profile=await tout(fsGetUser(user.uid),8000,"讀取個人資料逾時");
+        if(!profile){setUserProfile(null);setView("profileSetup");done=true;return;}
         setUserProfile(profile);
-        if(profile.status!=="active"){setView("pendingApproval");return;}
-        await loadAppData();
+        if(profile.status!=="active"){setView("pendingApproval");done=true;return;}
+        await tout(loadAppData(),12000,"載入資料逾時");
         setView("dashboard");
-      }catch(err){setErrMsg(err?.message||String(err));setView("error");}
+        done=true;
+      }catch(err){if(!done){setErrMsg(err?.message||String(err));setView("error");done=true;}}
+      finally{clearTimeout(overallTimer);}
     });
   },[]);
 
@@ -1235,16 +1245,21 @@ function App(){
   if(!authReady||view==="loading") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh",gap:0}},
     e(Icon,{n:"shield",s:56,c:"#f59e0b",w:1.2}),
     e("div",{style:{color:"var(--txt3)",fontSize:13,letterSpacing:"0.1em",marginTop:14}},"系統連線中…"),
-    loadingSlow&&e("div",{style:{marginTop:28,display:"flex",flexDirection:"column",alignItems:"center",gap:10}},
-      e("div",{style:{fontSize:12,color:"var(--txt3)"}},"連線時間較長，可能是網路問題"),
-      e("button",{
-        style:{background:"linear-gradient(135deg,#f59e0b,#ef4444)",border:"none",borderRadius:10,padding:"9px 22px",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},
-        onClick:()=>window.location.reload()
-      },"重新載入"),
-      e("button",{
-        style:{background:"transparent",border:"1px solid var(--border)",borderRadius:10,padding:"8px 18px",color:"var(--txt3)",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},
-        onClick:()=>{setAuthReady(true);setView("login");}
-      },"前往登入頁")
+    !loadingSlow&&e("div",{style:{marginTop:20,display:"flex",gap:5}},...[0,1,2].map(i=>
+      e("div",{key:i,style:{width:5,height:5,borderRadius:"50%",background:"var(--txt3)",opacity:0.4,animation:"dot-pulse 1.4s ease-in-out "+i*0.2+"s infinite"}})
+    )),
+    loadingSlow&&e("div",{style:{marginTop:28,display:"flex",flexDirection:"column",alignItems:"center",gap:10,padding:"0 32px",textAlign:"center"}},
+      e("div",{style:{fontSize:12,color:"var(--txt3)",lineHeight:1.7}},"連線時間異常，可能是網路品質較差","或 Firebase 伺服器正在回應中"),
+      e("div",{style:{display:"flex",gap:8,marginTop:4}},
+        e("button",{
+          style:{background:"linear-gradient(135deg,#f59e0b,#ef4444)",border:"none",borderRadius:10,padding:"9px 20px",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},
+          onClick:()=>window.location.reload()
+        },"重新載入"),
+        e("button",{
+          style:{background:"transparent",border:"1px solid var(--border)",borderRadius:10,padding:"8px 16px",color:"var(--txt3)",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},
+          onClick:()=>{setAuthReady(true);setView("login");}
+        },"前往登入頁")
+      )
     )
   );
 
