@@ -122,7 +122,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const APP_VERSION="1.0.6";
+const APP_VERSION="1.0.7";
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
 const DEF={
@@ -255,6 +255,37 @@ const S={
   toast:t=>({position:"fixed",top:18,left:"50%",transform:"translateX(-50%)",background:t==="ok"?"#10b981":"#ef4444",color:"#fff",borderRadius:10,padding:"10px 22px",fontSize:13,fontWeight:700,zIndex:999,whiteSpace:"nowrap",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}),
   slbl:{fontSize:11,fontWeight:800,color:"#f59e0b",letterSpacing:"0.12em",marginBottom:12},
 };
+
+// ═══ SVG ICONS ════════════════════════════════════════════════════════════════
+const ICONS={
+  home:`<path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>`,
+  list:`<path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>`,
+  building:`<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/>`,
+  chat:`<path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/>`,
+  grid:`<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>`,
+  chevL:`<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/>`,
+  chevR:`<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>`,
+  pencil:`<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>`,
+  trash:`<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>`,
+  search:`<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>`,
+  logout:`<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/>`,
+  warning:`<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>`,
+  refresh:`<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>`,
+  wrench:`<path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.654-4.654m5.292-8.916.005.004 3.413 3.413a1.5 1.5 0 0 1 0 2.122L13.5 12.5M11.42 15.17l-3.413-3.413"/>`,
+  user:`<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>`,
+  cog:`<path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>`,
+  calendar:`<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>`,
+  lock:`<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>`,
+  plus:`<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>`,
+  xmark:`<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>`,
+  phone:`<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/>`,
+  clock:`<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>`,
+  users:`<path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>`,
+  shield:`<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>`,
+};
+function Icon({n,s=20,c="currentColor",w=1.75}){
+  return e("svg",{xmlns:"http://www.w3.org/2000/svg",width:s,height:s,viewBox:"0 0 24 24",fill:"none",stroke:c,strokeWidth:w,strokeLinecap:"round",strokeLinejoin:"round",style:{display:"block",flexShrink:0,pointerEvents:"none"},dangerouslySetInnerHTML:{__html:ICONS[n]||""}});
+}
 
 // ═══ APP ══════════════════════════════════════════════════════════════════════
 
@@ -593,24 +624,21 @@ function App(){
 
   // ── Bottom Navigation ───────────────────────────────────────────────────────
   function BottomNav(){
-    const mainViews=["dashboard","home","unitMgmt","feedback","admin","adminPwd"];
+    const mainViews=["dashboard","home","unitMgmt","feedback","more","admin","adminPwd"];
     if(!mainViews.includes(view))return null;
-    const activeKey=view==="admin"?"adminPwd":view;
+    const activeKey=(view==="admin"||view==="adminPwd")?"more":view;
     const tabs=[
-      {key:"dashboard",icon:"🏠",label:"首頁"},
-      {key:"home",icon:"📋",label:"梯次"},
-      {key:"unitMgmt",icon:"🏢",label:"協訓"},
-      {key:"feedback",icon:"💬",label:"回饋"},
-      {key:"adminPwd",icon:"⚙️",label:"後台"},
+      {key:"dashboard",icon:"home",label:"首頁"},
+      {key:"home",icon:"list",label:"梯次"},
+      {key:"unitMgmt",icon:"building",label:"協訓"},
+      {key:"feedback",icon:"chat",label:"回饋"},
+      {key:"more",icon:"grid",label:"更多"},
     ];
     return e("div",{className:"bnav"},
       ...tabs.map(tab=>e("button",{key:tab.key,className:"bnav-item"+(activeKey===tab.key?" active":""),
-        onClick:()=>{
-          if(tab.key==="adminPwd"&&view!=="admin"){setAPwd("");setAPwdErr(false);setView("adminPwd");}
-          else if(tab.key!=="adminPwd")setView(tab.key);
-        }
+        onClick:()=>setView(tab.key)
       },
-        e("span",{className:"bnav-icon"},tab.icon),
+        e("span",{className:"bnav-icon"},e(Icon,{n:tab.icon,s:22})),
         e("span",{className:"bnav-lbl"},tab.label),
         activeKey===tab.key&&e("span",{className:"bnav-pip"})
       ))
@@ -865,8 +893,8 @@ function App(){
                 e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>setEditIdx(p=>({...p,[field]:null}))},"✕")
               )
             : e(React.Fragment,null,
-                e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#64748b"},onClick:()=>{setEditIdx(p=>({...p,[field]:i}));setEditVal(p=>({...p,[field]:item}));}},"✏️"),
-                e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433",padding:"5px 9px"},onClick:()=>setAf(p=>({...p,[field]:p[field].filter((_,j)=>j!==i)}))},"🗑️")
+                e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#64748b"},onClick:()=>{setEditIdx(p=>({...p,[field]:i}));setEditVal(p=>({...p,[field]:item}));}},e(Icon,{n:"pencil",s:15})),
+                e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433",padding:"5px 9px"},onClick:()=>setAf(p=>({...p,[field]:p[field].filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
               )
         );
       }),
@@ -898,8 +926,8 @@ function App(){
           e("span",{style:{fontSize:13,color:s.color,fontWeight:700,flex:1}},s.label),
           s.subReasons?.length>0&&e("span",{style:{fontSize:10,color:"var(--txt3)"}},s.subReasons.length+"個子項")
         ),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditStItem({...s});setEditStSubInput("");setShowEditSt(true);}},"✏️"),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,statusOptions:p.statusOptions.filter((_,j)=>j!==i)}))},"🗑️")
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditStItem({...s});setEditStSubInput("");setShowEditSt(true);}},e(Icon,{n:"pencil",s:15})),
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,statusOptions:p.statusOptions.filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
       ))
     );
   }
@@ -922,8 +950,8 @@ function App(){
           e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},q.label),
           q.desc&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},q.desc)
         ),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditQualItem({...q});setShowEditQual(true);}},"✏️"),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,qualCheckItems:p.qualCheckItems.filter((_,j)=>j!==i)}))},"🗑️")
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditQualItem({...q});setShowEditQual(true);}},e(Icon,{n:"pencil",s:15})),
+        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,qualCheckItems:p.qualCheckItems.filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
       ))
     );
   }
@@ -1013,8 +1041,8 @@ function App(){
               )
             )
           ),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditCFItem({...f});setCfOptionInput("");setShowEditCF(true);}},"✏️"),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,customFields:p.customFields.filter((_,j)=>j!==i)}))},"🗑️")
+          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditCFItem({...f});setCfOptionInput("");setShowEditCF(true);}},e(Icon,{n:"pencil",s:15})),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,customFields:p.customFields.filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
         );
       })
     );
@@ -1064,7 +1092,7 @@ function App(){
           // 只在梯次頁面才顯示梯次分頁
           e("div",{key:"signout-btn",style:{padding:"14px 20px",borderTop:"1px solid var(--border)",cursor:"pointer",display:"flex",alignItems:"center",gap:14},
             onClick:()=>{setShowMenu(false);signOutUser();}},
-            e("span",{style:{fontSize:20}},"🚪"),
+            e(Icon,{n:"logout",s:20,c:"var(--txt2)"}),
             e("span",{style:{fontSize:15,fontWeight:700,color:"var(--txt3)"}},"登出")
           ),
           (view==="batch"||view==="trainee")&&curBatch&&e(React.Fragment,null,
@@ -1089,14 +1117,14 @@ function App(){
   // ── Views ────────────────────────────────────────────────────────────────────
 
   if(!authReady||view==="loading") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e("div",{style:{fontSize:60,marginBottom:18}},"🎖️"),
+    e(Icon,{n:"shield",s:60,c:"#f59e0b",w:1.2}),
     e("div",{style:{color:"var(--txt3)",fontSize:13,letterSpacing:"0.1em"}},"系統連線中…")
   );
 
   // ── Login ──────────────────────────────────────────────────────────────────
   if(view==="login") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh",padding:32}},
     e("div",{style:{textAlign:"center",maxWidth:360,width:"100%"}},
-      e("div",{style:{fontSize:64,marginBottom:8}},"🎖️"),
+      e(Icon,{n:"shield",s:64,c:"#f59e0b",w:1.2}),
       e("div",{style:{fontSize:22,fontWeight:900,color:"var(--txt)",letterSpacing:"0.06em",marginBottom:4}},"RIIMS"),
       e("div",{style:{fontSize:13,color:"var(--txt3)",letterSpacing:"0.04em",marginBottom:40}},"招募資訊整合管理系統"),
       e("button",{
@@ -1233,7 +1261,7 @@ function App(){
               e("div",{style:{width:56,height:56,borderRadius:"50%",background:"var(--bg3)",border:"2px solid rgba(200,162,39,0.4)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}},
                 userProfile?.googlePhotoURL
                   ?e("img",{src:userProfile.googlePhotoURL,style:{width:"100%",height:"100%",objectFit:"cover"},referrerPolicy:"no-referrer"})
-                  :e("span",{style:{fontSize:24}},"👤")
+                  :e("span",{style:{fontSize:24}},e(Icon,{n:"user",s:24,c:"var(--txt3)"}))
               ),
               e("div",{style:{flex:1,minWidth:0}},
                 e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)",letterSpacing:"-0.01em"}},
@@ -1269,16 +1297,16 @@ function App(){
         ),
         e("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,padding:"0 14px"}},
           ...[
-            {icon:"📋",label:"梯次列表",sub:batches.length+"個梯次",bg:"rgba(74,136,216,0.12)",view:"home"},
-            {icon:"📅",label:"最近期程",sub:"查看排程",bg:"rgba(200,162,39,0.14)",view:"home"},
-            {icon:"🏢",label:"協訓單位",sub:unitProfiles.length+"個單位",bg:"rgba(34,197,94,0.12)",view:"unitMgmt"},
-            {icon:"👤",label:"個人資料",sub:"編輯設定",bg:"rgba(140,90,220,0.12)",view:"profile"},
-            {icon:"💬",label:"意見回饋",sub:"留言",bg:"rgba(224,156,26,0.12)",view:"feedback"},
-            {icon:"⚙️",label:"後台管理",sub:"管理員限定",bg:"rgba(217,64,64,0.12)",view:"adminPwd"},
+            {icon:"list",ic:"#4a88d8",label:"梯次列表",sub:batches.length+"個梯次",bg:"rgba(74,136,216,0.12)",view:"home"},
+            {icon:"calendar",ic:"#c8a227",label:"最近期程",sub:"查看排程",bg:"rgba(200,162,39,0.14)",view:"home"},
+            {icon:"building",ic:"#22c55e",label:"協訓單位",sub:unitProfiles.length+"個單位",bg:"rgba(34,197,94,0.12)",view:"unitMgmt"},
+            {icon:"user",ic:"#a855f7",label:"個人資料",sub:"編輯設定",bg:"rgba(140,90,220,0.12)",view:"more"},
+            {icon:"chat",ic:"#e09c1a",label:"意見回饋",sub:"留言",bg:"rgba(224,156,26,0.12)",view:"feedback"},
+            {icon:"cog",ic:"#ef4444",label:"後台管理",sub:"管理員限定",bg:"rgba(217,64,64,0.12)",view:"adminPwd"},
           ].map(tile=>e("div",{key:tile.label,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:"14px 8px 12px",display:"flex",flexDirection:"column",alignItems:"center",gap:8,cursor:"pointer"},
             onClick:()=>{if(tile.view==="adminPwd"){setAPwd("");setAPwdErr(false);}setView(tile.view);}
           },
-            e("div",{style:{width:46,height:46,borderRadius:13,background:tile.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}},tile.icon),
+            e("div",{style:{width:46,height:46,borderRadius:13,background:tile.bg,display:"flex",alignItems:"center",justifyContent:"center"}},e(Icon,{n:tile.icon,s:22,c:tile.ic})),
             e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt)",textAlign:"center",lineHeight:1.3}},tile.label),
             e("div",{style:{fontSize:10,color:"var(--txt3)",textAlign:"center"}},tile.sub)
           ))
@@ -1308,20 +1336,21 @@ function App(){
     );
   }
 
-  // ── My Profile view ─────────────────────────────────────────────────────────
-  if(view==="profile") return e("div",{style:S.app},
+  // ── 更多 view ────────────────────────────────────────────────────────────────
+  if(view==="more") return e("div",{style:S.app},
     e(WatermarkOverlay),e(Toast),
     e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},"←"),
-      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"👤 個人資料"))
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"更多"))
     ),
     e("div",{style:{...S.sec,paddingTop:16},className:"has-bnav"},
+      // 個人資料
+      e("div",{style:{...S.slbl,marginBottom:10}},"個人資料"),
       e("div",{style:{...S.card,marginBottom:10,borderTop:"3px solid #f59e0b"}},
         e("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:14}},
           e("div",{style:{width:56,height:56,borderRadius:"50%",background:"var(--bg3)",border:"2px solid rgba(200,162,39,0.4)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}},
             userProfile?.googlePhotoURL
               ?e("img",{src:userProfile.googlePhotoURL,style:{width:"100%",height:"100%",objectFit:"cover"},referrerPolicy:"no-referrer"})
-              :e("span",{style:{fontSize:24}},"👤")
+              :e(Icon,{n:"user",s:28,c:"var(--txt3)"})
           ),
           e("div",null,
             e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},(userProfile?.rank||"")+" "+(userProfile?.name||"")),
@@ -1362,8 +1391,35 @@ function App(){
           )
         )
       ),
-      e("button",{style:{...S.btn("ghost"),width:"100%",padding:"11px 0",color:"#ef4444",borderColor:"#ef444433"},onClick:signOutUser},"🚪 登出帳號"),
-      e("div",{style:{height:16}})
+      // 系統
+      e("div",{style:{...S.slbl,marginTop:8,marginBottom:10}},"系統"),
+      e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
+        e("button",{
+          style:{display:"flex",alignItems:"center",gap:12,width:"100%",padding:"14px 16px",background:"none",border:"none",cursor:"pointer",color:"var(--txt)"},
+          onClick:()=>{setAPwd("");setAPwdErr(false);setView("adminPwd");}
+        },
+          e("div",{style:{width:34,height:34,borderRadius:9,background:"rgba(217,64,64,0.12)",display:"flex",alignItems:"center",justifyContent:"center"}},e(Icon,{n:"cog",s:18,c:"#ef4444"})),
+          e("div",{style:{flex:1,textAlign:"left"}},
+            e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"後台管理"),
+            e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},"管理員限定")
+          ),
+          e(Icon,{n:"chevR",s:16,c:"var(--txt3)"})
+        )
+      ),
+      e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:16}},
+        e("button",{
+          style:{display:"flex",alignItems:"center",gap:12,width:"100%",padding:"14px 16px",background:"none",border:"none",cursor:"pointer",color:"#ef4444"},
+          onClick:signOutUser
+        },
+          e("div",{style:{width:34,height:34,borderRadius:9,background:"rgba(239,68,68,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}},e(Icon,{n:"logout",s:18,c:"#ef4444"})),
+          e("div",{style:{flex:1,textAlign:"left"}},
+            e("div",{style:{fontSize:14,fontWeight:700}},"登出帳號"),
+            e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},userProfile?.googleEmail||"")
+          ),
+          e(Icon,{n:"chevR",s:16,c:"#ef444466"})
+        )
+      ),
+      e("div",{style:{textAlign:"center",fontSize:10,color:"var(--txt3)",opacity:0.4,paddingBottom:8}},"v",APP_VERSION)
     ),
     e(BottomNav)
   );
@@ -1372,8 +1428,8 @@ function App(){
     const isPermErr=errMsg&&(errMsg.includes("permission")||errMsg.includes("Missing or insufficient"));
     return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh",padding:24}},
       e("div",{style:{textAlign:"center",maxWidth:400,width:"100%"}},
-        e("div",{style:{fontSize:52,marginBottom:10}},"⚠️"),
-        e("div",{style:{color:"#ef4444",fontWeight:800,fontSize:16,marginBottom:8}},"連線失敗"),
+        e(Icon,{n:"warning",s:52,c:"#ef4444",w:1.5}),
+        e("div",{style:{color:"#ef4444",fontWeight:800,fontSize:16,marginBottom:8,marginTop:10}},"連線失敗"),
         authUser&&e("div",{style:{background:"#16a34a22",border:"1px solid #16a34a55",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#4ade80",marginBottom:12,textAlign:"left"}},
           "✓ 已登入：",e("span",{style:{fontWeight:700}},authUser.email||authUser.displayName)
         ),
@@ -1383,13 +1439,13 @@ function App(){
             style:{...S.btn("primary"),padding:"12px 24px",opacity:retrying?0.6:1},
             onClick:retryConnection,
             disabled:retrying
-          },retrying?"連線中…":"🔄 重試連線"),
+          },retrying?"連線中…":e("span",{style:{display:"flex",alignItems:"center",gap:6}},e(Icon,{n:"refresh",s:15,c:"#fff"}),"重試連線")),
           e("button",{style:{...S.btn("ghost"),padding:"12px 20px"},onClick:()=>window.location.reload()},"重新整理"),
           e("button",{style:{...S.btn("ghost"),padding:"12px 20px",color:"#ef4444",borderColor:"#ef444433"},onClick:signOutUser},"登出")
         ),
         isPermErr
           ? e("div",{style:{marginTop:18,background:"var(--bg2)",border:"1px solid #f59e0b44",borderRadius:10,padding:14,textAlign:"left"}},
-              e("div",{style:{fontSize:12,fontWeight:700,color:"#f59e0b",marginBottom:8}},"🔧 修復步驟：Firestore 安全規則"),
+              e("div",{style:{fontSize:12,fontWeight:700,color:"#f59e0b",marginBottom:8,display:"flex",alignItems:"center",gap:5}},e(Icon,{n:"wrench",s:14,c:"#f59e0b"}),"修復步驟：Firestore 安全規則"),
               e("ol",{style:{fontSize:12,color:"var(--txt2)",paddingLeft:18,lineHeight:2}},
                 e("li",null,"前往 ",e("a",{href:"https://console.firebase.google.com/",target:"_blank",style:{color:"#60a5fa"}},"Firebase Console")),
                 e("li",null,"選擇專案 ",e("code",{style:{color:"#f59e0b",fontSize:11}},"recruitment-sys-d1d78")),
@@ -1420,7 +1476,7 @@ function App(){
   if(view==="admin"&&af) return e("div",{style:S.app},
     e(WatermarkOverlay),e(Toast),
     e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},"←"),
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"後台管理")),
       e("button",{style:S.btn("primary","sm"),onClick:saveAF,disabled:saving},saving?"儲存…":"儲存設定")
     ),
@@ -1689,7 +1745,7 @@ function App(){
   if(view==="home") return e("div",{style:S.app},
     e(WatermarkOverlay),e(Toast),
     e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},"←"),
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},
         e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"📋 梯次列表"),
         e("div",{style:{fontSize:10,color:"var(--txt3)"}},batches.length+" 個梯次")
@@ -1716,7 +1772,7 @@ function App(){
                 st.conf>0&&e("span",{style:S.tag("#10b981")},"✅ "+st.conf)
               )
             ),
-            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent"},onClick:()=>{setDelTarget(b);setDelPwd("");setDelPwdErr(false);setShowDelBatch(true);}},"🗑️")
+            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent"},onClick:()=>{setDelTarget(b);setDelPwd("");setDelPwdErr(false);setShowDelBatch(true);}},e(Icon,{n:"trash",s:15}))
           ),
           e("div",{style:{cursor:"pointer"},onClick:()=>{
               try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"👥 訓員列表");return;}}catch(e){}
@@ -1781,7 +1837,7 @@ function App(){
     ),
     showDelBatch&&delTarget&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowDelBatch(false)},
       e("div",{style:{...S.mBox,maxHeight:"60vh"}},
-        e("div",{style:{textAlign:"center",marginBottom:16}},e("div",{style:{fontSize:40,marginBottom:8}},"🗑️"),e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:4}},"刪除梯次"),e("div",{style:{fontSize:12,color:"var(--txt3)"}},delTarget.unit+"・"+delTarget.battalion+"・"+fmtSeq(delTarget.sequence))),
+        e("div",{style:{textAlign:"center",marginBottom:16}},e("div",{style:{fontSize:40,marginBottom:8}},e(Icon,{n:"trash",s:15})),e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:4}},"刪除梯次"),e("div",{style:{fontSize:12,color:"var(--txt3)"}},delTarget.unit+"・"+delTarget.battalion+"・"+fmtSeq(delTarget.sequence))),
         e("div",{style:{background:"#ef444415",border:"1px solid #ef444433",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#fca5a5"}},"刪除後無法復原"),
         e("div",{style:{marginBottom:16}},e("label",{style:S.lbl},"請輸入此梯次密碼確認刪除"),e("input",{style:S.inp,type:"password",placeholder:"••••••",value:delPwd,autoFocus:true,onChange:ev=>{setDelPwd(ev.target.value);setDelPwdErr(false);},onKeyDown:ev=>ev.key==="Enter"&&doDelBatch()})),
         delPwdErr&&e("div",{style:{color:"#ef4444",fontSize:13,fontWeight:600,marginBottom:12,textAlign:"center"}},"密碼錯誤"),
@@ -1794,7 +1850,7 @@ function App(){
   if(view==="feedback") return e("div",{style:S.app},
     e(WatermarkOverlay),e(Toast),
     e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},"←"),
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"💬 意見回饋"))
     ),
     e("div",{style:{...S.sec,paddingTop:16}},
@@ -1829,7 +1885,7 @@ function App(){
   if(view==="unitMgmt") return e("div",{style:S.app},
     e(WatermarkOverlay),e(Toast),
     e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},"←"),
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"🏢 協訓單位管理"))
     ),
     e("div",{style:{...S.sec,paddingTop:16},className:"has-bnav"},
@@ -1838,7 +1894,7 @@ function App(){
           e("div",{style:{fontSize:14,color:"var(--txt3)"}},"共 "+unitProfiles.length+" 個協訓單位，依筆畫排序"),
           e("button",{style:S.btn("primary","sm"),onClick:()=>{setEditUnitData({id:uid(),name:"",recruiters:[],_new:true});setShowEditUnit(true);}},"＋ 新增單位")
         ),
-        e("input",{style:{...S.inp,marginBottom:8},placeholder:"🔍 搜尋單位名稱或招募員姓名…",value:unitSearch,onChange:ev=>setUnitSearch(ev.target.value)}),
+        e("input",{style:{...S.inp,marginBottom:8},placeholder:"搜尋單位名稱或招募員姓名…",value:unitSearch,onChange:ev=>setUnitSearch(ev.target.value)}),
         (()=>{
           // 計算後台有但尚未匯入的單位
           const existingNames=unitProfiles.map(p=>p.name);
@@ -1874,7 +1930,7 @@ function App(){
               const profiles=unitProfiles.filter(u=>u.id!==unit.id);
               await saveUnitProfiles(profiles);
               toast_("已刪除");
-            }},"🗑️")
+            }},e(Icon,{n:"trash",s:15}))
           )
         ),
         // 招募員列表
@@ -1897,7 +1953,7 @@ function App(){
               setEditRecruiterData({...r});
               setEditRecruiterUnitId(unit.id);
               setShowEditRecruiter(true);
-            }},"✏️"),
+            }},e(Icon,{n:"pencil",s:15})),
             e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"3px 8px"},onClick:async()=>{
               const updated=unitProfiles.map(u=>u.id===unit.id?{...u,recruiters:(u.recruiters||[]).filter(x=>x.id!==r.id)}:u);
               await saveUnitProfiles(updated);
@@ -1987,7 +2043,7 @@ function App(){
     return e("div",{style:S.app},
       e(WatermarkOverlay),e(Toast),
       e("div",{style:S.hdr},
-        e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}},"←"),
+        e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}},e(Icon,{n:"chevL",s:18})),
         e("div",{style:{flex:1,textAlign:"center"}},
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},
             {"list":"👥 訓員列表","sched":"📅 梯次期程","hold":"🔒 協訓單位掌握名單","query":"📋 約談紀錄查詢","visit":"📞 電訪及家訪名單"}[batchTab]||"梯次"
@@ -2016,7 +2072,7 @@ function App(){
           )
         ),
         batchTab==="list"&&e(React.Fragment,null,
-          e("input",{style:{...S.inp,marginBottom:8},placeholder:"🔍 搜尋姓名或座號…",value:sq,onChange:ev=>setSq(ev.target.value)}),
+          e("input",{style:{...S.inp,marginBottom:8},placeholder:"搜尋姓名或座號…",value:sq,onChange:ev=>setSq(ev.target.value)}),
           (()=>{
             const allT=curBatch.trainees||[];
             function getLatestStId(t){
@@ -2268,11 +2324,11 @@ function App(){
             ),
             e("div",{style:{display:"flex",gap:8,marginTop:4}},
               e("button",{style:{...S.btn("ghost","sm"),flex:1},onClick:()=>{setQueryUnit("");setQueryDateFrom("");setQueryDateTo("");setQueryPeriod("");setQuerySubmitted(false);}},"🗑️ 清除條件"),
-              e("button",{style:{...S.btn("primary","sm"),flex:1},onClick:()=>setQuerySubmitted(true)},"🔍 查詢")
+              e("button",{style:{...S.btn("primary","sm"),flex:1},onClick:()=>setQuerySubmitted(true)},e("span",{style:{display:"flex",alignItems:"center",gap:5}},e(Icon,{n:"search",s:14,c:"#fff"}),"查詢"))
             )
           ),
           !querySubmitted&&e("div",{style:{textAlign:"center",padding:"32px 0",color:"var(--txt3)"}},
-            e("div",{style:{fontSize:32,marginBottom:8}},"🔍"),
+            e(Icon,{n:"search",s:32,c:"var(--txt3)"}),
             e("div",{style:{fontSize:13,fontWeight:600}},"設定條件後按「查詢」"),
             e("div",{style:{fontSize:12,marginTop:4,color:"var(--txt3)"}},"所有條件預設為「全部」，直接查詢可顯示所有紀錄")
           ),
@@ -2771,7 +2827,7 @@ function App(){
                         ),
                         e("div",{style:{display:"flex",alignItems:"center",gap:6,flexShrink:0}},
                           logSt&&e("span",{style:{...S.tag(logSt.color),fontSize:10}},logSt.emoji+" "+logSt.label),
-                          e("button",{style:{...S.btn("ghost","sm"),padding:"3px 8px",fontSize:11},onClick:()=>{setEditLogData({...log});setShowEditLog(true);}},"✏️")
+                          e("button",{style:{...S.btn("ghost","sm"),padding:"3px 8px",fontSize:11},onClick:()=>{setEditLogData({...log});setShowEditLog(true);}},e(Icon,{n:"pencil",s:15}))
                         )
                       ),
                       logSt&&e("div",{style:{marginBottom:log.note?8:0}},
