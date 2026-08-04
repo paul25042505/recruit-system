@@ -110,6 +110,8 @@ import {
   getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut as fbSignOut
 } from"firebase/auth";
 
+const e=React.createElement;
+
 // ═══ FIREBASE SDK + 離線快取 ═════════════════════════════════════════════════
 const _fbApp=initializeApp({
   apiKey:"AIzaSyBwdgl-e5ikVFCQqYoMmLIY6Ffg5hA9AAQ",
@@ -137,7 +139,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const APP_VERSION="1.0.9";
+const APP_VERSION="1.1.0";
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
 const DEF={
@@ -305,8 +307,6 @@ function Icon({n,s=20,c="currentColor",w=1.75}){
 // ═══ APP ══════════════════════════════════════════════════════════════════════
 
 function App(){
-  const e=React.createElement;
-
   // ── State ───────────────────────────────────────────────────────────────────
   const [view,setView]=useState("loading");
   const [cfg,setCfg]=useState(null);
