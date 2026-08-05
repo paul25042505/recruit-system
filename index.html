@@ -1985,10 +1985,17 @@ function App(){
               ),
               ...users.map((u,i)=>e("div",{key:u.uid||i,style:{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:i<users.length-1?"1px solid var(--border2)":"none"}},
                 e(Icon,{n:"user",s:16,c:"var(--txt3)"}),
-                e("div",{style:{flex:1,fontSize:13,fontWeight:600,color:"var(--txt)"}},
-                  (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
+                e("div",{style:{flex:1,minWidth:0}},
+                  e("div",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},
+                    (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
+                  ),
+                  u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit)
                 ),
-                u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)"}},u.battalionUnit)
+                e("div",{style:{display:"flex",gap:4,flexShrink:0}},
+                  ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:{fontSize:10,background:r==="admin"?"#f59e0b18":r==="coordinator"?"#3b82f618":"var(--bg3)",border:"1px solid "+(r==="admin"?"#f59e0b44":r==="coordinator"?"#3b82f644":"var(--border)"),borderRadius:6,padding:"2px 7px",color:r==="admin"?"#f59e0b":r==="coordinator"?"#3b82f6":"var(--txt2)",fontWeight:700}},
+                    r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r
+                  ))
+                )
               ))
             );
           }),
