@@ -654,7 +654,7 @@ function App(){
         let restored=false;
         if(hs?.page==="batch"&&hs?.batchId){
           const b=(loadedBatches||[]).find(x=>x.id===hs.batchId);
-          if(b){try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab(hs.tab||"list");setView("batch");restored=true;}}catch(_){}}
+          if(b){try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved&&saved.toUpperCase()===(b.password||"").toUpperCase()){setCurBatch(b);setSq("");setFst("all");setBatchTab(hs.tab||"list");setView("batch");restored=true;}}catch(_){}}
         }else if(["home","more","admin"].includes(hs?.page)){setView(hs.page);restored=true;}
         if(!restored)setView("dashboard");
         done=true;
@@ -1035,7 +1035,7 @@ function App(){
     finally{setSaving(false);}
   }
   async function doDelBatch(){
-    if(delPwd!==delTarget.password){setDelPwdErr(true);return;}
+    if(delPwd.toUpperCase()!==(delTarget.password||"").toUpperCase()){setDelPwdErr(true);return;}
     setSaving(true);
     try{await fsDel("batches/"+delTarget.id);setBatches(p=>p.filter(b=>b.id!==delTarget.id));setShowDelBatch(false);toast_("已刪除");}
     catch(err){toast_(err.message,"err");}
@@ -1227,7 +1227,7 @@ function App(){
   }
   function canManage(batchUnit){return isAdminUser()||isCoord(batchUnit);}
   function submitBPwd(){
-    if(bPwd!==pendBatch.password){setBPwdErr(true);return;}
+    if(bPwd.toUpperCase()!==(pendBatch.password||"").toUpperCase()){setBPwdErr(true);return;}
     try{sessionStorage.setItem("bpwd_"+pendBatch.id,bPwd);}catch(e){}
     const myUid=authUser?.uid;
     const approved=(pendBatch.approvedUids||[]).includes(myUid);
@@ -1640,7 +1640,7 @@ function App(){
             const diff=Math.floor((new Date(rd)-tdDate)/(1000*60*60*24));
             return e("div",{key:b.id,style:{display:"flex",alignItems:"center",gap:10,background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:12,padding:"10px 12px",marginBottom:8,cursor:"pointer"},
               onClick:()=>{
-                try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");return;}}catch(_){}
+                try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved&&saved.toUpperCase()===(b.password||"").toUpperCase()){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");return;}}catch(_){}
                 setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");
               }
             },
@@ -1665,7 +1665,7 @@ function App(){
               return e("div",{key:r.traineeId,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",borderBottom:i<recentWithBatch.length-1?"1px solid var(--border2)":"none",cursor:"pointer"},
                 onClick:()=>{
                   const b=r.batch;
-                  try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");openT(t);return;}}catch(_){}
+                  try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved&&saved.toUpperCase()===(b.password||"").toUpperCase()){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");openT(t);return;}}catch(_){}
                   // 需要密碼
                   setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");
                 }
@@ -2552,7 +2552,7 @@ function App(){
         const grad=getServiceGrad(b.unit);
         const canDel=canManage(b.unit);
         const enterBatch=()=>{
-          try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password&&(b.openEnroll!==false||(b.approvedUids||[]).includes(authUser?.uid))){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");return;}}catch(_){}
+          try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved&&saved.toUpperCase()===(b.password||"").toUpperCase()&&(b.openEnroll!==false||(b.approvedUids||[]).includes(authUser?.uid))){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");return;}}catch(_){}
           setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");
         };
         return e("div",{key:b.id,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden",marginBottom:10,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}},
