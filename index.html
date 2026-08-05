@@ -847,9 +847,9 @@ function App(){
 
   // ── Bottom Navigation ───────────────────────────────────────────────────────
   function BottomNav(){
-    const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd","batch","trainee"];
+    const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd"];
     if(!mainViews.includes(view))return null;
-    const activeKey=(view==="admin"||view==="adminPwd")?"more":(view==="batch"||view==="trainee")?"home":view;
+    const activeKey=(view==="admin"||view==="adminPwd")?"more":view;
     const tabs=[
       {key:"dashboard",icon:"home",label:"首頁"},
       {key:"home",icon:"list",label:"梯次"},
@@ -2607,9 +2607,9 @@ function App(){
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}},e(Icon,{n:"chevL",s:18})),
-        e("div",{style:{flex:1,textAlign:"center"}},
-          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},
-            {"list":"訓員列表","recruiter":"招募員","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[batchTab]||"梯次"
+        e("div",{style:{flex:1,textAlign:"center",minWidth:0}},
+          e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
+            fmtSeq(curBatch.sequence)+" | "+curBatch.unit
           )
         ),
         e("div",{style:{width:44,flexShrink:0}})
@@ -2660,11 +2660,6 @@ function App(){
       })(),
       e("div",{style:S.sec},
 
-        e("div",{className:"hs",style:{display:"flex",gap:0,marginBottom:12,background:"var(--inp-bg)",borderRadius:10,padding:3,overflowX:"auto"}},
-          ...[["list","訓員列表"],["recruiter","招募員"],["query","約談內容"],["sched","梯次期程"],["info","梯次資訊"]].map(([tab,lbl])=>
-            e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:11,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:batchTab===tab?"var(--bg3)":"transparent",color:batchTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>{setBatchTab(tab);pushState({page:"batch",batchId:curBatch?.id,tab},{"list":"訓員列表","recruiter":"招募員","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[tab]||tab);}},lbl)
-          )
-        ),
         batchTab==="list"&&e(React.Fragment,null,
           e("input",{style:{...S.inp,marginBottom:8},placeholder:"搜尋姓名或座號…",value:sq,onChange:ev=>setSq(ev.target.value)}),
           (()=>{
@@ -3057,17 +3052,20 @@ function App(){
         )
       )
       ),
-      (()=>{
-        const activeKey="home";
-        const tabs=[{key:"dashboard",icon:"home",label:"首頁"},{key:"home",icon:"list",label:"梯次"},{key:"unitView",icon:"building",label:"單位"},{key:"feedback",icon:"chat",label:"回饋"},{key:"more",icon:"grid",label:"更多"}];
-        return e("div",{className:"bnav-inline"},
-          ...tabs.map(tab=>e("button",{key:tab.key,className:"bnav-item"+(activeKey===tab.key?" active":""),onClick:()=>setView(tab.key)},
-            e("span",{className:"bnav-icon"},e(Icon,{n:tab.icon,s:26})),
-            e("span",{className:"bnav-lbl"},tab.label),
-            activeKey===tab.key&&e("span",{className:"bnav-pip"})
-          ))
-        );
-      })()
+      e("div",{className:"bnav-inline"},
+        ...[
+          {key:"list",icon:"users",label:"訓員列表"},
+          {key:"recruiter",icon:"megaphone",label:"招募員"},
+          {key:"query",icon:"chat",label:"約談內容"},
+          {key:"sched",icon:"calendar",label:"梯次期程"},
+          {key:"info",icon:"info",label:"梯次資訊"},
+        ].map(tab=>e("button",{key:tab.key,className:"bnav-item"+(batchTab===tab.key?" active":""),
+          onClick:()=>{setBatchTab(tab.key);pushState({page:"batch",batchId:curBatch?.id,tab:tab.key},tab.label);}},
+          e("span",{className:"bnav-icon"},e(Icon,{n:tab.icon,s:24})),
+          e("span",{className:"bnav-lbl"},tab.label),
+          batchTab===tab.key&&e("span",{className:"bnav-pip"})
+        ))
+      )
     );
   }
 
