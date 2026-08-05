@@ -794,32 +794,6 @@ function App(){
       )
     );
   }
-  function NewBatchPwdModal(){
-    if(!showNewBatchPwd)return null;
-    const {password,name}=showNewBatchPwd;
-    return e("div",{style:{position:"fixed",inset:0,zIndex:2100,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px"}},
-      e("div",{style:{background:"var(--bg2)",borderRadius:20,padding:"24px 20px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px rgba(0,0,0,0.25)"}},
-        e("div",{style:{textAlign:"center",marginBottom:16}},
-          e("div",{style:{fontSize:32,marginBottom:8}},"🔑"),
-          e("div",{style:{fontSize:17,fontWeight:800,color:"var(--txt)"}},name),
-          e("div",{style:{fontSize:13,color:"var(--txt3)",marginTop:4}},"梯次已建立")
-        ),
-        e("div",{style:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px 16px",marginBottom:12}},
-          e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:6,fontWeight:600}},"進入密碼（只顯示一次）"),
-          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}},
-            e("div",{style:{fontSize:26,fontWeight:900,letterSpacing:"0.15em",color:"var(--txt)",fontVariantNumeric:"tabular-nums"}},password),
-            e("button",{style:{...S.btn("ghost","sm"),padding:"6px 12px",flexShrink:0},onClick:()=>{navigator.clipboard?.writeText(password).catch(()=>{});toast_("已複製密碼");}},
-              e(Icon,{n:"copy",s:16})
-            )
-          )
-        ),
-        e("div",{style:{background:"#ef444412",border:"1px solid #ef444433",borderRadius:10,padding:"10px 12px",marginBottom:16,fontSize:12,color:"#fca5a5",lineHeight:1.6}},
-          "⚠️ 密碼只顯示這一次，請截圖或複製後傳給招募員。忘記密碼請聯絡管理員。"
-        ),
-        e("button",{style:{...S.btn("primary"),width:"100%",padding:13,fontSize:15},onClick:()=>setShowNewBatchPwd(null)},"我已儲存密碼，確認")
-      )
-    );
-  }
   const [ptrDist,setPtrDist]=useState(-1); // -1=收起；>=0=下拉距離(px,已阻尼)
   const ptrRef=React.useRef({startY:null,active:false,rawDist:0});
 
@@ -1410,6 +1384,38 @@ function App(){
     )
   );
 
+  // ── New Batch Password ─────────────────────────────────────────────────────
+  if(showNewBatchPwd){
+    const {password:nbp,name:nbn}=showNewBatchPwd;
+    return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh",padding:"32px 20px"}},
+      e(Toast),
+      e("div",{style:{width:"100%",maxWidth:400}},
+        e("div",{style:{textAlign:"center",marginBottom:24}},
+          e("div",{style:{fontSize:40,marginBottom:10}},"🔑"),
+          e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)",marginBottom:4}},nbn),
+          e("div",{style:{fontSize:13,color:"var(--txt3)"}},"梯次已建立")
+        ),
+        e("div",{style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:"20px",marginBottom:16}},
+          e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:8,fontWeight:700}},"進入密碼（只顯示一次）"),
+          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+            e("div",{style:{fontSize:32,fontWeight:900,letterSpacing:"0.2em",color:"var(--txt)",fontVariantNumeric:"tabular-nums"}},nbp),
+            e("button",{style:{...S.btn("ghost","sm"),padding:"8px 14px",flexShrink:0},
+              onClick:()=>{navigator.clipboard?.writeText(nbp).catch(()=>{});toast_("已複製密碼");}},
+              e(Icon,{n:"copy",s:18})
+            )
+          )
+        ),
+        e("div",{style:{background:"#ef444412",border:"1px solid #ef444433",borderRadius:12,padding:"14px",marginBottom:24,fontSize:13,color:"#fca5a5",lineHeight:1.7,textAlign:"center"}},
+          "⚠️ 密碼只顯示這一次",e("br"),
+          "請截圖或複製後傳給招募員",e("br"),
+          "忘記密碼請聯絡管理員"
+        ),
+        e("button",{style:{...S.btn("primary"),width:"100%",padding:14,fontSize:15},
+          onClick:()=>setShowNewBatchPwd(null)},"我已儲存密碼，確認")
+      )
+    );
+  }
+
   // ── Profile Setup ──────────────────────────────────────────────────────────
   if(view==="profileSetup") return e("div",{style:S.app},
     e(Toast),
@@ -1535,7 +1541,7 @@ function App(){
     }).filter(Boolean);
 
     return e("div",{style:S.app},
-      e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),NewBatchPwdModal(),
+      e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       // Header
       e("div",{style:{...S.hdr,justifyContent:"space-between"}},
         e("div",null,
@@ -2361,7 +2367,7 @@ function App(){
 
   // ── Batches sub-view ───────────────────────────────────────────────────────
   if(adminSubView==="batches") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),NewBatchPwdModal(),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     subHdr("梯次管理"),
     e("div",{style:{...S.sec,paddingTop:16}},
       e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},"共 "+batches.length+" 個梯次"),
