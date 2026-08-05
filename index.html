@@ -694,6 +694,23 @@ function App(){
 
   // ── Pull-to-Refresh ─────────────────────────────────────────────────────────
   const [refreshing,setRefreshing]=useState(false);
+  const [showSignoutConfirm,setShowSignoutConfirm]=useState(false);
+  function reqSignOut(){setShowSignoutConfirm(true);}
+  function SignoutConfirm(){
+    if(!showSignoutConfirm)return null;
+    return e("div",{style:{position:"fixed",inset:0,zIndex:2000,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"flex-end",justifyContent:"center",paddingBottom:"calc(20px + env(safe-area-inset-bottom,0px))"},
+      onClick:ev=>{if(ev.target===ev.currentTarget)setShowSignoutConfirm(false);}},
+      e("div",{style:{background:"var(--bg2)",borderRadius:16,padding:"20px 20px 8px",width:"calc(100% - 32px)",maxWidth:380,boxShadow:"0 -4px 24px rgba(0,0,0,0.2)"}},
+        e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)",marginBottom:6}},"確定要登出嗎？"),
+        e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:20,lineHeight:1.6}},"登出後需重新以 Google 帳號驗證身份才能進入系統。"),
+        e("div",{style:{display:"flex",gap:10}},
+          e("button",{style:{...S.btn("ghost"),flex:1,minHeight:48},onClick:()=>setShowSignoutConfirm(false)},"取消"),
+          e("button",{style:{...S.btn("primary"),flex:1,minHeight:48,background:"#ef4444",borderColor:"#ef4444"},onClick:()=>{setShowSignoutConfirm(false);signOutUser();}},"登出")
+        ),
+        e("div",{style:{height:8}})
+      )
+    );
+  }
   const [ptrProgress,setPtrProgress]=useState(0);
   const ptrRef=React.useRef({startY:0,active:false,progress:0});
 
@@ -794,9 +811,9 @@ function App(){
 
   // ── Bottom Navigation ───────────────────────────────────────────────────────
   function BottomNav(){
-    const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd"];
+    const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd","batch","trainee"];
     if(!mainViews.includes(view))return null;
-    const activeKey=(view==="admin"||view==="adminPwd")?"more":view;
+    const activeKey=(view==="admin"||view==="adminPwd")?"more":(view==="batch"||view==="trainee")?"home":view;
     const tabs=[
       {key:"dashboard",icon:"home",label:"首頁"},
       {key:"home",icon:"list",label:"梯次"},
@@ -1270,7 +1287,7 @@ function App(){
           )),
           // 只在梯次頁面才顯示梯次分頁
           e("div",{key:"signout-btn",style:{padding:"14px 20px",borderTop:"1px solid var(--border)",cursor:"pointer",display:"flex",alignItems:"center",gap:14},
-            onClick:()=>{setShowMenu(false);signOutUser();}},
+            onClick:()=>{setShowMenu(false);reqSignOut();}},
             e(Icon,{n:"logout",s:20,c:"var(--txt2)"}),
             e("span",{style:{fontSize:15,fontWeight:700,color:"var(--txt3)"}},"登出")
           ),
@@ -1512,7 +1529,7 @@ function App(){
     }).filter(Boolean);
 
     return e("div",{style:S.app},
-      e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+      e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       // Header
       e("div",{style:{...S.hdr,justifyContent:"space-between"}},
         e("div",null,
@@ -1527,7 +1544,7 @@ function App(){
           e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:refreshing?0.5:1},onClick:doRefresh,disabled:refreshing,title:"重新整理"},
             e(Icon,{n:"refresh",s:18,c:"var(--txt3)",style:refreshing?{animation:"ptr-spin 0.8s linear infinite"}:{}})
           ),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:signOutUser,title:"登出"},
+          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},
             e(Icon,{n:"logout",s:18,c:"var(--txt3)"})
           )
         )
@@ -1730,7 +1747,7 @@ function App(){
     );
   }
   if(view==="more") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"更多"))
     ),
@@ -1771,7 +1788,7 @@ function App(){
         e(MoreNavRow,{icon:"info",label:"關於系統",sub:"版本・著作權",onClick:()=>setView("moreAbout")})
       ),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:20}},
-        e(MoreNavRow,{icon:"logout",label:"登出帳號",sub:userProfile?.googleEmail||"",onClick:signOutUser,danger:true})
+        e(MoreNavRow,{icon:"logout",label:"登出帳號",sub:userProfile?.googleEmail||"",onClick:reqSignOut,danger:true})
       ),
       e("div",{style:{textAlign:"center",fontSize:11,color:"var(--txt3)",opacity:0.7,paddingBottom:8,letterSpacing:"0.05em"}},"v",APP_VERSION)
     )),
@@ -1885,7 +1902,7 @@ function App(){
     });
     const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-      e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+      e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
         e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位")),
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:uvLoading?0.4:1},onClick:()=>{setUvLoading(true);fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));},disabled:uvLoading},
@@ -2101,7 +2118,7 @@ function App(){
   }
 
   if(view==="adminPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:{width:"100%",maxWidth:360,padding:28}},
       e("div",{style:{textAlign:"center",marginBottom:28}},e("div",{style:{marginBottom:10}},e(Icon,{n:"cog",s:48,c:"var(--txt2)"})),e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)"}},"後台管理")),
       e("input",{style:{...S.inp,textAlign:"center",fontSize:22,letterSpacing:"0.25em",marginBottom:10,padding:14},type:"password",placeholder:"管理員密碼",value:aPwd,autoFocus:true,onChange:ev=>{setAPwd(ev.target.value);setAPwdErr(false);},onKeyDown:ev=>ev.key==="Enter"&&submitAPwd()}),
@@ -2113,7 +2130,7 @@ function App(){
   );
 
   if(view==="admin"&&af) return e("div",{style:S.app},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"後台管理")),
@@ -2382,7 +2399,7 @@ function App(){
   );
 
   if(view==="batchPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:{width:"100%",maxWidth:360,padding:28}},
       e("div",{style:{textAlign:"center",marginBottom:24}},
         e("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:64,height:64,borderRadius:20,background:"linear-gradient(135deg,#1e2d45,#0a0f1e)",border:"1px solid var(--border)",marginBottom:14}},
@@ -2409,7 +2426,7 @@ function App(){
   );
 
   if(view==="home") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},
@@ -2508,7 +2525,7 @@ function App(){
   );
 
   if(view==="feedback") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"意見回饋"))
@@ -2552,7 +2569,7 @@ function App(){
     const nextBatch=curBatchIdx<batches.length-1?batches[curBatchIdx+1]:null;
     function goBatch(b){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");}
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-      e(WatermarkOverlay),e(PTRIndicator),e(Toast),
+      e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}},e(Icon,{n:"chevL",s:18})),
         e("div",{style:{flex:1,textAlign:"center"}},
