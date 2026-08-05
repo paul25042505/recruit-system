@@ -181,6 +181,7 @@ async function fsDel(p){
 }
 
 const APP_VERSION="2.1.4";
+const PTR_THRESHOLD=68; // px — 下拉超過此距離才觸發 reload
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
 const DEF={
@@ -734,49 +735,43 @@ function App(){
       )
     );
   }
-  const [ptrProgress,setPtrProgress]=useState(0);
-  const ptrRef=React.useRef({startY:0,active:false,progress:0});
-
-  async function doRefresh(){
-    if(refreshing)return;
-    setRefreshing(true);
-    try{await loadAppData();toast_("資料已更新");}
-    catch(err){toast_(err?.message||"更新失敗","err");}
-    finally{setRefreshing(false);}
-  }
+  const [ptrDist,setPtrDist]=useState(-1); // -1=收起；>=0=下拉距離(px,已阻尼)
+  const ptrRef=React.useRef({startY:null,active:false,rawDist:0});
 
   useEffect(()=>{
-    function getScrolled(){
-      // 優先查頁面內的 ptr-scroll 捲動容器，否則用視窗捲動量
+    const ref=ptrRef.current;
+    function getScrollTop(){
       const sc=document.querySelector(".ptr-scroll");
       return sc?sc.scrollTop:window.scrollY;
     }
     function onTS(e){
-      if(getScrolled()===0){
-        ptrRef.current.startY=e.touches[0].clientY;
-        ptrRef.current.active=true;
-      }
+      if(ref.active)return;
+      const inExcl=e.target.closest&&e.target.closest(".bnav,.bnav-inline,.modal-sheet");
+      if(inExcl||getScrollTop()>0)return;
+      ref.startY=e.touches[0].clientY;
+      ref.active=true;
+      ref.rawDist=0;
     }
     function onTM(e){
-      if(!ptrRef.current.active)return;
-      const dy=e.touches[0].clientY-ptrRef.current.startY;
-      if(dy>0&&getScrolled()===0){
-        // 立刻阻止瀏覽器原生 overscroll / header 被拉下
-        e.preventDefault();
-        if(dy>8){
-          const p=Math.min(1,(dy-8)/72);
-          ptrRef.current.progress=p;
-          setPtrProgress(p);
-        }
-      }else if(dy<=0){
-        ptrRef.current.active=false;
-        ptrRef.current.progress=0;
-        setPtrProgress(0);
+      if(!ref.active||ref.startY==null)return;
+      const dy=e.touches[0].clientY-ref.startY;
+      if(dy<=0||getScrollTop()>0){
+        ref.active=false;ref.rawDist=0;ref.startY=null;setPtrDist(-1);
+        return;
       }
+      ref.rawDist=dy*0.5; // 阻尼：手指移 2px，視覺走 1px
+      setPtrDist(Math.min(ref.rawDist,PTR_THRESHOLD*1.4)); // 視覺封頂避免跑出畫面
+      e.preventDefault();
     }
     function onTE(){
-      if(ptrRef.current.progress>=1)window.dispatchEvent(new Event("ptr-trigger"));
-      ptrRef.current.active=false;ptrRef.current.progress=0;setPtrProgress(0);
+      if(!ref.active){ref.startY=null;return;}
+      if(ref.rawDist>=PTR_THRESHOLD){
+        setRefreshing(true);
+        setPtrDist(PTR_THRESHOLD); // 停在門檻位置轉圈
+        window.location.reload();
+      }else{
+        ref.active=false;ref.rawDist=0;ref.startY=null;setPtrDist(-1);
+      }
     }
     document.addEventListener("touchstart",onTS,{passive:true});
     document.addEventListener("touchmove",onTM,{passive:false});
@@ -787,11 +782,6 @@ function App(){
       document.removeEventListener("touchend",onTE);
     };
   },[]);
-  useEffect(()=>{
-    function h(){if(!refreshing)doRefresh();}
-    window.addEventListener("ptr-trigger",h);
-    return()=>window.removeEventListener("ptr-trigger",h);
-  },[refreshing]);
 
   // 響應式視窗寬度
   useEffect(()=>{
@@ -846,15 +836,32 @@ function App(){
   }
 
   function PTRIndicator(){
-    const show=ptrProgress>0||refreshing;
-    if(!show)return null;
-    const scale=refreshing?1:ptrProgress;
-    return e("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:300,display:"flex",justifyContent:"center",paddingTop:"calc(env(safe-area-inset-top,0px) + 56px)",pointerEvents:"none"}},
-      e("div",{style:{width:36,height:36,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 12px rgba(0,0,0,0.15)",transform:"scale("+scale+")",opacity:scale,transition:refreshing?"none":"transform 0.08s,opacity 0.08s"}},
-        e("div",{style:{display:"flex",animation:refreshing?"ptr-spin 0.8s linear infinite":"none"}},
-          e(Icon,{n:"refresh",s:16,c:"var(--txt2)"})
-        )
-      )
+    if(ptrDist<0&&!refreshing)return null;
+    const d=refreshing?PTR_THRESHOLD:ptrDist;
+    const atThresh=d>=PTR_THRESHOLD;
+    const label=refreshing?"重新整理中…":atThresh?"放開重新整理":"下拉重新整理";
+    return e("div",{style:{
+      position:"fixed",
+      top:"calc(env(safe-area-inset-top,0px) + 16px)",
+      left:"50%",
+      transform:`translateX(-50%) translateY(${d}px)`,
+      display:"flex",alignItems:"center",gap:8,
+      padding:"8px 16px",
+      background:"var(--bg2)",
+      border:"1px solid var(--border)",
+      borderRadius:999,
+      boxShadow:"0 2px 16px rgba(0,0,0,0.18)",
+      fontSize:12,fontWeight:700,color:"var(--txt2)",
+      zIndex:300,pointerEvents:"none",
+      opacity:refreshing?1:Math.min(d/PTR_THRESHOLD,1),
+      whiteSpace:"nowrap",
+    }},
+      e("div",{style:{
+        display:"flex",
+        transform:`rotate(${refreshing?0:d*2.4}deg)`,
+        animation:(refreshing||atThresh)?"ptr-spin 0.8s linear infinite":"none",
+      }},e(Icon,{n:"refresh",s:14,c:"#f59e0b"})),
+      label
     );
   }
 
