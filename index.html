@@ -198,7 +198,6 @@ const RECRUIT_UNITS=[
   "陸軍步兵第三〇二旅",
 ];
 const DEF={
-  adminPassword:"admin1234",
   battalions:["第一營","第二營","第三營","特勤營","後勤營"],
   companies:["（無）","第一連","第二連","第三連","第四連"],
   recruitUnits:["陸軍步兵旅","海軍陸戰隊","空軍作戰指揮部","憲兵指揮部"],
@@ -407,7 +406,6 @@ function App(){
   const [delPwd,setDelPwd]=useState("");
   const [delPwdErr,setDelPwdErr]=useState(false);
   // 驗證
-  const [aPwd,setAPwd]=useState("");const [aPwdErr,setAPwdErr]=useState(false);
   const [bPwd,setBPwd]=useState("");const [bPwdErr,setBPwdErr]=useState(false);
   const [pendBatch,setPendBatch]=useState(null);
   // 篩選
@@ -416,18 +414,6 @@ function App(){
   const [tf,setTf]=useState(null);const [dirty,setDirty]=useState(false);
   const [curTIdx,setCurTIdx]=useState(0);
   // 後台
-  const [af,setAf]=useState(null);
-  const [ni,setNi]=useState({units:"",battalions:"",companies:""});
-  const [editIdx,setEditIdx]=useState({});
-  const [editVal,setEditVal]=useState({});
-  const [showEditSt,setShowEditSt]=useState(false);
-  const [editStItem,setEditStItem]=useState(null);
-  const [editStSubInput,setEditStSubInput]=useState("");
-  const [showEditQual,setShowEditQual]=useState(false);
-  const [editQualItem,setEditQualItem]=useState(null);
-  const [showEditCF,setShowEditCF]=useState(false);
-  const [editCFItem,setEditCFItem]=useState(null);
-  const [cfOptionInput,setCfOptionInput]=useState("");
   // 意見回饋
   const [feedbackForm,setFeedbackForm]=useState({unit:"",name:"",content:""});
   const [feedbackList,setFeedbackList]=useState([]);
@@ -879,9 +865,9 @@ function App(){
   // ── Bottom Navigation ───────────────────────────────────────────────────────
   function BottomNav(){
     const isAdmin=userProfile?.roles?.includes("admin")||userProfile?.googleEmail==="paul25042505@gmail.com";
-    const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd"];
+    const mainViews=["dashboard","home","unitView","feedback","more","admin"];
     if(!mainViews.includes(view))return null;
-    const activeKey=(view==="adminPwd")?"admin":view;
+    const activeKey=view;
     const tabs=[
       {key:"dashboard",icon:"home",label:"首頁"},
       {key:"home",icon:"list",label:"梯次"},
@@ -906,7 +892,7 @@ function App(){
     function onPop(ev){
       const st=ev.state;
       if(!st||st.page==="home"){setView("home");document.title="梯次列表 | 招募資訊整合管理系統";return;}
-      if(st.page==="admin"){setView("adminPwd");return;}
+      if(st.page==="admin"){enterAdmin();return;}
       if(st.page==="feedback"){setView("feedback");return;}
       if(st.page==="batch"&&st.batchId){
         const b=batches.find(x=>x.id===st.batchId);
@@ -1007,12 +993,6 @@ function App(){
         pushState({page:"batch",batchId:curBatch?.id,tab},tabTitle);
       }
     }
-    catch(err){toast_(err.message,"err");}
-    finally{setSaving(false);}
-  }
-  async function saveAF(){
-    setSaving(true);
-    try{await fsSet("settings/global",af);setCfg(af);setView("home");toast_("設定已儲存 ✓");}
     catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
   }
@@ -1141,7 +1121,7 @@ function App(){
   function isAdminUser(){
     return !!(userProfile?.roles||[]).includes("admin")||userProfile?.googleEmail==="paul25042505@gmail.com";
   }
-  function canManage(batchUnit){return !!af||isAdminUser()||isCoord(batchUnit);}
+  function canManage(batchUnit){return isAdminUser()||isCoord(batchUnit);}
   function submitBPwd(){
     if(bPwd!==pendBatch.password){setBPwdErr(true);return;}
     try{sessionStorage.setItem("bpwd_"+pendBatch.id,bPwd);}catch(e){}
@@ -1178,200 +1158,9 @@ function App(){
     }catch(err){toast_(err.message,"err");}
     finally{setEMSaving(false);}
   }
-  function enterAdmin(){setAf({...DEF,...cfg,qualCheckItems:cfg.qualCheckItems||DEF.qualCheckItems,statusOptions:cfg.statusOptions||DEF.statusOptions,recruitUnits:cfg.recruitUnits||DEF.recruitUnits,customFields:cfg.customFields||DEF.customFields,recruitUnitProfiles:cfg.recruitUnitProfiles||DEF.recruitUnitProfiles});setNi({units:"",battalions:"",companies:""});setEditIdx({});setEditVal({});setASV(null);loadPendingUsers();loadAllUsers();setView("admin");pushState({page:"admin"},"後台管理");}
-  function submitAPwd(){
-    if(aPwd===cfg.adminPassword){enterAdmin();setAPwd("");}
-    else setAPwdErr(true);
-  }
-  function moveArr(arr,i,dir){const a=[...arr];const j=i+dir;if(j<0||j>=a.length)return arr;[a[i],a[j]]=[a[j],a[i]];return a;}
+  function enterAdmin(){setASV(null);loadPendingUsers();loadAllUsers();setView("admin");pushState({page:"admin"},"後台管理");}
   const sts=(cfg||DEF).statusOptions;
   const Toast=()=>toast?e("div",{style:S.toast(toast.type)},toast.msg):null;
-
-  // ── List Editor (admin) ─────────────────────────────────────────────────────
-  function listEd(field,label){
-    const items=af[field]||[];
-    return e("div",{style:{...S.card,marginBottom:10}},
-      e("div",{style:S.slbl},label),
-      items.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:12,marginBottom:8}},"（尚無項目）"),
-      ...items.map((item,i)=>{
-        const isEd=editIdx[field]===i;
-        return e("div",{key:i,style:{display:"flex",alignItems:"center",gap:6,marginBottom:6}},
-          e("div",{style:{display:"flex",flexDirection:"column",gap:2,flexShrink:0}},
-            e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===0?0.2:1},disabled:i===0,onClick:()=>setAf(p=>({...p,[field]:moveArr(p[field],i,-1)})) },"▲"),
-            e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===items.length-1?0.2:1},disabled:i===items.length-1,onClick:()=>setAf(p=>({...p,[field]:moveArr(p[field],i,1)})) },"▼")
-          ),
-          isEd
-            ? e("input",{style:{...S.inp,flex:1,fontSize:13},value:editVal[field]??item,autoFocus:true,
-                onChange:ev=>setEditVal(p=>({...p,[field]:ev.target.value})),
-                onKeyDown:ev=>{
-                  if(ev.key==="Enter"){const v=(editVal[field]??item).trim();if(v){const a=[...items];a[i]=v;setAf(p=>({...p,[field]:a}));}setEditIdx(p=>({...p,[field]:null}));}
-                  if(ev.key==="Escape")setEditIdx(p=>({...p,[field]:null}));
-                }
-              })
-            : e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:7,padding:"7px 10px",fontSize:13,color:"var(--txt)",cursor:"pointer"},
-                onClick:()=>{setEditIdx(p=>({...p,[field]:i}));setEditVal(p=>({...p,[field]:item}));}
-              },item),
-          isEd
-            ? e(React.Fragment,null,
-                e("button",{style:{...S.btn("primary","sm"),padding:"5px 10px"},onClick:()=>{const v=(editVal[field]??item).trim();if(v){const a=[...items];a[i]=v;setAf(p=>({...p,[field]:a}));}setEditIdx(p=>({...p,[field]:null}));}},"✓"),
-                e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>setEditIdx(p=>({...p,[field]:null}))},"✕")
-              )
-            : e(React.Fragment,null,
-                e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#64748b"},onClick:()=>{setEditIdx(p=>({...p,[field]:i}));setEditVal(p=>({...p,[field]:item}));}},e(Icon,{n:"pencil",s:15})),
-                e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433",padding:"5px 9px"},onClick:()=>setAf(p=>({...p,[field]:p[field].filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
-              )
-        );
-      }),
-      e("div",{style:{display:"flex",gap:8,marginTop:8}},
-        e("input",{style:{...S.inp,flex:1,fontSize:13},placeholder:"新增"+label+"…",value:ni[field],
-          onChange:ev=>setNi(p=>({...p,[field]:ev.target.value})),
-          onKeyDown:ev=>{if(ev.key==="Enter"&&ni[field].trim()){setAf(p=>({...p,[field]:[...p[field],ni[field].trim()]}));setNi(p=>({...p,[field]:""}));}}
-        }),
-        e("button",{style:S.btn("primary","sm"),onClick:()=>{if(!ni[field].trim())return;setAf(p=>({...p,[field]:[...p[field],ni[field].trim()]}));setNi(p=>({...p,[field]:""}));}},"＋")
-      )
-    );
-  }
-
-  // ── Status Editor (admin) ────────────────────────────────────────────────────
-  function statusEditor(){
-    const items=af.statusOptions||[];
-    return e("div",{style:{...S.card,marginBottom:10}},
-      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
-        e("div",{style:S.slbl},"意願狀態選項"),
-        e("button",{style:S.btn("primary","sm"),onClick:()=>{setEditStItem({id:uid(),emoji:"",label:"",color:"#64748b",subReasons:[],hasNote:true,_new:true});setEditStSubInput("");setShowEditSt(true);}},"＋ 新增")
-      ),
-      ...items.map((s,i)=>e("div",{key:s.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:6}},
-        e("div",{style:{display:"flex",flexDirection:"column",gap:2,flexShrink:0}},
-          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===0?0.2:1},disabled:i===0,onClick:()=>setAf(p=>({...p,statusOptions:moveArr(p.statusOptions,i,-1)})) },"▲"),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===items.length-1?0.2:1},disabled:i===items.length-1,onClick:()=>setAf(p=>({...p,statusOptions:moveArr(p.statusOptions,i,1)})) },"▼")
-        ),
-        e("div",{style:{flex:1,display:"flex",alignItems:"center",gap:8,background:"var(--inp-bg)",borderRadius:8,padding:"8px 10px",border:"1px solid "+s.color+"30"}},
-          e(Icon,{n:s.icon||"circle",s:16,c:s.color}),
-          e("span",{style:{fontSize:13,color:s.color,fontWeight:700,flex:1}},s.label),
-          s.subReasons?.length>0&&e("span",{style:{fontSize:10,color:"var(--txt3)"}},s.subReasons.length+"個子項")
-        ),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditStItem({...s});setEditStSubInput("");setShowEditSt(true);}},e(Icon,{n:"pencil",s:15})),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,statusOptions:p.statusOptions.filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
-      ))
-    );
-  }
-
-  // ── Qual Editor (admin) ──────────────────────────────────────────────────────
-  function qualEditor(){
-    const items=af.qualCheckItems||[];
-    return e("div",{style:{...S.card,marginBottom:10}},
-      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
-        e("div",{style:S.slbl},"資格審查項目"),
-        e("button",{style:S.btn("primary","sm"),onClick:()=>{setEditQualItem({id:uid(),label:"",desc:"",_new:true});setShowEditQual(true);}},"＋ 新增")
-      ),
-      items.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:12,marginBottom:8}},"（尚無項目）"),
-      ...items.map((q,i)=>e("div",{key:q.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:6}},
-        e("div",{style:{display:"flex",flexDirection:"column",gap:2,flexShrink:0}},
-          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===0?0.2:1},disabled:i===0,onClick:()=>setAf(p=>({...p,qualCheckItems:moveArr(p.qualCheckItems,i,-1)})) },"▲"),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===items.length-1?0.2:1},disabled:i===items.length-1,onClick:()=>setAf(p=>({...p,qualCheckItems:moveArr(p.qualCheckItems,i,1)})) },"▼")
-        ),
-        e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:8,padding:"8px 10px"}},
-          e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},q.label),
-          q.desc&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},q.desc)
-        ),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditQualItem({...q});setShowEditQual(true);}},e(Icon,{n:"pencil",s:15})),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,qualCheckItems:p.qualCheckItems.filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
-      ))
-    );
-  }
-
-  // ── Custom Fields Editor (admin) ─────────────────────────────────────────────
-  // 固定欄位定義（不可移動/刪除，只供預覽排版參考）
-  const FIXED_FIELDS=[
-    {id:"_seat",label:"座號",type:"number",width:"half",fixed:true},
-    {id:"_name",label:"姓名",type:"text",width:"half",fixed:true},
-    {id:"_education",label:"畢業學歷",type:"select",width:"half",fixed:true},
-    {id:"_school",label:"學校",type:"text",width:"half",fixed:true},
-    {id:"_department",label:"科系",type:"text",width:"half",fixed:true},
-    {id:"_city",label:"居住城市",type:"select",width:"half",fixed:true},
-    {id:"_district",label:"區/鄉鎮市",type:"select",width:"half",fixed:true},
-    {id:"_workExp",label:"工作經驗",type:"select",width:"half",fixed:true},
-  ];
-  const TYPE_META={
-    text:{icon:"pencil",label:"文字"},
-    number:{icon:"info",label:"數字"},
-    date:{icon:"calendar",label:"日期"},
-    select:{icon:"clipboard",label:"下拉選擇"},
-    radio:{icon:"circle",label:"單選"},
-    checkbox:{icon:"checkCircle",label:"多選"},
-    textarea:{icon:"book",label:"長文字"},
-    phone:{icon:"phone",label:"電話"},
-    email:{icon:"info",label:"Email"},
-    url:{icon:"info",label:"網址"},
-  };
-  function cfPreviewField(f,isFixed){
-    const meta=TYPE_META[f.type]||{icon:"pencil",label:f.type};
-    return e("div",{
-      style:{
-        background:isFixed?"var(--bg3)":"var(--inp-bg)",
-        border:"1px solid "+(isFixed?"var(--border2)":"#f59e0b44"),
-        borderRadius:8,padding:"8px 10px",
-        gridColumn:f.width==="full"?"span 2":"auto",
-        opacity:isFixed?0.6:1,
-      }
-    },
-      e("div",{style:{fontSize:11,color:isFixed?"var(--txt3)":"#f59e0b",fontWeight:700,marginBottom:3,display:"flex",alignItems:"center",gap:3}},
-        e(Icon,{n:isFixed?"lock":meta.icon,s:10,c:isFixed?"var(--txt3)":"#f59e0b"}),f.label
-      ),
-      e("div",{style:{fontSize:12,color:"var(--txt3)"}},isFixed?"固定欄位":meta.label+(f.required?" · 必填":"")+(f.placeholder?" · "+f.placeholder:""))
-    );
-  }
-  function customFieldsEditor(){
-    const items=af.customFields||[];
-
-    const allFields=[...FIXED_FIELDS,...items];
-    // 計算預覽格線（每兩個half合一行）
-    return e("div",{style:{...S.card,marginBottom:10}},
-      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
-        e("div",{style:S.slbl},"自訂基本資料欄位"),
-        e("button",{style:S.btn("primary","sm"),onClick:()=>{
-          setEditCFItem({id:uid(),label:"",type:"text",options:[],width:"half",required:false,placeholder:"",_new:true});
-          setCfOptionInput("");setShowEditCF(true);
-        }},"＋ 新增欄位")
-      ),
-      // 版面預覽
-      e("div",{style:{marginBottom:14}},
-        e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:6,fontWeight:700}},"版面預覽"),
-        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
-          ...allFields.map(f=>cfPreviewField(f,!!f.fixed))
-        )
-      ),
-      // 固定欄位說明
-      e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:10,padding:"6px 10px",background:"var(--bg3)",borderRadius:7,display:"flex",alignItems:"center",gap:5}},e(Icon,{n:"lock",s:11,c:"var(--txt3)"}),"灰色為系統固定欄位（座號、姓名等），橘色框為你新增的自訂欄位，可拖排順序"),
-      // 自訂欄位列表
-      items.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:13,marginBottom:8,textAlign:"center",padding:"12px 0"}},"尚無自訂欄位，點上方「＋ 新增欄位」"),
-      ...items.map((f,i)=>{
-        const meta=TYPE_META[f.type]||{icon:"pencil",label:f.type};
-        return e("div",{key:f.id,style:{display:"flex",alignItems:"center",gap:6,marginBottom:6}},
-          e("div",{style:{display:"flex",flexDirection:"column",gap:2,flexShrink:0}},
-            e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===0?0.2:1},disabled:i===0,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,-1)}))},"▲"),
-            e("button",{style:{...S.btn("ghost","sm"),padding:"2px 6px",opacity:i===items.length-1?0.2:1},disabled:i===items.length-1,onClick:()=>setAf(p=>({...p,customFields:moveArr(p.customFields,i,1)}))},"▼")
-          ),
-          e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:8,padding:"8px 10px",border:"1px solid #f59e0b33"}},
-            e("div",{style:{display:"flex",alignItems:"center",gap:6}},
-              e("span",{style:{fontSize:14}},meta.icon),
-              e("div",{style:{flex:1}},
-                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},f.label||"（未命名）"),
-                e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},
-                  meta.label,
-                  " · ",(f.width==="full"?"整行":"半行"),
-                  f.required?" · 必填":"",
-                  f.type==="select"||f.type==="radio"||f.type==="checkbox"?(" · "+( f.options?.length||0)+"個選項"):""
-                )
-              )
-            )
-          ),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"var(--txt2)"},onClick:()=>{setEditCFItem({...f});setCfOptionInput("");setShowEditCF(true);}},e(Icon,{n:"pencil",s:15})),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 9px",color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setAf(p=>({...p,customFields:p.customFields.filter((_,j)=>j!==i)}))},e(Icon,{n:"trash",s:15}))
-        );
-      })
-    );
-  }
 
   // ── Scroll Anchor Component ──────────────────────────────────────────────────
   function ScrollAnchor({seat,onDone}){
@@ -1511,25 +1300,6 @@ function App(){
       e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)",marginTop:14,marginBottom:8}},"等待管理員審核"),
       e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:28,lineHeight:1.8}},
         "您的帳號申請已送出。","請稍候，管理員審核完成後即可登入系統。"
-      ),
-      e("div",{style:{...S.card,width:"100%",marginBottom:12,textAlign:"left"}},
-        e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt3)",marginBottom:10}},"管理員可使用密碼直接啟用"),
-        e("input",{style:S.inp,type:"password",placeholder:"管理員密碼",value:aPwd,onChange:ev=>{setAPwd(ev.target.value);setAPwdErr(false);}}),
-        aPwdErr&&e("div",{style:{color:"#ef4444",fontSize:11,marginTop:4}},"密碼錯誤"),
-        e("button",{
-          style:{...S.btn("primary"),width:"100%",marginTop:10},
-          onClick:async()=>{
-            const s=await fsGet("settings/global");
-            const adminPwd=(s||DEF).adminPassword||DEF.adminPassword;
-            if(aPwd!==adminPwd){setAPwdErr(true);return;}
-            setAPwdErr(false);
-            const updated={...userProfile,status:"active"};
-            await fsSetUser(authUser.uid,updated);
-            setUserProfile(updated);
-            await loadAppData();
-            setView("dashboard");
-          }
-        },"啟用帳號")
       ),
       e("button",{style:{...S.btn("ghost"),width:"100%"},onClick:signOutUser},"登出帳號")
     )
@@ -1908,7 +1678,7 @@ function App(){
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:20}},
         e(MoreNavRow,{icon:"logout",label:"登出帳號",sub:userProfile?.googleEmail||"",onClick:reqSignOut,danger:true})
       ),
-      e("div",{style:{textAlign:"center",fontSize:11,color:"var(--txt3)",opacity:0.7,paddingBottom:8,letterSpacing:"0.05em",cursor:"pointer"},onClick:()=>{setAPwd("");setAPwdErr(false);setView("adminPwd");}},"v",APP_VERSION)
+      e("div",{style:{textAlign:"center",fontSize:11,color:"var(--txt3)",opacity:0.7,paddingBottom:8,letterSpacing:"0.05em",cursor:"pointer"},onClick:()=>enterAdmin()},"v",APP_VERSION)
     )),
     e(BottomNav)
   );
@@ -2301,19 +2071,7 @@ function App(){
     );
   }
 
-  if(view==="adminPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    e("div",{style:{width:"100%",maxWidth:360,padding:28}},
-      e("div",{style:{textAlign:"center",marginBottom:28}},e("div",{style:{marginBottom:10}},e(Icon,{n:"cog",s:48,c:"var(--txt2)"})),e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)"}},"後台管理")),
-      e("input",{style:{...S.inp,textAlign:"center",fontSize:22,letterSpacing:"0.25em",marginBottom:10,padding:14},type:"password",placeholder:"管理員密碼",value:aPwd,autoFocus:true,onChange:ev=>{setAPwd(ev.target.value);setAPwdErr(false);},onKeyDown:ev=>ev.key==="Enter"&&submitAPwd()}),
-      aPwdErr&&e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10,fontWeight:600}},"密碼錯誤"),
-      e("button",{style:{...S.btn("primary"),width:"100%",padding:13,fontSize:15,marginBottom:8},onClick:submitAPwd},"進入後台"),
-      e("button",{style:{...S.btn("ghost"),width:"100%",padding:10},onClick:()=>setView("dashboard")},"← 返回")
-    ),
-    e(BottomNav)
-  );
-
-  if(view==="admin"&&af){
+  if(view==="admin"){
   // ── iOS Settings-style admin helpers ──────────────────────────────────────
   const roleLabel=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r;
   const roleStyle=r=>({fontSize:10,background:r==="admin"?"#f59e0b18":r==="coordinator"?"#3b82f618":"var(--bg3)",border:"1px solid "+(r==="admin"?"#f59e0b44":r==="coordinator"?"#3b82f644":"var(--border)"),borderRadius:6,padding:"2px 7px",color:r==="admin"?"#f59e0b":r==="coordinator"?"#3b82f6":"var(--txt2)",fontWeight:700});
@@ -2332,10 +2090,9 @@ function App(){
       ...rows.map((r,i)=>i<rows.length-1?r:e("div",{key:"last",style:{borderBottom:"none"}},r))
     )
   );
-  const subHdr=(title,saveBtn)=>e("div",{style:S.hdr},
+  const subHdr=(title)=>e("div",{style:S.hdr},
     e(BackBtn,{onClick:()=>setASV(null)}),
-    e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},title)),
-    saveBtn&&e("button",{style:S.btn("primary","sm"),onClick:saveAF,disabled:saving},saving?"儲存…":"儲存設定")
+    e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},title))
   );
 
   // ── Pending users sub-view ─────────────────────────────────────────────────
@@ -2551,143 +2308,6 @@ function App(){
     e(BottomNav)
   );
 
-  // ── System settings sub-view (密碼) ────────────────────────────────────────
-  if(adminSubView==="system") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    subHdr("管理員密碼",true),
-    e("div",{style:{...S.sec,paddingTop:16}},
-      e("div",{style:S.card},
-        e("div",{style:S.slbl},"管理員密碼"),
-        e("input",{style:S.inp,type:"password",placeholder:"新密碼（留空保持不變）",value:af.adminPassword,onChange:ev=>setAf(p=>({...p,adminPassword:ev.target.value}))})
-      ),
-      e("div",{style:{height:48}})
-    ),
-    e(BottomNav)
-  );
-
-  // ── Status / qual sub-view ─────────────────────────────────────────────────
-  if(adminSubView==="status") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    subHdr("狀態選項・資格審查",true),
-    e("div",{style:{...S.sec,paddingTop:16}},
-      statusEditor(),
-      qualEditor(),
-      e("div",{style:{height:48}})
-    ),
-    showEditSt&&editStItem&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditSt(false)},
-      e("div",{style:S.mBox},
-        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editStItem._new?"新增意願狀態":"編輯意願狀態"),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"名稱"),e("input",{style:S.inp,placeholder:"例：高意願",value:editStItem.label||"",onChange:ev=>setEditStItem(p=>({...p,label:ev.target.value}))})),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"顏色"),
-          e("div",{style:{display:"flex",alignItems:"center",gap:10}},
-            e("input",{type:"color",style:{width:44,height:36,borderRadius:8,border:"1px solid var(--border)",background:"var(--inp-bg)",cursor:"pointer"},value:editStItem.color||"#64748b",onChange:ev=>setEditStItem(p=>({...p,color:ev.target.value}))}),
-            e("div",{style:{flex:1,background:editStItem.color+"22",border:"1px solid "+editStItem.color+"55",borderRadius:8,padding:"7px 12px",fontSize:13,color:editStItem.color,fontWeight:700}},(editStItem.label||"預覽"))
-          )
-        ),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"子原因"),
-          ...(editStItem.subReasons||[]).map((r,i)=>e("div",{key:i,style:{display:"flex",gap:6,marginBottom:6}},
-            e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:7,padding:"6px 10px",fontSize:13,color:"var(--txt)"}},r),
-            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"4px 8px"},onClick:()=>setEditStItem(p=>({...p,subReasons:p.subReasons.filter((_,j)=>j!==i)}))},"✕")
-          )),
-          e("div",{style:{display:"flex",gap:6}},
-            e("input",{style:{...S.inp,flex:1,fontSize:13},placeholder:"新增子原因…",value:editStSubInput,onChange:ev=>setEditStSubInput(ev.target.value),
-              onKeyDown:ev=>{if(ev.key==="Enter"&&editStSubInput.trim()){setEditStItem(p=>({...p,subReasons:[...(p.subReasons||[]),editStSubInput.trim()]}));setEditStSubInput("");}}}),
-            e("button",{style:S.btn("primary","sm"),onClick:()=>{if(!editStSubInput.trim())return;setEditStItem(p=>({...p,subReasons:[...(p.subReasons||[]),editStSubInput.trim()]}));setEditStSubInput("");}},"＋")
-          )
-        ),
-        e("div",{style:{marginBottom:16}},e("label",{style:S.lbl},"包含備註欄"),
-          e("div",{style:{display:"flex",gap:8}},
-            ...[["是",true],["否",false]].map(([lbl,v])=>e("button",{key:lbl,style:{...S.btn(editStItem.hasNote===v?"primary":"ghost","sm"),flex:1},onClick:()=>setEditStItem(p=>({...p,hasNote:v}))},lbl))
-          )
-        ),
-        e("div",{style:{display:"flex",gap:10}},
-          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditSt(false)},"取消"),
-          e("button",{style:{...S.btn("primary"),flex:1},onClick:()=>{
-            if(!editStItem.label.trim())return;
-            if(editStItem._new)setAf(p=>({...p,statusOptions:[...p.statusOptions,{...editStItem,_new:undefined}]}));
-            else setAf(p=>({...p,statusOptions:p.statusOptions.map(s=>s.id===editStItem.id?{...editStItem,_new:undefined}:s)}));
-            setShowEditSt(false);
-          }},"儲存")
-        )
-      )
-    ),
-    showEditQual&&editQualItem&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditQual(false)},
-      e("div",{style:{...S.mBox,maxHeight:"60vh"}},
-        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editQualItem._new?"新增審查項目":"編輯審查項目"),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"項目名稱"),e("input",{style:S.inp,placeholder:"例：痼疾",value:editQualItem.label||"",onChange:ev=>setEditQualItem(p=>({...p,label:ev.target.value}))})),
-        e("div",{style:{marginBottom:20}},e("label",{style:S.lbl},"說明文字"),e("input",{style:S.inp,placeholder:"例：是否患有影響服役之疾病",value:editQualItem.desc||"",onChange:ev=>setEditQualItem(p=>({...p,desc:ev.target.value}))})),
-        e("div",{style:{display:"flex",gap:10}},
-          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditQual(false)},"取消"),
-          e("button",{style:{...S.btn("primary"),flex:1},onClick:()=>{
-            if(!editQualItem.label.trim())return;
-            if(editQualItem._new)setAf(p=>({...p,qualCheckItems:[...(p.qualCheckItems||[]),{...editQualItem,_new:undefined}]}));
-            else setAf(p=>({...p,qualCheckItems:p.qualCheckItems.map(q=>q.id===editQualItem.id?{...editQualItem,_new:undefined}:q)}));
-            setShowEditQual(false);
-          }},"儲存")
-        )
-      )
-    ),
-    e(BottomNav)
-  );
-
-  // ── Fields sub-view (營別/連別/自訂欄位) ────────────────────────────────────
-  if(adminSubView==="fields") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    subHdr("營別・連別・自訂欄位",true),
-    e("div",{style:{...S.sec,paddingTop:16}},
-      listEd("battalions","營別"),
-      listEd("companies","連別"),
-      customFieldsEditor(),
-      e("div",{style:{height:48}})
-    ),
-    showEditCF&&editCFItem&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditCF(false)},
-      e("div",{style:S.mBox},
-        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editCFItem._new?"新增欄位":"編輯欄位"),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"欄位名稱 *"),e("input",{style:S.inp,placeholder:"例：兵種志願、血型…",value:editCFItem.label||"",onChange:ev=>setEditCFItem(p=>({...p,label:ev.target.value}))})),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"說明文字（選填）"),e("input",{style:S.inp,placeholder:"顯示在欄位下方的補充說明",value:editCFItem.desc||"",onChange:ev=>setEditCFItem(p=>({...p,desc:ev.target.value}))})),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"輸入類型"),
-          e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
-            ...Object.entries({text:"文字",number:"數字",date:"日期",phone:"電話",email:"Email",url:"網址",select:"下拉選擇",radio:"單選",checkbox:"多選",textarea:"長文字"}).map(([v,lbl])=>
-              e("button",{key:v,style:{...S.btn(editCFItem.type===v?"primary":"ghost","sm"),justifyContent:"flex-start",fontSize:12},onClick:()=>setEditCFItem(p=>({...p,type:v}))},lbl)
-            )
-          )
-        ),
-        (["text","number","phone","email","url","textarea"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"預設提示文字"),e("input",{style:S.inp,placeholder:"例：請輸入…",value:editCFItem.placeholder||"",onChange:ev=>setEditCFItem(p=>({...p,placeholder:ev.target.value}))})),
-        (["select","radio","checkbox"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"選項清單"),
-          ...(editCFItem.options||[]).map((opt,i)=>e("div",{key:i,style:{display:"flex",gap:6,marginBottom:6}},
-            e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:7,padding:"7px 10px",fontSize:13,color:"var(--txt)"}},opt),
-            e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"4px 8px"},onClick:()=>setEditCFItem(p=>({...p,options:p.options.filter((_,j)=>j!==i)}))},"✕")
-          )),
-          e("div",{style:{display:"flex",gap:6}},
-            e("input",{style:{...S.inp,flex:1},placeholder:"新增選項…",value:cfOptionInput,onChange:ev=>setCfOptionInput(ev.target.value),
-              onKeyDown:ev=>{if(ev.key==="Enter"&&cfOptionInput.trim()){setEditCFItem(p=>({...p,options:[...(p.options||[]),cfOptionInput.trim()]}));setCfOptionInput("");}}}),
-            e("button",{style:S.btn("primary","sm"),onClick:()=>{if(!cfOptionInput.trim())return;setEditCFItem(p=>({...p,options:[...(p.options||[]),cfOptionInput.trim()]}));setCfOptionInput("");}},"＋")
-          )
-        ),
-        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"版面寬度"),
-          e("div",{style:{display:"flex",gap:8}},
-            ...[["half","半行"],["full","整行"]].map(([v,lbl])=>e("button",{key:v,style:{...S.btn(editCFItem.width===v?"primary":"ghost","sm"),flex:1},onClick:()=>setEditCFItem(p=>({...p,width:v}))},lbl))
-          )
-        ),
-        e("div",{style:{marginBottom:20,display:"flex",alignItems:"center",gap:10}},
-          e("label",{style:{...S.lbl,marginBottom:0}},"必填欄位"),
-          e("button",{style:{...S.btn(editCFItem.required?"primary":"ghost","sm")},onClick:()=>setEditCFItem(p=>({...p,required:!p.required}))},editCFItem.required?"是":"否")
-        ),
-        e("div",{style:{display:"flex",gap:10}},
-          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditCF(false)},"取消"),
-          e("button",{style:{...S.btn("primary"),flex:1},onClick:()=>{
-            if(!editCFItem.label.trim())return;
-            const item={...editCFItem,_new:undefined};
-            if(editCFItem._new)setAf(p=>({...p,customFields:[...(p.customFields||[]),item]}));
-            else setAf(p=>({...p,customFields:(p.customFields||[]).map(f=>f.id===item.id?item:f)}));
-            setShowEditCF(false);
-          }},"儲存")
-        )
-      )
-    ),
-    e(BottomNav)
-  );
-
   // ── Feedback sub-view ──────────────────────────────────────────────────────
   if(adminSubView==="feedback") return e("div",{style:S.app},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
@@ -2722,11 +2342,6 @@ function App(){
       ]),
       adminSection("梯次",[
         adminRow("clipboard","#3b82f6","梯次管理","共 "+batches.length+" 個梯次",0,()=>setASV("batches")),
-      ]),
-      adminSection("系統設定",[
-        adminRow("lock","#64748b","管理員密碼",null,0,()=>setASV("system")),
-        adminRow("shield","#10b981","狀態選項・資格審查",null,0,()=>setASV("status")),
-        adminRow("cog","#a855f7","營別・連別・自訂欄位",null,0,()=>setASV("fields")),
       ]),
       adminSection("其他",[
         adminRow("chat","#0ea5e9","意見回饋紀錄","共 "+feedbackList.length+" 筆",0,()=>setASV("feedback")),
@@ -3544,7 +3159,7 @@ function App(){
                 basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作單位"),e("input",{style:S.inp,placeholder:"例：台積電",value:basicDraft.workPlace||"",onChange:ev=>setBasicDraft(p=>({...p,workPlace:ev.target.value}))})),
                 basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作年資（年）"),e("input",{style:S.inp,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))})),
                 // 自訂欄位編輯（支援全部類型）
-                ...(cfg?.customFields||[]).map(f=>{
+                ...(DEF.customFields).map(f=>{
                   const val=basicDraft.customData?.[f.id];
                   const setVal=v=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:v}}));
                   let input;
@@ -3635,7 +3250,7 @@ function App(){
                   e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.workYears?tf.workYears+"年":"—")
                 ),
                 // 自訂欄位唯讀顯示（照 width 設定排版）
-                ...(cfg?.customFields||[]).map(f=>{
+                ...(DEF.customFields).map(f=>{
                   const val=tf.customData?.[f.id]||"";
                   const display=f.type==="checkbox"
                     ? (val?val.split(",").join("、"):"—")
