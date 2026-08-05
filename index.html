@@ -466,6 +466,8 @@ function App(){
   const [buInputMode,setBUInputMode]=useState(false);
   const [adminBUInput,setAdminBUInput]=useState("");
   const [adminBUMode,setAdminBUMode]=useState(false);
+  const [itvwUnitMode,setItvwUnitMode]=useState(false);
+  const [itvwUnitInput,setItvwUnitInput]=useState("");
   const [winW,setWinW]=useState(window.innerWidth);
 
   // 身分驗證
@@ -1051,6 +1053,20 @@ function App(){
     setEMD(d=>({...d,brigadeUnit:trimmed}));
     setAdminBUMode(false);
     setAdminBUInput("");
+    toast_("已新增並選擇 ✓");
+  }
+  async function doAddItvwUnit(){
+    const trimmed=itvwUnitInput.trim();
+    if(!trimmed)return;
+    const existing=cfg?.brigadeUnits||[];
+    if(!existing.includes(trimmed)){
+      const newCfg={...cfg,brigadeUnits:[...existing,trimmed]};
+      await fsSet("settings/global",newCfg);
+      setCfg(newCfg);
+    }
+    setNewItvw(p=>({...p,unit:trimmed}));
+    setItvwUnitMode(false);
+    setItvwUnitInput("");
     toast_("已新增並選擇 ✓");
   }
   async function addRecruitUnit(name){
@@ -2835,7 +2851,7 @@ function App(){
                 e("option",{value:""},"— 全部單位 —"),
                 ...[...new Set([
                   ...(curBatch.trainees||[]).flatMap(t=>(t.interviewLogs||[]).map(l=>l.unit).filter(Boolean)),
-                  ...(cfg?.recruitUnits||DEF.recruitUnits)
+                  ...(cfg?.brigadeUnits||[])
                 ])].sort().map(u=>e("option",{key:u,value:u},u))
               )
             ),
@@ -3328,22 +3344,29 @@ function App(){
                 e("div",{style:{marginBottom:14,paddingBottom:14,borderBottom:"1px solid var(--border)"}},
                   e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt2)",marginBottom:12,letterSpacing:"0.05em"}},"＋ 新增約談紀錄"),
                   e("div",{style:{display:"flex",flexDirection:"column",gap:12}},
-                    // 約談單位：下拉 + 永遠顯示新增輸入框
+                    // 約談單位：旅級單位同款 toggle 模式
                     e("div",null,
                       e("label",{style:S.lbl},"約談單位"),
-                      e("select",{style:S.sel,value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
-                        e("option",{value:""},"請選擇單位"),
-                        ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
-                      ),
-                      e("div",{style:{display:"flex",gap:6,marginTop:8}},
-                        e("input",{style:{...S.inp,flex:1},placeholder:"輸入新單位名稱…",value:newItvw._newUnit||"",onChange:ev=>setNewItvw(p=>({...p,_newUnit:ev.target.value}))}),
-                        e("button",{style:S.btn("primary","sm"),onClick:async()=>{
-                          const v=(newItvw._newUnit||"").trim();
-                          if(!v)return;
-                          await addRecruitUnit(v);
-                          setNewItvw(p=>({...p,unit:v,_newUnit:""}));
-                        }},"＋ 新增")
-                      )
+                      itvwUnitMode
+                        ?e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                            e("input",{style:{...S.inp,flex:1},placeholder:"輸入單位全銜",value:itvwUnitInput,autoFocus:true,
+                              onChange:ev=>setItvwUnitInput(ev.target.value),
+                              onKeyDown:ev=>ev.key==="Enter"&&doAddItvwUnit()}),
+                            e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#10b981",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                              onClick:doAddItvwUnit},e(Icon,{n:"checkCircle",s:18,c:"#fff"})),
+                            e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                              onClick:()=>{setItvwUnitMode(false);setItvwUnitInput("");}},e(Icon,{n:"xmark",s:18}))
+                          )
+                        :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                            e("select",{style:{...S.sel,flex:1},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
+                              e("option",{value:""},"請選擇單位"),
+                              ...(cfg?.brigadeUnits||[]).map(u=>e("option",{key:u,value:u},u))
+                            ),
+                            e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                              onClick:()=>{setItvwUnitMode(true);setItvwUnitInput("");}},"+"),
+                            newItvw.unit&&e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                              onClick:()=>setNewItvw(p=>({...p,unit:""}))},e(Icon,{n:"trash",s:15}))
+                          )
                     ),
                     // 招募員：依選取的約談單位過濾，有就顯示下拉
                     e("div",null,
@@ -3499,7 +3522,7 @@ function App(){
               e("label",{style:S.lbl},"約談單位"),
               e("select",{style:S.sel,value:editLogData.unit||"",onChange:ev=>setEditLogData(p=>({...p,unit:ev.target.value}))},
                 e("option",{value:""},"請選擇"),
-                ...(cfg?.recruitUnits||DEF.recruitUnits).map(u=>e("option",{key:u,value:u},u))
+                ...[...new Set([...(cfg?.brigadeUnits||[]),...(editLogData.unit?[editLogData.unit]:[])])].map(u=>e("option",{key:u,value:u},u))
               )
             ),
             // 訪談日期
