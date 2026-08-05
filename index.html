@@ -468,6 +468,7 @@ function App(){
   const [editMemberDraft,setEMD]=useState(null);
   const [editMemberSaving,setEMSaving]=useState(false);
   const [adminSubView,setASV]=useState(null);
+  const [memberSearch,setMemberSearch]=useState("");
   const [recentCases,setRecentCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("riims_recent")||"[]");}catch{return[];}});
   const [showBrigadeSheet,setShowBrigadeSheet]=useState(false);
   const [winW,setWinW]=useState(window.innerWidth);
@@ -2298,33 +2299,53 @@ function App(){
   );
 
   // ── Members sub-view ───────────────────────────────────────────────────────
-  if(adminSubView==="members") return e("div",{style:S.app},
+  if(adminSubView==="members"){
+  const mq=memberSearch.trim().toLowerCase();
+  const filteredUsers=mq?allUsers.filter(u=>{
+    const name=((u.rank||"")+" "+(u.name||u.googleDisplayName||"")).toLowerCase();
+    const unit=((u.brigadeUnit||u.unit||"")+" "+(u.battalionUnit||"")).toLowerCase();
+    const email=(u.googleEmail||"").toLowerCase();
+    const roles=(u.roles||[u.role||""]).join(" ").toLowerCase();
+    return name.includes(mq)||unit.includes(mq)||email.includes(mq)||roles.includes(mq);
+  }):allUsers;
+  return e("div",{style:S.app},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     subHdr("成員管理"),
     e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:{display:"flex",alignItems:"center",gap:8,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:"0 14px",marginBottom:12}},
+        e(Icon,{n:"search",s:16,c:"var(--txt3)",w:2}),
+        e("input",{style:{flex:1,background:"none",border:"none",outline:"none",fontSize:14,color:"var(--txt)",padding:"11px 0",fontFamily:"'Noto Sans TC',sans-serif"},
+          placeholder:"搜尋姓名、單位、階級…",value:memberSearch,
+          onChange:ev=>setMemberSearch(ev.target.value)})
+      ),
       e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},
-        e("span",{style:{fontSize:12,color:"var(--txt3)"}},"共 "+allUsers.length+" 位已核准成員"),
+        e("span",{style:{fontSize:12,color:"var(--txt3)"}},
+          mq?"搜尋結果 "+filteredUsers.length+" / "+allUsers.length+" 人":"共 "+allUsers.length+" 位已核准成員"
+        ),
         e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"4px 10px"},onClick:loadAllUsers},"重整")
       ),
       allUsers.length===0
         ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無成員")
-        :e("div",{style:S.card},
-          ...allUsers.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:i<allUsers.length-1?"1px solid var(--border2)":"none"}},
-            e("div",{style:{width:36,height:36,borderRadius:"50%",background:"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}},(u.name||u.googleDisplayName||"？")[0]),
-            e("div",{style:{flex:1,minWidth:0}},
-              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},(u.rank||"")+(u.rank?" ":"")+(u.name||u.googleDisplayName||"（未填）")),
-              e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:1}},u.brigadeUnit||(u.unit||"未填單位")),
-              e("div",{style:{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}},
-                ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
-              )
-            ),
-            e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>{
-              const parts=(u.unit||"").split("・");
-              setEMD({...u,brigadeUnit:u.brigadeUnit||(parts[0]||""),battalionUnit:u.battalionUnit||(parts.slice(1).join("・")||""),roles:u.roles||[u.role||"recruiter"]});
-              setShowEditMember(true);
-            }},e(Icon,{n:"pencil",s:14}))
-          ))
-        ),
+        :filteredUsers.length===0
+          ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"找不到符合「"+memberSearch+"」的成員")
+          :e("div",{style:S.card},
+            ...filteredUsers.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:i<filteredUsers.length-1?"1px solid var(--border2)":"none"}},
+              e("div",{style:{width:36,height:36,borderRadius:"50%",background:"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}},(u.name||u.googleDisplayName||"？")[0]),
+              e("div",{style:{flex:1,minWidth:0}},
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},(u.rank||"")+(u.rank?" ":"")+(u.name||u.googleDisplayName||"（未填）")),
+                e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:1}},u.brigadeUnit||(u.unit||"未填單位")),
+                u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit),
+                e("div",{style:{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}},
+                  ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
+                )
+              ),
+              e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>{
+                const parts=(u.unit||"").split("・");
+                setEMD({...u,brigadeUnit:u.brigadeUnit||(parts[0]||""),battalionUnit:u.battalionUnit||(parts.slice(1).join("・")||""),roles:u.roles||[u.role||"recruiter"]});
+                setShowEditMember(true);
+              }},e(Icon,{n:"pencil",s:14}))
+            ))
+          ),
       e("div",{style:{height:48}})
     ),
     showEditMember&&editMemberDraft&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditMember(false)},
@@ -2357,7 +2378,7 @@ function App(){
       )
     ),
     e(BottomNav)
-  );
+  );}
 
   // ── Batches sub-view ───────────────────────────────────────────────────────
   if(adminSubView==="batches") return e("div",{style:S.app},
@@ -2604,7 +2625,7 @@ function App(){
     e("div",{style:{...S.sec,paddingTop:20}},
       adminSection("帳號管理",[
         adminRow("users","#ef4444","待審核帳號",pendingUsers.length===0?"目前無待審核帳號":pendingUsers.length+" 人等待核准",pendingUsers.length,()=>setASV("pending")),
-        adminRow("people","#f59e0b","成員管理","共 "+allUsers.length+" 位已核准成員",0,()=>setASV("members")),
+        adminRow("people","#f59e0b","成員管理","共 "+allUsers.length+" 位已核准成員",0,()=>{setMemberSearch("");setASV("members");}),
       ]),
       adminSection("梯次",[
         adminRow("clipboard","#3b82f6","梯次管理","共 "+batches.length+" 個梯次",0,()=>setASV("batches")),
