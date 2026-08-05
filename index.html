@@ -1917,9 +1917,9 @@ function App(){
                     onChange:ev=>setNewBUInput(ev.target.value),
                     onKeyDown:ev=>ev.key==="Enter"&&doAddBrigadeUnit()}),
                   e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#10b981",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                    onClick:doAddBrigadeUnit},e(Icon,{n:"check",s:16,c:"#fff"})),
+                    onClick:doAddBrigadeUnit},e(Icon,{n:"checkCircle",s:18,c:"#fff"})),
                   e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                    onClick:()=>{setBUInputMode(false);setNewBUInput("");}},e(Icon,{n:"x",s:16}))
+                    onClick:()=>{setBUInputMode(false);setNewBUInput("");}},e(Icon,{n:"xmark",s:18}))
                 )
               :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
                   e("select",{style:{...S.sel,flex:1},value:moreProfileDraft.brigadeUnit,
