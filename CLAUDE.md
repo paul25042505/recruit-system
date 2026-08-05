@@ -12,6 +12,11 @@
 - 所有修改推送到開發分支，完成後立即用 GitHub MCP 工具建立 PR 並 merge 到 main（使用 squash merge）
 - 若 merge 衝突：`git fetch origin main && git rebase origin/main && git push --force-with-lease`，再重新 merge
 
+## 討論優先規則
+- 當使用者說「來討論」、「我們討論一下」、「先討論」、「討論看看」或任何帶有「討論」語意的話，**絕對不能直接寫程式碼**
+- 必須先討論並雙方同意架構、方向、實作方式後，才能開始動手寫程式
+- 討論階段只用文字說明，不產出任何程式碼片段，直到使用者明確說「好」、「開始」、「來做」、「繼續」之類的確認語
+
 ## 安全規則
 - Firebase service account 私鑰（key_id: `ae1369abeed39c0a1f5e21eea52d3e98abfc1cdc`）絕對不能 commit 或出現在任何程式碼中
 
