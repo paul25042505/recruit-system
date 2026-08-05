@@ -1824,7 +1824,11 @@ function App(){
           )
         )
       ),
-      // 系統
+      // 帳號設定
+      e("div",{style:{...S.slbl,marginBottom:8}},"帳號設定"),
+      e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:16}},
+        e(MoreNavRow,{icon:"user",label:"個人資料",sub:(userProfile?.rank||"")+" "+(userProfile?.name||""),onClick:()=>{const parts=(userProfile?.unit||"").split("・");const bg=userProfile?.brigadeUnit||(parts[0]||"");const bn=userProfile?.battalionUnit||(parts.slice(1).join("・")||"");setMPD({name:userProfile?.name||"",rank:userProfile?.rank||"",unit:userProfile?.unit||"",brigadeUnit:bg,battalionUnit:bn,roles:userProfile?.roles||["recruiter"]});setView("moreProfile");}})
+      ),
       // 系統
       e("div",{style:{...S.slbl,marginBottom:8}},"系統"),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
@@ -1884,7 +1888,7 @@ function App(){
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"角色（可複選）"),
             e("div",{style:{display:"flex",gap:8}},
-              ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"管理員"}]).map(({v,l})=>{
+              ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"}]).map(({v,l})=>{
                 const active=(moreProfileDraft.roles||[]).includes(v);
                 return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
                   onClick:()=>setMPD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
