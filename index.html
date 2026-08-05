@@ -180,13 +180,24 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const APP_VERSION="2.2.1";
+const APP_VERSION="2.3.0";
 const PTR_THRESHOLD=68; // px — 下拉超過此距離才觸發 reload
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
+const RECRUIT_UNITS=[
+  "陸軍步兵第一〇一旅",
+  "陸軍步兵第一〇四旅",
+  "陸軍步兵第一〇九旅",
+  "陸軍步兵第一一七旅",
+  "陸軍步兵第一五三旅",
+  "陸軍步兵第二〇三旅",
+  "陸軍步兵第二〇六旅",
+  "陸軍步兵第二四九旅",
+  "陸軍步兵第二五七旅",
+  "陸軍步兵第三〇二旅",
+];
 const DEF={
   adminPassword:"admin1234",
-  units:["陸軍司令部","海軍司令部","空軍司令部","海軍陸戰隊","憲兵指揮部"],
   battalions:["第一營","第二營","第三營","特勤營","後勤營"],
   companies:["（無）","第一連","第二連","第三連","第四連"],
   recruitUnits:["陸軍步兵旅","海軍陸戰隊","空軍作戰指揮部","憲兵指揮部"],
@@ -1014,13 +1025,6 @@ function App(){
     }catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
   }
-  async function addHoldUnit(name){
-    if(!name.trim())return;
-    const newUnits=[...(cfg.units||[]),name.trim()];
-    const newCfg={...cfg,units:newUnits};
-    await fsSet("settings/global",newCfg);
-    setCfg(newCfg);
-  }
   async function addRecruitUnit(name){
     if(!name.trim())return;
     if((cfg.recruitUnits||[]).includes(name.trim()))return;
@@ -1738,7 +1742,7 @@ function App(){
         e("div",{style:S.mBox},
           e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}},e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)"}},"新增梯次"),e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowAB(false)},"✕")),
           e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:12}},
-            e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.units||DEF.units).map(o=>e("option",{key:o},o)))),
+            e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...RECRUIT_UNITS.map(o=>e("option",{key:o},o)))),
             e("div",null,e("label",{style:S.lbl},"營別 *"),e("select",{style:S.sel,value:nb.battalion,onChange:ev=>setNb(p=>({...p,battalion:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.battalions||DEF.battalions).map(o=>e("option",{key:o},o)))),
             e("div",null,e("label",{style:S.lbl},"連別"),e("select",{style:S.sel,value:nb.company,onChange:ev=>setNb(p=>({...p,company:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.companies||DEF.companies).map(o=>e("option",{key:o},o)))),
             e("div",{style:{gridColumn:"span 2"}},
@@ -2265,7 +2269,6 @@ function App(){
           );
         })
       ),
-      listEd("units","接訓單位"),
       listEd("battalions","營別"),
       listEd("companies","連別"),
       statusEditor(),
@@ -2427,7 +2430,7 @@ function App(){
             e("label",{style:S.lbl},"接訓單位"),
             e("select",{style:S.sel,value:editBatchData.unit||"",onChange:ev=>setEditBatchData(p=>({...p,unit:ev.target.value}))},
               e("option",{value:""},"請選擇"),
-              ...(cfg?.units||DEF.units).map(o=>e("option",{key:o,value:o},o))
+              ...RECRUIT_UNITS.map(o=>e("option",{key:o,value:o},o))
             )
           ),
           e("div",null,
@@ -2574,7 +2577,7 @@ function App(){
       e("div",{style:S.mBox},
         e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}},e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)"}},"新增梯次"),e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowAB(false)},"✕")),
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:12}},
-          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.units||DEF.units).map(o=>e("option",{key:o},o)))),
+          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...RECRUIT_UNITS.map(o=>e("option",{key:o},o)))),
           e("div",null,e("label",{style:S.lbl},"營別 *"),e("select",{style:S.sel,value:nb.battalion,onChange:ev=>setNb(p=>({...p,battalion:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.battalions||DEF.battalions).map(o=>e("option",{key:o},o)))),
           e("div",null,e("label",{style:S.lbl},"連別"),e("select",{style:S.sel,value:nb.company,onChange:ev=>setNb(p=>({...p,company:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.companies||DEF.companies).map(o=>e("option",{key:o},o)))),
           e("div",{style:{gridColumn:"span 2"}},
