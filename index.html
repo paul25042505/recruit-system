@@ -766,7 +766,7 @@ function App(){
           const tab=st.tab||"list";
           setBatchTab(tab);
           setView("batch");
-          const tabTitle={"list":"訓員列表","sched":"梯次期程","hold":"協訓單位掌握名單","query":"約談紀錄查詢","visit":"電訪及家訪名單"}[tab]||"梯次";
+          const tabTitle={"list":"訓員列表","recruiter":"招募員","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[tab]||"梯次";
           document.title=tabTitle+" | 招募資訊整合管理系統";
         }
         else setView("home");
@@ -853,7 +853,7 @@ function App(){
         setScrollToSeat(tf?.seat);
         setView("batch");
         const tab=batchTab||"list";
-        const tabTitle={"list":"訓員列表","sched":"梯次期程","hold":"協訓單位掌握名單","query":"約談紀錄查詢","visit":"電訪及家訪名單"}[tab]||"梯次";
+        const tabTitle={"list":"訓員列表","recruiter":"招募員","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[tab]||"梯次";
         document.title=tabTitle+" | 招募資訊整合管理系統";
         pushState({page:"batch",batchId:curBatch?.id,tab},tabTitle);
       }
@@ -1214,10 +1214,10 @@ function App(){
             e("div",{style:{padding:"10px 20px 6px",fontSize:11,fontWeight:800,color:"#f59e0b",letterSpacing:"0.1em"}},fmtSeq(curBatch.sequence)+" 分頁"),
             ...[
               {icon:"users",label:"訓員列表",tab:"list"},
+              {icon:"people",label:"招募員",tab:"recruiter"},
+              {icon:"clipboard",label:"約談內容",tab:"query"},
               {icon:"calendar",label:"梯次期程",tab:"sched"},
-              {icon:"lock",label:"協訓單位掌握名單",tab:"hold"},
-              {icon:"clipboard",label:"約談紀錄查詢",tab:"query"},
-              {icon:"phone",label:"電訪及家訪名單",tab:"visit"},
+              {icon:"building",label:"梯次資訊",tab:"info"},
             ].map(({icon,label,tab})=>e("div",{key:tab,style:{display:"flex",alignItems:"center",gap:14,padding:"12px 20px",cursor:"pointer",borderBottom:"1px solid var(--border2)",background:batchTab===tab?"#1e2d45":"transparent"},
               onClick:()=>{setShowMenu(false);setBatchTab(tab);if(view!=="batch")setView("batch");}},
               e(Icon,{n:icon,s:18,c:batchTab===tab?"#f59e0b":"var(--txt3)"}),
@@ -2487,17 +2487,18 @@ function App(){
     const prevBatch=curBatchIdx>0?batches[curBatchIdx-1]:null;
     const nextBatch=curBatchIdx<batches.length-1?batches[curBatchIdx+1]:null;
     function goBatch(b){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");}
-    return e("div",{style:S.app},
+    return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
       e(WatermarkOverlay),e(Toast),
       e("div",{style:S.hdr},
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}},e(Icon,{n:"chevL",s:18})),
         e("div",{style:{flex:1,textAlign:"center"}},
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},
-            {"list":"訓員列表","sched":"梯次期程","hold":"協訓單位掌握名單","query":"約談紀錄查詢","visit":"電訪及家訪名單"}[batchTab]||"梯次"
+            {"list":"訓員列表","recruiter":"招募員","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[batchTab]||"梯次"
           )
         ),
         e("div",{style:{width:44,flexShrink:0}})
       ),
+      e("div",{style:{flex:1,overflowY:"auto"},className:"has-bnav"},
       e("div",{style:{...S.sec,paddingTop:14,paddingBottom:0}},
         e("div",{style:{...S.card,marginBottom:0}},
           e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:4}},
@@ -2544,8 +2545,8 @@ function App(){
       e("div",{style:S.sec},
 
         e("div",{className:"hs",style:{display:"flex",gap:0,marginBottom:12,background:"var(--inp-bg)",borderRadius:10,padding:3,overflowX:"auto"}},
-          ...[["list","訓員列表"],["sched","梯次期程"],["hold","協訓掌握"],["query","約談查詢"],["visit","電訪家訪"]].map(([tab,lbl])=>
-            e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:11,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:batchTab===tab?"var(--bg3)":"transparent",color:batchTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>{setBatchTab(tab);pushState({page:"batch",batchId:curBatch?.id,tab},{"list":"訓員列表","sched":"梯次期程","hold":"協訓單位掌握名單","query":"約談紀錄查詢","visit":"電訪及家訪名單"}[tab]||tab);}},lbl)
+          ...[["list","訓員列表"],["recruiter","招募員"],["query","約談內容"],["sched","梯次期程"],["info","梯次資訊"]].map(([tab,lbl])=>
+            e("button",{key:tab,style:{flex:1,flexShrink:0,padding:"7px 6px",fontSize:11,fontWeight:700,borderRadius:8,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",background:batchTab===tab?"var(--bg3)":"transparent",color:batchTab===tab?"var(--txt)":"var(--txt3)",transition:"all 0.15s",whiteSpace:"nowrap"},onClick:()=>{setBatchTab(tab);pushState({page:"batch",batchId:curBatch?.id,tab},{"list":"訓員列表","recruiter":"招募員","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[tab]||tab);}},lbl)
           )
         ),
         batchTab==="list"&&e(React.Fragment,null,
@@ -2724,7 +2725,7 @@ function App(){
           })(),
           e("div",{style:{height:40}})
         ),
-        batchTab==="hold"&&e(React.Fragment,null,
+        batchTab==="recruiter"&&e(React.Fragment,null,
           (()=>{
             const held=(curBatch.trainees||[]).filter(t=>t.holdUnit);
             const groups={};
@@ -2843,47 +2844,84 @@ function App(){
           ),
           e("div",{style:{height:40}})
         ),
-        batchTab==="visit"&&e(React.Fragment,null,
-          (()=>{
-            const allT=curBatch.trainees||[];
-            const midHighWill=allT.filter(t=>{
-              const logs=t.interviewLogs||[];
-              const last=logs[logs.length-1];
-              const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);
-              return sid===4||sid===5;
-            });
-            if(!midHighWill.length) return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
-              e("div",{style:{marginBottom:12}},e(Icon,{n:"phone",s:36,c:"var(--txt3)"})),
-              e("div",{style:{fontSize:14}},"目前無中高意願訓員")
-            );
-            const mid=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===4;});
-            const high=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===5;});
-            function VisitRow({t,showHome}){
-              return e("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid var(--border2)",cursor:"pointer"},onClick:()=>openT(t)},
-                e("div",{style:{width:32,height:32,background:"var(--bg3)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"var(--txt3)",flexShrink:0}},t.seat||"?"),
-                e("div",{style:{flex:1,minWidth:0}},
-                  e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},t.name||"（未填）"),
-                  e("div",{style:{fontSize:12,color:"var(--txt3)",marginTop:2}},t.holdUnit||""),
-                  e("div",{style:{display:"flex",gap:12,marginTop:4,flexWrap:"wrap"}},
-                    e("span",{style:{fontSize:13,color:"#3b82f6",fontWeight:600}},"電訪："+(t.phoneVisitDate||"未填")),
-                    showHome&&e("span",{style:{fontSize:13,color:"#22c55e",fontWeight:600}},"家訪："+(t.homeVisitDate||"未填"))
-                  )
-                ),
-                e("span",{style:{color:"var(--txt3)",fontSize:18}},"›")
-              );
-            }
-            return e(React.Fragment,null,
-              e("div",{style:{fontSize:14,color:"var(--txt3)",marginBottom:10}},"中高意願共 "+midHighWill.length+" 人"),
-              mid.length>0&&e("div",{style:{...S.card,marginBottom:10}},
-                e("div",{style:{fontSize:14,fontWeight:800,color:"#3b82f6",marginBottom:8}},"中意願（"+mid.length+" 人）"),
-                ...mid.map(t=>e(VisitRow,{key:t.id,t,showHome:false}))
+        batchTab==="info"&&e(React.Fragment,null,
+          e("div",{style:{...S.card,marginBottom:10}},
+            e("div",{style:S.slbl},"▍ 梯次基本資訊"),
+            e("div",{style:{display:"flex",flexDirection:"column",gap:0}},
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"單位"),
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",textAlign:"right"}},curBatch.unit||"")
               ),
-              high.length>0&&e("div",{style:{...S.card,marginBottom:10}},
-                e("div",{style:{fontSize:14,fontWeight:800,color:"#22c55e",marginBottom:8}},"高意願（"+high.length+" 人）"),
-                ...high.map(t=>e(VisitRow,{key:t.id,t,showHome:true}))
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"群／營"),
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",textAlign:"right"}},curBatch.battalion||"")
+              ),
+              hc&&e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"連"),
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",textAlign:"right"}},curBatch.company||"")
+              ),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"梯次"),
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",textAlign:"right"}},fmtSeq(curBatch.sequence))
+              ),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"訓員人數"),
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",textAlign:"right"}},(curBatch.trainees?.length||0)+" 人")
+              ),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0"}},
+                e("div",null,
+                  e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:4}},"進入密碼"),
+                  e("div",{style:{fontSize:18,fontWeight:900,color:"var(--txt)",letterSpacing:"0.08em",fontVariantNumeric:"tabular-nums"}},curBatch.password||"—")
+                ),
+                e("button",{style:{...S.btn("ghost","sm"),gap:4,display:"flex",alignItems:"center"},
+                  onClick:()=>{navigator.clipboard?.writeText(curBatch.password||"").catch(()=>{});toast_("已複製密碼");}
+                },e(Icon,{n:"copy",s:14,c:"var(--txt3)"}))
               )
-            );
-          })(),
+            )
+          ),
+          e("div",{style:{...S.card,marginBottom:10}},
+            e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:10}},"電訪及家訪名單"),
+            (()=>{
+              const allT=curBatch.trainees||[];
+              const midHighWill=allT.filter(t=>{
+                const logs=t.interviewLogs||[];
+                const last=logs[logs.length-1];
+                const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);
+                return sid===4||sid===5;
+              });
+              if(!midHighWill.length) return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"20px 0"}},
+                e("div",{style:{marginBottom:8}},e(Icon,{n:"phone",s:28,c:"var(--txt3)"})),
+                e("div",{style:{fontSize:13}},"目前無中高意願訓員")
+              );
+              const mid=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===4;});
+              const high=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===5;});
+              function VisitRow2({t,showHome}){
+                return e("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid var(--border2)",cursor:"pointer"},onClick:()=>openT(t)},
+                  e("div",{style:{width:32,height:32,background:"var(--bg3)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"var(--txt3)",flexShrink:0}},t.seat||"?"),
+                  e("div",{style:{flex:1,minWidth:0}},
+                    e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},t.name||"（未填）"),
+                    e("div",{style:{fontSize:12,color:"var(--txt3)",marginTop:2}},t.holdUnit||""),
+                    e("div",{style:{display:"flex",gap:12,marginTop:4,flexWrap:"wrap"}},
+                      e("span",{style:{fontSize:12,color:"#3b82f6",fontWeight:600}},"電訪："+(t.phoneVisitDate||"未填")),
+                      showHome&&e("span",{style:{fontSize:12,color:"#22c55e",fontWeight:600}},"家訪："+(t.homeVisitDate||"未填"))
+                    )
+                  ),
+                  e("span",{style:{color:"var(--txt3)",fontSize:18}},"›")
+                );
+              }
+              return e(React.Fragment,null,
+                e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},"中高意願共 "+midHighWill.length+" 人"),
+                mid.length>0&&e("div",{style:{marginBottom:10}},
+                  e("div",{style:{fontSize:13,fontWeight:800,color:"#3b82f6",marginBottom:6}},"中意願（"+mid.length+" 人）"),
+                  ...mid.map(t=>e(VisitRow2,{key:t.id,t,showHome:false}))
+                ),
+                high.length>0&&e("div",null,
+                  e("div",{style:{fontSize:13,fontWeight:800,color:"#22c55e",marginBottom:6}},"高意願（"+high.length+" 人）"),
+                  ...high.map(t=>e(VisitRow2,{key:t.id,t,showHome:true}))
+                )
+              );
+            })()
+          ),
           e("div",{style:{height:40}})
         ),
         showEC&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEC(false)},
@@ -2902,6 +2940,8 @@ function App(){
           )
         )
       )
+      ),
+      e(BottomNav)
     );
   }
 
@@ -2926,7 +2966,7 @@ function App(){
           setScrollToSeat(tf?.seat);
           setView("batch");
           const tab=batchTab||"list";
-          const tabTitle={"list":"訓員列表","sched":"梯次期程","hold":"協訓單位掌握名單","query":"約談紀錄查詢","visit":"電訪及家訪名單"}[tab]||"梯次";
+          const tabTitle={"list":"訓員列表","recruiter":"招募員","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[tab]||"梯次";
           document.title=tabTitle+" | 招募資訊整合管理系統";
           pushState({page:"batch",batchId:curBatch?.id,tab},tabTitle);
         }},saving?"儲存中…":"← 返回"),
