@@ -454,7 +454,7 @@ function App(){
   const [pendingUsers,setPendingUsers]=useState([]);
   const [allUsers,setAllUsers]=useState([]);
   const [membersLoading,setMembersLoading]=useState(false);
-  const [showEditMember,setShowEditMember]=useState(false);
+
   const [editMemberDraft,setEMD]=useState(null);
   const [editMemberSaving,setEMSaving]=useState(false);
   const [adminSubView,setASV]=useState(null);
@@ -895,6 +895,7 @@ function App(){
       const st=ev.state;
       if(!st||st.page==="home"){setView("home");document.title="梯次列表 | 招募資訊整合管理系統";return;}
       if(st.page==="admin"){enterAdmin();return;}
+      if(st.page==="memberProfile"){return;}
       if(st.page==="feedback"){setView("feedback");return;}
       if(st.page==="batch"&&st.batchId){
         const b=batches.find(x=>x.id===st.batchId);
@@ -1170,7 +1171,8 @@ function App(){
       await fsSetUser(updated.uid,updated);
       setAllUsers(prev=>prev.map(u=>u.uid===updated.uid?updated:u));
       if(userProfile?.uid===updated.uid)setUserProfile(updated);
-      setShowEditMember(false);toast_("已儲存 ✓");
+      setView("admin");setASV("members");pushState({page:"admin"},"後台管理");
+      toast_("已儲存 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setEMSaving(false);}
   }
@@ -1853,6 +1855,10 @@ function App(){
                     (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
                   ),
                   u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit),
+                  u.phone&&e("div",{style:{display:"flex",alignItems:"center",gap:4,marginTop:3}},
+                    e(Icon,{n:"phone",s:11,c:"var(--txt3)"}),
+                    e("span",{style:{fontSize:11,color:"var(--txt3)"}},u.phone)
+                  ),
                   u.lineId&&e("div",{style:{display:"flex",alignItems:"center",gap:4,marginTop:3}},
                     e("svg",{viewBox:"0 0 24 24",width:11,height:11,fill:"#06c755",style:{flexShrink:0},dangerouslySetInnerHTML:{__html:"<path d='M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.628-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314'/>"}}),
                     e("span",{style:{fontSize:11,color:"#06c755",fontWeight:700}},u.lineId)
@@ -2180,79 +2186,89 @@ function App(){
         :filteredUsers.length===0
           ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"找不到符合「"+memberSearch+"」的成員")
           :e("div",{style:S.card},
-            ...filteredUsers.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:i<filteredUsers.length-1?"1px solid var(--border2)":"none"}},
+            ...filteredUsers.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:i<filteredUsers.length-1?"1px solid var(--border2)":"none",cursor:"pointer"},onClick:()=>{
+              const parts=(u.unit||"").split("・");
+              setEMD({...u,brigadeUnit:u.brigadeUnit||(parts[0]||""),battalionUnit:u.battalionUnit||(parts.slice(1).join("・")||""),roles:u.roles||[u.role||"recruiter"]});
+              setAdminBUMode(false);setAdminBUInput("");
+              setView("memberProfile");pushState({page:"memberProfile"},(u.name||"成員")+" | 個人資料");
+            }},
               e("div",{style:{width:36,height:36,borderRadius:"50%",background:"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}},(u.name||u.googleDisplayName||"？")[0]),
               e("div",{style:{flex:1,minWidth:0}},
                 e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},(u.rank||"")+(u.rank?" ":"")+(u.name||u.googleDisplayName||"（未填）")),
                 e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:1}},u.brigadeUnit||(u.unit||"未填單位")),
                 u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit),
+                u.phone&&e("div",{style:{display:"flex",alignItems:"center",gap:4,marginTop:2}},
+                  e(Icon,{n:"phone",s:11,c:"var(--txt3)"}),
+                  e("span",{style:{fontSize:11,color:"var(--txt3)"}},u.phone)
+                ),
                 e("div",{style:{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}},
                   ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
                 )
               ),
-              e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>{
-                const parts=(u.unit||"").split("・");
-                setEMD({...u,brigadeUnit:u.brigadeUnit||(parts[0]||""),battalionUnit:u.battalionUnit||(parts.slice(1).join("・")||""),roles:u.roles||[u.role||"recruiter"]});
-                setAdminBUMode(false);setAdminBUInput("");
-                setShowEditMember(true);
-              }},e(Icon,{n:"pencil",s:14}))
+              e(Icon,{n:"chevR",s:14,c:"var(--txt3)"})
             ))
           ),
       e("div",{style:{height:48}})
     ),
-    showEditMember&&editMemberDraft&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditMember(false)},
-      e("div",{style:{...S.mBox,maxHeight:"85vh",display:"flex",flexDirection:"column"}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexShrink:0}},
-          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"編輯成員"),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowEditMember(false)},"✕")
-        ),
-        e("div",{style:{overflowY:"auto",display:"flex",flexDirection:"column",gap:12}},
-          e("div",null,e("label",{style:S.lbl},"軍職姓名"),e("input",{style:S.inp,value:editMemberDraft.name||"",onChange:ev=>setEMD(d=>({...d,name:ev.target.value}))})),
-          e("div",null,e("label",{style:S.lbl},"階級"),
-            e("select",{style:S.sel,value:editMemberDraft.rank||"",onChange:ev=>setEMD(d=>({...d,rank:ev.target.value}))},
-              e("option",{value:""},"請選擇"),...RANKS_ALL.map(r=>e("option",{key:r,value:r},r))
-            )
-          ),
-          e("div",null,e("label",{style:S.lbl},"旅級單位"),
-            adminBUMode
-              ?e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-                  e("input",{style:{...S.inp,flex:1},placeholder:"輸入旅級單位全銜",value:adminBUInput,autoFocus:true,
-                    onChange:ev=>setAdminBUInput(ev.target.value),
-                    onKeyDown:ev=>ev.key==="Enter"&&doAddAdminBrigadeUnit()}),
-                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#10b981",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                    onClick:doAddAdminBrigadeUnit},e(Icon,{n:"checkCircle",s:18,c:"#fff"})),
-                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                    onClick:()=>{setAdminBUMode(false);setAdminBUInput("");}},e(Icon,{n:"xmark",s:18}))
-                )
-              :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-                  e("select",{style:{...S.sel,flex:1},value:editMemberDraft.brigadeUnit||"",
-                    onChange:ev=>setEMD(d=>({...d,brigadeUnit:ev.target.value}))},
-                    e("option",{value:""},"請選擇"),
-                    ...(cfg?.brigadeUnits||[]).map(u=>e("option",{key:u,value:u},u))
-                  ),
-                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                    onClick:()=>{setAdminBUMode(true);setAdminBUInput("");}},"+"),
-                  editMemberDraft.brigadeUnit&&e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                    onClick:()=>setEMD(d=>({...d,brigadeUnit:""}))},e(Icon,{n:"trash",s:15}))
-                )
-          ),
-          e("div",null,e("label",{style:S.lbl},"群/營級單位"),e("input",{style:S.inp,value:editMemberDraft.battalionUnit||"",onChange:ev=>setEMD(d=>({...d,battalionUnit:ev.target.value}))})),
-          e("div",null,e("label",{style:S.lbl},"角色（可複選）"),
-            e("div",{style:{display:"flex",gap:8}},
-              ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"管理員"}]).map(({v,l})=>{
-                const active=(editMemberDraft.roles||[]).includes(v);
-                return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
-                  onClick:()=>setEMD(d=>{const cur=d.roles||[];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
-              })
-            )
-          ),
-          e("div",{style:{fontSize:11,color:"var(--txt3)",padding:"4px 0"}},editMemberDraft.googleEmail)
-        ),
-        e("button",{style:{...S.btn("primary"),marginTop:16,flexShrink:0},onClick:saveMember,disabled:editMemberSaving},editMemberSaving?"儲存中…":"儲存")
-      )
-    ),
     e(BottomNav)
   );}
+
+  // ── Member Profile view ────────────────────────────────────────────────────
+  if(view==="memberProfile"&&editMemberDraft) return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e("div",{style:S.hdr},
+      e(BackBtn,{onClick:()=>{setView("admin");setASV("members");pushState({page:"admin"},"後台管理");}}),
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"個人資料"))
+    ),
+    e("div",{style:{...S.sec,paddingTop:16,display:"flex",flexDirection:"column",gap:12}},
+      e("div",{style:{...S.card,textAlign:"center",padding:"20px 16px"}},
+        e("div",{style:{width:56,height:56,borderRadius:"50%",background:"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,fontWeight:800,color:"#60a5fa",margin:"0 auto 10px"}},
+          (editMemberDraft.name||editMemberDraft.googleDisplayName||"？")[0]
+        ),
+        e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)"}},
+          (editMemberDraft.rank||"")+(editMemberDraft.rank?" ":"")+(editMemberDraft.name||editMemberDraft.googleDisplayName||"（未填）")
+        ),
+        editMemberDraft.googleEmail&&e("div",{style:{fontSize:12,color:"var(--txt3)",marginTop:4}},editMemberDraft.googleEmail)
+      ),
+      e("div",{style:{...S.card,display:"flex",flexDirection:"column",gap:12}},
+        e("div",null,e("label",{style:S.lbl},"軍職姓名"),e("input",{style:S.inp,value:editMemberDraft.name||"",onChange:ev=>setEMD(d=>({...d,name:ev.target.value}))})),
+        e("div",null,e("label",{style:S.lbl},"階級"),
+          e("select",{style:S.sel,value:editMemberDraft.rank||"",onChange:ev=>setEMD(d=>({...d,rank:ev.target.value}))},
+            e("option",{value:""},"請選擇"),...RANKS_ALL.map(r=>e("option",{key:r,value:r},r))
+          )
+        ),
+        e("div",null,e("label",{style:S.lbl},"旅級單位"),
+          adminBUMode
+            ?e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                e("input",{style:{...S.inp,flex:1},placeholder:"輸入旅級單位全銜",value:adminBUInput,autoFocus:true,
+                  onChange:ev=>setAdminBUInput(ev.target.value),
+                  onKeyDown:ev=>ev.key==="Enter"&&doAddAdminBrigadeUnit()}),
+                e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#10b981",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                  onClick:doAddAdminBrigadeUnit},e(Icon,{n:"checkCircle",s:18,c:"#fff"})),
+                e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                  onClick:()=>{setAdminBUMode(false);setAdminBUInput("");}},e(Icon,{n:"xmark",s:18}))
+              )
+            :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                e("select",{style:{...S.sel,flex:1},value:editMemberDraft.brigadeUnit||"",
+                  onChange:ev=>setEMD(d=>({...d,brigadeUnit:ev.target.value}))},
+                  e("option",{value:""},"請選擇"),
+                  ...(cfg?.brigadeUnits||[]).map(u=>e("option",{key:u,value:u},u))
+                ),
+                e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                  onClick:()=>{setAdminBUMode(true);setAdminBUInput("");}},"+"),
+                editMemberDraft.brigadeUnit&&e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                  onClick:()=>setEMD(d=>({...d,brigadeUnit:""}))},e(Icon,{n:"trash",s:15}))
+              )
+        ),
+        e("div",null,e("label",{style:S.lbl},"群/營級單位"),e("input",{style:S.inp,value:editMemberDraft.battalionUnit||"",onChange:ev=>setEMD(d=>({...d,battalionUnit:ev.target.value}))})),
+        e("div",null,e("label",{style:S.lbl},"手機號碼"),e("input",{style:S.inp,type:"tel",inputMode:"numeric",placeholder:"例：0912345678",value:editMemberDraft.phone||"",onChange:ev=>setEMD(d=>({...d,phone:ev.target.value}))})),
+        e("div",null,e("label",{style:S.lbl},"Line ID"),e("input",{style:S.inp,placeholder:"輸入 Line ID（選填）",value:editMemberDraft.lineId||"",onChange:ev=>setEMD(d=>({...d,lineId:ev.target.value}))}))
+      ),
+      e("button",{style:{...S.btn("primary"),width:"100%"},onClick:saveMember,disabled:editMemberSaving},editMemberSaving?"儲存中…":"儲存"),
+      e("div",{style:{height:48}})
+    ),
+    e(BottomNav)
+  );
 
   // ── Batches sub-view ───────────────────────────────────────────────────────
   if(adminSubView==="batches") return e("div",{style:S.app},
