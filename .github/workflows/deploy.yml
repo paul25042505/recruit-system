@@ -28,7 +28,7 @@ jobs:
       - name: Bump patch version
         id: ver
         run: |
-          CURRENT=$(grep -oP 'const APP_VERSION="\K[^"]+' index.html)
+          CURRENT=$(grep -oP 'const APP_VERSION="\K[^"]+' index.html | head -1)
           IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
           NEW="${MAJ}.${MIN}.$((PAT + 1))"
           sed -i "s/const APP_VERSION=\"${CURRENT}\"/const APP_VERSION=\"${NEW}\"/" index.html
