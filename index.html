@@ -379,7 +379,7 @@ function App(){
   const [saving,setSaving]=useState(false);
   // 新增梯次
   const [showAB,setShowAB]=useState(false);
-  const [nb,setNb]=useState({unit:"",battalion:"",company:"",sequence:"",password:"",traineeCount:"30"});
+  const [nb,setNb]=useState({unit:"",battalion:"",company:"",sequence:"",traineeCount:"30"});
   // 新增訓員
   const [showAT,setShowAT]=useState(false);
   const [newTName,setNewTName]=useState("");
@@ -921,7 +921,7 @@ function App(){
       const batch={id,...nb,password:autoPassword,coordinator,traineeCount:count,createdAt:todayStr(),schedule:DEF_SCHED.map(s=>({...s})),trainees};
       await fsSet("batches/"+id,batch);
       setBatches(p=>[batch,...p]);
-      setShowAB(false);setNb({unit:"",battalion:"",company:"",sequence:"",password:"",traineeCount:"30"});
+      setShowAB(false);setNb({unit:"",battalion:"",company:"",sequence:"",traineeCount:"30"});
       toast_("梯次已建立 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
@@ -2542,7 +2542,7 @@ function App(){
             nb.sequence&&e("div",{style:{fontSize:11,color:"#f59e0b",marginTop:4,fontWeight:600}},"顯示為："+nb.sequence)
           ),
           e("div",null,e("label",{style:S.lbl},"訓員人數"),e("input",{style:S.inp,type:"number",min:"0",max:"500",value:nb.traineeCount,onChange:ev=>setNb(p=>({...p,traineeCount:ev.target.value}))})),
-          e("div",null,e("label",{style:S.lbl},"專案密碼 *"),e("input",{style:S.inp,type:"password",placeholder:"設定進入密碼",value:nb.password,onChange:ev=>setNb(p=>({...p,password:ev.target.value}))}))
+          e("div",{style:{display:"flex",alignItems:"center",gap:6,background:"var(--bg3)",borderRadius:9,padding:"10px 12px",fontSize:12,color:"var(--txt3)"}},e(Icon,{n:"lock",s:14,c:"var(--txt3)"}),e("span",null,"進入密碼將自動設定為梯次 ID 末 6 碼"))
         ),
         e("div",{style:{display:"flex",gap:10}},e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowAB(false)},"取消"),e("button",{style:{...S.btn("primary"),flex:1},onClick:doAddBatch,disabled:saving},saving?"建立中…":"建立梯次"))
       )
