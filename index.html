@@ -474,6 +474,8 @@ function App(){
   const [showBrigadeSheet,setShowBrigadeSheet]=useState(false);
   const [newBUInput,setNewBUInput]=useState("");
   const [buInputMode,setBUInputMode]=useState(false);
+  const [adminBUInput,setAdminBUInput]=useState("");
+  const [adminBUMode,setAdminBUMode]=useState(false);
   const [winW,setWinW]=useState(window.innerWidth);
 
   // 身分驗證
@@ -1050,6 +1052,21 @@ function App(){
     setMPD(d=>({...d,brigadeUnit:trimmed}));
     setBUInputMode(false);
     setNewBUInput("");
+    toast_("已新增並選擇 ✓");
+  }
+  async function doAddAdminBrigadeUnit(){
+    const trimmed=adminBUInput.trim();
+    if(!trimmed)return;
+    const existing=cfg?.brigadeUnits||[];
+    if(!existing.includes(trimmed)){
+      const newList=[...existing,trimmed];
+      const newCfg={...cfg,brigadeUnits:newList};
+      await fsSet("settings/global",newCfg);
+      setCfg(newCfg);
+    }
+    setEMD(d=>({...d,brigadeUnit:trimmed}));
+    setAdminBUMode(false);
+    setAdminBUInput("");
     toast_("已新增並選擇 ✓");
   }
   async function addRecruitUnit(name){
@@ -2386,6 +2403,7 @@ function App(){
               e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>{
                 const parts=(u.unit||"").split("・");
                 setEMD({...u,brigadeUnit:u.brigadeUnit||(parts[0]||""),battalionUnit:u.battalionUnit||(parts.slice(1).join("・")||""),roles:u.roles||[u.role||"recruiter"]});
+                setAdminBUMode(false);setAdminBUInput("");
                 setShowEditMember(true);
               }},e(Icon,{n:"pencil",s:14}))
             ))
@@ -2405,7 +2423,29 @@ function App(){
               e("option",{value:""},"請選擇"),...RANKS_ALL.map(r=>e("option",{key:r,value:r},r))
             )
           ),
-          e("div",null,e("label",{style:S.lbl},"旅級單位"),e("input",{style:S.inp,value:editMemberDraft.brigadeUnit||"",onChange:ev=>setEMD(d=>({...d,brigadeUnit:ev.target.value}))})),
+          e("div",null,e("label",{style:S.lbl},"旅級單位"),
+            adminBUMode
+              ?e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                  e("input",{style:{...S.inp,flex:1},placeholder:"輸入旅級單位全銜",value:adminBUInput,autoFocus:true,
+                    onChange:ev=>setAdminBUInput(ev.target.value),
+                    onKeyDown:ev=>ev.key==="Enter"&&doAddAdminBrigadeUnit()}),
+                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#10b981",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:doAddAdminBrigadeUnit},e(Icon,{n:"checkCircle",s:18,c:"#fff"})),
+                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:()=>{setAdminBUMode(false);setAdminBUInput("");}},e(Icon,{n:"xmark",s:18}))
+                )
+              :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                  e("select",{style:{...S.sel,flex:1},value:editMemberDraft.brigadeUnit||"",
+                    onChange:ev=>setEMD(d=>({...d,brigadeUnit:ev.target.value}))},
+                    e("option",{value:""},"請選擇"),
+                    ...(cfg?.brigadeUnits||[]).map(u=>e("option",{key:u,value:u},u))
+                  ),
+                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:()=>{setAdminBUMode(true);setAdminBUInput("");}},"+"),
+                  editMemberDraft.brigadeUnit&&e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:()=>setEMD(d=>({...d,brigadeUnit:""}))},e(Icon,{n:"trash",s:15}))
+                )
+          ),
           e("div",null,e("label",{style:S.lbl},"群/營級單位"),e("input",{style:S.inp,value:editMemberDraft.battalionUnit||"",onChange:ev=>setEMD(d=>({...d,battalionUnit:ev.target.value}))})),
           e("div",null,e("label",{style:S.lbl},"角色（可複選）"),
             e("div",{style:{display:"flex",gap:8}},
