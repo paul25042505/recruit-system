@@ -1138,7 +1138,10 @@ function App(){
     return (userProfile?.roles||[userProfile?.role||""]).includes("coordinator")&&
       (userProfile?.brigadeUnit||"")===(batchUnit||"");
   }
-  function canManage(batchUnit){return !!af||isCoord(batchUnit);}
+  function isAdminUser(){
+    return !!(userProfile?.roles||[]).includes("admin")||userProfile?.googleEmail==="paul25042505@gmail.com";
+  }
+  function canManage(batchUnit){return !!af||isAdminUser()||isCoord(batchUnit);}
   function submitBPwd(){
     if(bPwd!==pendBatch.password){setBPwdErr(true);return;}
     try{sessionStorage.setItem("bpwd_"+pendBatch.id,bPwd);}catch(e){}
