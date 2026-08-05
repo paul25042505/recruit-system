@@ -1826,7 +1826,7 @@ function App(){
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:20}},
         e(MoreNavRow,{icon:"logout",label:"登出帳號",sub:userProfile?.googleEmail||"",onClick:reqSignOut,danger:true})
       ),
-      e("div",{style:{textAlign:"center",fontSize:11,color:"var(--txt3)",opacity:0.7,paddingBottom:8,letterSpacing:"0.05em"}},"v",APP_VERSION)
+      e("div",{style:{textAlign:"center",fontSize:11,color:"var(--txt3)",opacity:0.7,paddingBottom:8,letterSpacing:"0.05em",cursor:"pointer"},onClick:()=>{setAPwd("");setAPwdErr(false);setView("adminPwd");}},"v",APP_VERSION)
     )),
     e(BottomNav)
   );
