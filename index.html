@@ -467,6 +467,7 @@ function App(){
   const [showEditMember,setShowEditMember]=useState(false);
   const [editMemberDraft,setEMD]=useState(null);
   const [editMemberSaving,setEMSaving]=useState(false);
+  const [adminSubView,setASV]=useState(null);
   const [recentCases,setRecentCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("riims_recent")||"[]");}catch{return[];}});
   const [showBrigadeSheet,setShowBrigadeSheet]=useState(false);
   const [winW,setWinW]=useState(window.innerWidth);
@@ -1114,7 +1115,7 @@ function App(){
     }catch(err){toast_(err.message,"err");}
     finally{setEMSaving(false);}
   }
-  function enterAdmin(){setAf({...DEF,...cfg,qualCheckItems:cfg.qualCheckItems||DEF.qualCheckItems,statusOptions:cfg.statusOptions||DEF.statusOptions,recruitUnits:cfg.recruitUnits||DEF.recruitUnits,customFields:cfg.customFields||DEF.customFields,recruitUnitProfiles:cfg.recruitUnitProfiles||DEF.recruitUnitProfiles});setNi({units:"",battalions:"",companies:""});setEditIdx({});setEditVal({});loadPendingUsers();loadAllUsers();setView("admin");pushState({page:"admin"},"後台管理");}
+  function enterAdmin(){setAf({...DEF,...cfg,qualCheckItems:cfg.qualCheckItems||DEF.qualCheckItems,statusOptions:cfg.statusOptions||DEF.statusOptions,recruitUnits:cfg.recruitUnits||DEF.recruitUnits,customFields:cfg.customFields||DEF.customFields,recruitUnitProfiles:cfg.recruitUnitProfiles||DEF.recruitUnitProfiles});setNi({units:"",battalions:"",companies:""});setEditIdx({});setEditVal({});setASV(null);loadPendingUsers();loadAllUsers();setView("admin");pushState({page:"admin"},"後台管理");}
   function submitAPwd(){
     if(aPwd===cfg.adminPassword){enterAdmin();setAPwd("");}
     else setAPwdErr(true);
@@ -2241,171 +2242,235 @@ function App(){
     e(BottomNav)
   );
 
-  if(view==="admin"&&af) return e("div",{style:S.app},
-    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
-      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"後台管理")),
-      e("button",{style:S.btn("primary","sm"),onClick:saveAF,disabled:saving},saving?"儲存…":"儲存設定")
+  if(view==="admin"&&af){
+  // ── iOS Settings-style admin helpers ──────────────────────────────────────
+  const roleLabel=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r;
+  const roleStyle=r=>({fontSize:10,background:r==="admin"?"#f59e0b18":r==="coordinator"?"#3b82f618":"var(--bg3)",border:"1px solid "+(r==="admin"?"#f59e0b44":r==="coordinator"?"#3b82f644":"var(--border)"),borderRadius:6,padding:"2px 7px",color:r==="admin"?"#f59e0b":r==="coordinator"?"#3b82f6":"var(--txt2)",fontWeight:700});
+  const adminRow=(icon,iconBg,label,sub,badge,onClick)=>e("button",{key:label,style:{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:"none",border:"none",borderBottom:"1px solid var(--border2)",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",textAlign:"left"},onClick},
+    e("div",{style:{width:34,height:34,borderRadius:10,background:iconBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:icon,s:17,c:"#fff",w:2})),
+    e("div",{style:{flex:1,minWidth:0}},
+      e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},label),
+      sub&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},sub)
     ),
+    badge>0&&e("span",{style:{background:"#ef4444",color:"#fff",borderRadius:99,padding:"1px 7px",fontSize:11,fontWeight:800,flexShrink:0}},badge),
+    e(Icon,{n:"chevR",s:16,c:"var(--txt3)",w:2})
+  );
+  const adminSection=(title,rows)=>e("div",{style:{marginBottom:24}},
+    e("div",{style:{fontSize:11,fontWeight:800,letterSpacing:"0.1em",color:"var(--txt3)",padding:"0 4px 6px",textTransform:"uppercase"}},title),
+    e("div",{style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:14,overflow:"hidden"}},
+      ...rows.map((r,i)=>i<rows.length-1?r:e("div",{key:"last",style:{borderBottom:"none"}},r))
+    )
+  );
+  const subHdr=(title,saveBtn)=>e("div",{style:S.hdr},
+    e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setASV(null)},e(Icon,{n:"chevL",s:18})),
+    e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},title)),
+    saveBtn&&e("button",{style:S.btn("primary","sm"),onClick:saveAF,disabled:saving},saving?"儲存…":"儲存設定")
+  );
+
+  // ── Pending users sub-view ─────────────────────────────────────────────────
+  if(adminSubView==="pending") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    subHdr("待審核帳號"),
     e("div",{style:{...S.sec,paddingTop:16}},
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:S.slbl},"管理員密碼"),
-        e("input",{style:S.inp,type:"password",placeholder:"新密碼",value:af.adminPassword,onChange:ev=>setAf(p=>({...p,adminPassword:ev.target.value}))})
+      e("div",{style:{display:"flex",justifyContent:"flex-end",marginBottom:10}},
+        e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"4px 10px"},onClick:loadPendingUsers},"重整")
       ),
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
-          e("div",{style:S.slbl},"待審核帳號"),
-          e("div",{style:{display:"flex",alignItems:"center",gap:8}},
-            e("span",{style:{fontSize:11,color:"var(--txt3)"}},pendingUsers.length===0?"（無）":pendingUsers.length+" 人"),
-            e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"3px 8px"},onClick:loadPendingUsers},"重整")
-          )
-        ),
-        pendingUsers.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:12}},"目前無待審核帳號"),
-        ...pendingUsers.map(u=>e("div",{key:u.uid,style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
-          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}},
+      pendingUsers.length===0
+        ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"目前無待審核帳號")
+        :e("div",{style:S.card},
+          ...pendingUsers.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,padding:"12px 0",borderBottom:i<pendingUsers.length-1?"1px solid var(--border2)":"none"}},
             e("div",{style:{flex:1,minWidth:0}},
-              e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:3}},
-                (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||u.googleDisplayName||"（未填姓名）")
-              ),
-              u.brigadeUnit&&e("div",{style:{fontSize:12,fontWeight:700,color:"#f59e0b",marginBottom:2}},
-                u.brigadeUnit+(u.battalionUnit?"　"+u.battalionUnit:"")
-              ),
-              !u.brigadeUnit&&e("div",{style:{fontSize:12,color:"#ef4444",marginBottom:2}},"未填單位"),
-              e("div",{style:{fontSize:11,color:"var(--txt3)"}},u.googleEmail),
-              (u.roles||[]).length>0&&e("div",{style:{marginTop:4,display:"flex",gap:4}},
-                ...(u.roles||[]).map(r=>e("span",{key:r,style:{fontSize:10,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"1px 6px",color:"var(--txt2)"}},
-                  r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r
-                ))
+              e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:3}},(u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||u.googleDisplayName||"（未填姓名）")),
+              u.brigadeUnit
+                ?e("div",{style:{fontSize:12,fontWeight:700,color:"#f59e0b",marginBottom:2}},u.brigadeUnit+(u.battalionUnit?"　"+u.battalionUnit:""))
+                :e("div",{style:{fontSize:12,color:"#ef4444",marginBottom:2}},"未填單位"),
+              e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},u.googleEmail),
+              (u.roles||[]).length>0&&e("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
+                ...(u.roles||[]).map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
               )
             ),
-            e("button",{style:{...S.btn("primary","sm"),padding:"5px 12px",flexShrink:0},onClick:()=>approveUser(u)},"核准")
-          )
-        ))
-      ),
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
-          e("div",{style:S.slbl},"成員管理"),
-          e("div",{style:{display:"flex",alignItems:"center",gap:8}},
-            e("span",{style:{fontSize:11,color:"var(--txt3)"}},"共 "+allUsers.length+" 人"),
-            e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"3px 8px"},onClick:loadAllUsers},"重整")
-          )
+            e("button",{style:{...S.btn("primary","sm"),padding:"5px 14px",flexShrink:0},onClick:()=>approveUser(u)},"核准")
+          ))
         ),
-        allUsers.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:12}},"尚無成員"),
-        ...allUsers.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:i<allUsers.length-1?"1px solid var(--border2)":"none"}},
-          e("div",{style:{flex:1,minWidth:0}},
-            e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},(u.rank||"")+" "+(u.name||u.googleDisplayName||"（未填）")),
-            e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700}},u.brigadeUnit||(u.unit||"未填單位")),
-            e("div",{style:{marginTop:3,display:"flex",gap:4,flexWrap:"wrap"}},
-              ...(u.roles||[u.role]||["recruiter"]).map(r=>e("span",{key:r,style:{fontSize:10,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"1px 6px",color:"var(--txt2)"}},
-                r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r
-              ))
+      e("div",{style:{height:48}})
+    ),
+    e(BottomNav)
+  );
+
+  // ── Members sub-view ───────────────────────────────────────────────────────
+  if(adminSubView==="members") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    subHdr("成員管理"),
+    e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},
+        e("span",{style:{fontSize:12,color:"var(--txt3)"}},"共 "+allUsers.length+" 位已核准成員"),
+        e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"4px 10px"},onClick:loadAllUsers},"重整")
+      ),
+      allUsers.length===0
+        ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無成員")
+        :e("div",{style:S.card},
+          ...allUsers.map((u,i)=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:i<allUsers.length-1?"1px solid var(--border2)":"none"}},
+            e("div",{style:{width:36,height:36,borderRadius:"50%",background:"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#60a5fa",flexShrink:0}},(u.name||u.googleDisplayName||"？")[0]),
+            e("div",{style:{flex:1,minWidth:0}},
+              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},(u.rank||"")+(u.rank?" ":"")+(u.name||u.googleDisplayName||"（未填）")),
+              e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:1}},u.brigadeUnit||(u.unit||"未填單位")),
+              e("div",{style:{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}},
+                ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
+              )
+            ),
+            e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>{
+              const parts=(u.unit||"").split("・");
+              setEMD({...u,brigadeUnit:u.brigadeUnit||(parts[0]||""),battalionUnit:u.battalionUnit||(parts.slice(1).join("・")||""),roles:u.roles||[u.role||"recruiter"]});
+              setShowEditMember(true);
+            }},e(Icon,{n:"pencil",s:14}))
+          ))
+        ),
+      e("div",{style:{height:48}})
+    ),
+    showEditMember&&editMemberDraft&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditMember(false)},
+      e("div",{style:{...S.mBox,maxHeight:"85vh",display:"flex",flexDirection:"column"}},
+        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexShrink:0}},
+          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"編輯成員"),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowEditMember(false)},"✕")
+        ),
+        e("div",{style:{overflowY:"auto",display:"flex",flexDirection:"column",gap:12}},
+          e("div",null,e("label",{style:S.lbl},"軍職姓名"),e("input",{style:S.inp,value:editMemberDraft.name||"",onChange:ev=>setEMD(d=>({...d,name:ev.target.value}))})),
+          e("div",null,e("label",{style:S.lbl},"階級"),
+            e("select",{style:S.sel,value:editMemberDraft.rank||"",onChange:ev=>setEMD(d=>({...d,rank:ev.target.value}))},
+              e("option",{value:""},"請選擇"),...RANKS_ALL.map(r=>e("option",{key:r,value:r},r))
             )
           ),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"5px 10px"},onClick:()=>{
-            const parts=(u.unit||"").split("・");
-            setEMD({...u,brigadeUnit:u.brigadeUnit||(parts[0]||""),battalionUnit:u.battalionUnit||(parts.slice(1).join("・")||""),roles:u.roles||[u.role||"recruiter"]});
-            setShowEditMember(true);
-          }},e(Icon,{n:"pencil",s:14}))
-        ))
-      ),
-      showEditMember&&editMemberDraft&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditMember(false)},
-        e("div",{style:{...S.mBox,maxHeight:"85vh",display:"flex",flexDirection:"column"}},
-          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexShrink:0}},
-            e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"編輯成員"),
-            e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowEditMember(false)},"✕")
+          e("div",null,e("label",{style:S.lbl},"旅級單位"),e("input",{style:S.inp,value:editMemberDraft.brigadeUnit||"",onChange:ev=>setEMD(d=>({...d,brigadeUnit:ev.target.value}))})),
+          e("div",null,e("label",{style:S.lbl},"群/營級單位"),e("input",{style:S.inp,value:editMemberDraft.battalionUnit||"",onChange:ev=>setEMD(d=>({...d,battalionUnit:ev.target.value}))})),
+          e("div",null,e("label",{style:S.lbl},"角色（可複選）"),
+            e("div",{style:{display:"flex",gap:8}},
+              ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"管理員"}]).map(({v,l})=>{
+                const active=(editMemberDraft.roles||[]).includes(v);
+                return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
+                  onClick:()=>setEMD(d=>{const cur=d.roles||[];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
+              })
+            )
           ),
-          e("div",{style:{overflowY:"auto",display:"flex",flexDirection:"column",gap:12}},
-            e("div",null,e("label",{style:S.lbl},"軍職姓名"),
-              e("input",{style:S.inp,value:editMemberDraft.name||"",onChange:ev=>setEMD(d=>({...d,name:ev.target.value}))})
+          e("div",{style:{fontSize:11,color:"var(--txt3)",padding:"4px 0"}},editMemberDraft.googleEmail)
+        ),
+        e("button",{style:{...S.btn("primary"),marginTop:16,flexShrink:0},onClick:saveMember,disabled:editMemberSaving},editMemberSaving?"儲存中…":"儲存")
+      )
+    ),
+    e(BottomNav)
+  );
+
+  // ── Batches sub-view ───────────────────────────────────────────────────────
+  if(adminSubView==="batches") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    subHdr("梯次管理"),
+    e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},"共 "+batches.length+" 個梯次"),
+      batches.length===0&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無梯次"),
+      ...batches.map(b=>{
+        const hc=b.company&&b.company!=="（無）";
+        const reportDate=(b.schedule||[]).find(s=>s.key==="report")?.date;
+        return e("div",{key:b.id,style:{...S.card,marginBottom:8}},
+          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}},
+            e("div",{style:{flex:1,minWidth:0}},
+              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",marginBottom:4}},b.unit+"・"+b.battalion+(hc?"・"+b.company:"")+"・"+fmtSeq(b.sequence)),
+              e("div",{style:{fontSize:11,color:"var(--txt3)"}},"報到日："+(reportDate||"未設定")+"・密碼："+b.password)
             ),
-            e("div",null,e("label",{style:S.lbl},"階級"),
-              e("select",{style:S.sel,value:editMemberDraft.rank||"",onChange:ev=>setEMD(d=>({...d,rank:ev.target.value}))},
-                e("option",{value:""},"請選擇"),
-                ...RANKS_ALL.map(r=>e("option",{key:r,value:r},r))
-              )
-            ),
-            e("div",null,e("label",{style:S.lbl},"旅級單位"),
-              e("input",{style:S.inp,value:editMemberDraft.brigadeUnit||"",onChange:ev=>setEMD(d=>({...d,brigadeUnit:ev.target.value}))})
-            ),
-            e("div",null,e("label",{style:S.lbl},"群/營級單位"),
-              e("input",{style:S.inp,value:editMemberDraft.battalionUnit||"",onChange:ev=>setEMD(d=>({...d,battalionUnit:ev.target.value}))})
-            ),
-            e("div",null,e("label",{style:S.lbl},"角色（可複選）"),
-              e("div",{style:{display:"flex",gap:8}},
-                ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"管理員"}]).map(({v,l})=>{
-                  const active=(editMemberDraft.roles||[]).includes(v);
-                  return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
-                    onClick:()=>setEMD(d=>{const cur=d.roles||[];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
-                })
-              )
-            ),
-            e("div",{style:{fontSize:11,color:"var(--txt3)",padding:"4px 0"}},editMemberDraft.googleEmail)
+            e("button",{style:{...S.btn("ghost","sm"),padding:"5px 12px",color:"#f59e0b",borderColor:"#f59e0b44"},onClick:()=>{
+              const rd=(b.schedule||[]).find(s=>s.key==="report")?.date||"";
+              setEditBatchData({...b,_reportDate:rd});
+              setShowEditBatch(true);
+            }},"編輯")
+          )
+        );
+      }),
+      e("div",{style:{height:48}})
+    ),
+    showEditBatch&&editBatchData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditBatch(false)},
+      e("div",{style:S.mBox},
+        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},"編輯梯次資訊"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:14}},
+          e("div",{style:{gridColumn:"span 2"}},
+            e("label",{style:S.lbl},"接訓單位"),
+            e("select",{style:S.sel,value:editBatchData.unit||"",onChange:ev=>setEditBatchData(p=>({...p,unit:ev.target.value}))},
+              e("option",{value:""},"請選擇"),...RECRUIT_UNITS.map(o=>e("option",{key:o,value:o},o))
+            )
           ),
-          e("button",{style:{...S.btn("primary"),marginTop:16,flexShrink:0},onClick:saveMember,disabled:editMemberSaving},editMemberSaving?"儲存中…":"儲存")
+          e("div",null,e("label",{style:S.lbl},"營別"),
+            e("select",{style:S.sel,value:editBatchData.battalion||"",onChange:ev=>setEditBatchData(p=>({...p,battalion:ev.target.value}))},
+              e("option",{value:""},"請選擇"),...(cfg?.battalions||DEF.battalions).map(o=>e("option",{key:o,value:o},o))
+            )
+          ),
+          e("div",null,e("label",{style:S.lbl},"連別"),
+            e("select",{style:S.sel,value:editBatchData.company||"",onChange:ev=>setEditBatchData(p=>({...p,company:ev.target.value}))},
+              e("option",{value:""},"請選擇"),...(cfg?.companies||DEF.companies).map(o=>e("option",{key:o,value:o},o))
+            )
+          ),
+          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"梯次"),
+            e("input",{style:S.inp,placeholder:"例：第1梯",value:editBatchData.sequence||"",onChange:ev=>setEditBatchData(p=>({...p,sequence:ev.target.value})),
+              onBlur:ev=>{const v=ev.target.value.trim();if(/^\d+$/.test(v))setEditBatchData(p=>({...p,sequence:"第"+v+"梯"}));}})
+          ),
+          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"報到日"),
+            e("input",{style:S.inp,type:"date",value:editBatchData._reportDate||"",onChange:ev=>setEditBatchData(p=>({...p,_reportDate:ev.target.value}))})
+          ),
+          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"梯次密碼"),
+            e("input",{style:S.inp,type:"text",value:editBatchData.password||"",onChange:ev=>setEditBatchData(p=>({...p,password:ev.target.value}))})
+          )
+        ),
+        e("div",{style:{display:"flex",gap:10}},
+          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditBatch(false)},"取消"),
+          e("button",{style:{...S.btn("primary"),flex:1},disabled:saving,onClick:async()=>{
+            setSaving(true);
+            try{
+              const newSched=(editBatchData.schedule||[]).map(s=>s.key==="report"?{...s,date:editBatchData._reportDate||""}:s);
+              const {_reportDate,...rest}=editBatchData;
+              const updated={...rest,schedule:newSched};
+              await fsSet("batches/"+updated.id,updated);
+              setBatches(p=>p.map(b=>b.id===updated.id?updated:b));
+              if(curBatch?.id===updated.id)setCurBatch(updated);
+              setShowEditBatch(false);toast_("梯次已更新 ✓");
+            }catch(err){toast_(err.message,"err");}
+            finally{setSaving(false);}
+          }},saving?"儲存中…":"儲存")
         )
+      )
+    ),
+    e(BottomNav)
+  );
+
+  // ── System settings sub-view (密碼) ────────────────────────────────────────
+  if(adminSubView==="system") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    subHdr("管理員密碼",true),
+    e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:S.card},
+        e("div",{style:S.slbl},"管理員密碼"),
+        e("input",{style:S.inp,type:"password",placeholder:"新密碼（留空保持不變）",value:af.adminPassword,onChange:ev=>setAf(p=>({...p,adminPassword:ev.target.value}))})
       ),
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
-          e("div",{style:S.slbl},"梯次管理"),
-          e("span",{style:{fontSize:11,color:"var(--txt3)"}},"共 "+batches.length+" 個梯次")
-        ),
-        batches.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:12}},"尚無梯次"),
-        ...batches.map(b=>{
-          const hc=b.company&&b.company!=="（無）";
-          const reportDate=(b.schedule||[]).find(s=>s.key==="report")?.date;
-          return e("div",{key:b.id,style:{marginBottom:10,paddingBottom:10,borderBottom:"1px solid var(--border2)"}},
-            e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}},
-              e("div",null,
-                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},b.unit+"・"+b.battalion+(hc?"・"+b.company:"")+"・"+fmtSeq(b.sequence)),
-                e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},"報到日："+(reportDate||"未設定")+"・密碼："+b.password)
-              ),
-              e("button",{style:{...S.btn("ghost","sm"),padding:"5px 12px",color:"#f59e0b",borderColor:"#f59e0b44"},onClick:()=>{
-                const rd=(b.schedule||[]).find(s=>s.key==="report")?.date||"";
-                setEditBatchData({...b,_reportDate:rd});
-                setShowEditBatch(true);
-              }},"編輯")
-            )
-          );
-        })
-      ),
-      listEd("battalions","營別"),
-      listEd("companies","連別"),
+      e("div",{style:{height:48}})
+    ),
+    e(BottomNav)
+  );
+
+  // ── Status / qual sub-view ─────────────────────────────────────────────────
+  if(adminSubView==="status") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    subHdr("狀態選項・資格審查",true),
+    e("div",{style:{...S.sec,paddingTop:16}},
       statusEditor(),
       qualEditor(),
-      customFieldsEditor(),
-      e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
-          e("div",{style:S.slbl},"意見回饋紀錄"),
-          e("span",{style:{fontSize:11,color:"var(--txt3)"}},"共 "+feedbackList.length+" 筆")
-        ),
-        feedbackList.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:12}},"尚無意見"),
-        ...[...feedbackList].reverse().map((fb,i)=>e("div",{key:fb.id||i,style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
-          e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}},
-            e("span",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）"),
-            e("span",{style:{fontSize:10,color:"var(--txt3)"}},fb.createdAt)
-          ),
-          fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},fb.name),
-          e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},fb.content)
-        ))
-      ),
       e("div",{style:{height:48}})
     ),
     showEditSt&&editStItem&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditSt(false)},
       e("div",{style:S.mBox},
         e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editStItem._new?"新增意願狀態":"編輯意願狀態"),
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"名稱"),e("input",{style:S.inp,placeholder:"例：高意願",value:editStItem.label||"",onChange:ev=>setEditStItem(p=>({...p,label:ev.target.value}))})
-        ),
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"顏色"),
+        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"名稱"),e("input",{style:S.inp,placeholder:"例：高意願",value:editStItem.label||"",onChange:ev=>setEditStItem(p=>({...p,label:ev.target.value}))})),
+        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"顏色"),
           e("div",{style:{display:"flex",alignItems:"center",gap:10}},
             e("input",{type:"color",style:{width:44,height:36,borderRadius:8,border:"1px solid var(--border)",background:"var(--inp-bg)",cursor:"pointer"},value:editStItem.color||"#64748b",onChange:ev=>setEditStItem(p=>({...p,color:ev.target.value}))}),
             e("div",{style:{flex:1,background:editStItem.color+"22",border:"1px solid "+editStItem.color+"55",borderRadius:8,padding:"7px 12px",fontSize:13,color:editStItem.color,fontWeight:700}},(editStItem.label||"預覽"))
           )
         ),
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"子原因"),
+        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"子原因"),
           ...(editStItem.subReasons||[]).map((r,i)=>e("div",{key:i,style:{display:"flex",gap:6,marginBottom:6}},
             e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:7,padding:"6px 10px",fontSize:13,color:"var(--txt)"}},r),
             e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"4px 8px"},onClick:()=>setEditStItem(p=>({...p,subReasons:p.subReasons.filter((_,j)=>j!==i)}))},"✕")
@@ -2416,8 +2481,7 @@ function App(){
             e("button",{style:S.btn("primary","sm"),onClick:()=>{if(!editStSubInput.trim())return;setEditStItem(p=>({...p,subReasons:[...(p.subReasons||[]),editStSubInput.trim()]}));setEditStSubInput("");}},"＋")
           )
         ),
-        e("div",{style:{marginBottom:16}},
-          e("label",{style:S.lbl},"包含備註欄"),
+        e("div",{style:{marginBottom:16}},e("label",{style:S.lbl},"包含備註欄"),
           e("div",{style:{display:"flex",gap:8}},
             ...[["是",true],["否",false]].map(([lbl,v])=>e("button",{key:lbl,style:{...S.btn(editStItem.hasNote===v?"primary":"ghost","sm"),flex:1},onClick:()=>setEditStItem(p=>({...p,hasNote:v}))},lbl))
           )
@@ -2449,39 +2513,33 @@ function App(){
         )
       )
     ),
+    e(BottomNav)
+  );
+
+  // ── Fields sub-view (營別/連別/自訂欄位) ────────────────────────────────────
+  if(adminSubView==="fields") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    subHdr("營別・連別・自訂欄位",true),
+    e("div",{style:{...S.sec,paddingTop:16}},
+      listEd("battalions","營別"),
+      listEd("companies","連別"),
+      customFieldsEditor(),
+      e("div",{style:{height:48}})
+    ),
     showEditCF&&editCFItem&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditCF(false)},
       e("div",{style:S.mBox},
         e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},editCFItem._new?"新增欄位":"編輯欄位"),
-        // 欄位名稱
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"欄位名稱 *"),
-          e("input",{style:S.inp,placeholder:"例：兵種志願、血型、緊急聯絡人…",value:editCFItem.label||"",onChange:ev=>setEditCFItem(p=>({...p,label:ev.target.value}))})
-        ),
-        // 說明文字
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"說明文字（選填）"),
-          e("input",{style:S.inp,placeholder:"顯示在欄位下方的補充說明",value:editCFItem.desc||"",onChange:ev=>setEditCFItem(p=>({...p,desc:ev.target.value}))})
-        ),
-        // 輸入類型
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"輸入類型"),
+        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"欄位名稱 *"),e("input",{style:S.inp,placeholder:"例：兵種志願、血型…",value:editCFItem.label||"",onChange:ev=>setEditCFItem(p=>({...p,label:ev.target.value}))})),
+        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"說明文字（選填）"),e("input",{style:S.inp,placeholder:"顯示在欄位下方的補充說明",value:editCFItem.desc||"",onChange:ev=>setEditCFItem(p=>({...p,desc:ev.target.value}))})),
+        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"輸入類型"),
           e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}},
             ...Object.entries({text:"文字",number:"數字",date:"日期",phone:"電話",email:"Email",url:"網址",select:"下拉選擇",radio:"單選",checkbox:"多選",textarea:"長文字"}).map(([v,lbl])=>
-              e("button",{key:v,
-                style:{...S.btn(editCFItem.type===v?"primary":"ghost","sm"),justifyContent:"flex-start",fontSize:12},
-                onClick:()=>setEditCFItem(p=>({...p,type:v}))
-              },lbl)
+              e("button",{key:v,style:{...S.btn(editCFItem.type===v?"primary":"ghost","sm"),justifyContent:"flex-start",fontSize:12},onClick:()=>setEditCFItem(p=>({...p,type:v}))},lbl)
             )
           )
         ),
-        // 文字/數字/電話/Email/URL：Placeholder
-        (["text","number","phone","email","url","textarea"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"預設提示文字（Placeholder）"),
-          e("input",{style:S.inp,placeholder:"例：請輸入…",value:editCFItem.placeholder||"",onChange:ev=>setEditCFItem(p=>({...p,placeholder:ev.target.value}))})
-        ),
-        // 下拉/單選/多選：選項清單
-        (["select","radio","checkbox"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"選項清單"),
+        (["text","number","phone","email","url","textarea"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"預設提示文字"),e("input",{style:S.inp,placeholder:"例：請輸入…",value:editCFItem.placeholder||"",onChange:ev=>setEditCFItem(p=>({...p,placeholder:ev.target.value}))})),
+        (["select","radio","checkbox"].includes(editCFItem.type))&&e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"選項清單"),
           ...(editCFItem.options||[]).map((opt,i)=>e("div",{key:i,style:{display:"flex",gap:6,marginBottom:6}},
             e("div",{style:{flex:1,background:"var(--inp-bg)",borderRadius:7,padding:"7px 10px",fontSize:13,color:"var(--txt)"}},opt),
             e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"4px 8px"},onClick:()=>setEditCFItem(p=>({...p,options:p.options.filter((_,j)=>j!==i)}))},"✕")
@@ -2492,23 +2550,14 @@ function App(){
             e("button",{style:S.btn("primary","sm"),onClick:()=>{if(!cfOptionInput.trim())return;setEditCFItem(p=>({...p,options:[...(p.options||[]),cfOptionInput.trim()]}));setCfOptionInput("");}},"＋")
           )
         ),
-        // 版面寬度
-        e("div",{style:{marginBottom:12}},
-          e("label",{style:S.lbl},"版面寬度"),
+        e("div",{style:{marginBottom:12}},e("label",{style:S.lbl},"版面寬度"),
           e("div",{style:{display:"flex",gap:8}},
-            ...[["half","半行"],["full","整行"]].map(([v,lbl])=>e("button",{key:v,
-              style:{...S.btn(editCFItem.width===v?"primary":"ghost","sm"),flex:1},
-              onClick:()=>setEditCFItem(p=>({...p,width:v}))
-            },lbl))
+            ...[["half","半行"],["full","整行"]].map(([v,lbl])=>e("button",{key:v,style:{...S.btn(editCFItem.width===v?"primary":"ghost","sm"),flex:1},onClick:()=>setEditCFItem(p=>({...p,width:v}))},lbl))
           )
         ),
-        // 必填
         e("div",{style:{marginBottom:20,display:"flex",alignItems:"center",gap:10}},
           e("label",{style:{...S.lbl,marginBottom:0}},"必填欄位"),
-          e("button",{
-            style:{...S.btn(editCFItem.required?"primary":"ghost","sm")},
-            onClick:()=>setEditCFItem(p=>({...p,required:!p.required}))
-          },editCFItem.required?"是":"否")
+          e("button",{style:{...S.btn(editCFItem.required?"primary":"ghost","sm")},onClick:()=>setEditCFItem(p=>({...p,required:!p.required}))},editCFItem.required?"是":"否")
         ),
         e("div",{style:{display:"flex",gap:10}},
           e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditCF(false)},"取消"),
@@ -2522,67 +2571,57 @@ function App(){
         )
       )
     ),
-    showEditBatch&&editBatchData&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEditBatch(false)},
-      e("div",{style:S.mBox},
-        e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",marginBottom:16}},"編輯梯次資訊"),
-        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:14}},
-          e("div",{style:{gridColumn:"span 2"}},
-            e("label",{style:S.lbl},"接訓單位"),
-            e("select",{style:S.sel,value:editBatchData.unit||"",onChange:ev=>setEditBatchData(p=>({...p,unit:ev.target.value}))},
-              e("option",{value:""},"請選擇"),
-              ...RECRUIT_UNITS.map(o=>e("option",{key:o,value:o},o))
-            )
-          ),
-          e("div",null,
-            e("label",{style:S.lbl},"營別"),
-            e("select",{style:S.sel,value:editBatchData.battalion||"",onChange:ev=>setEditBatchData(p=>({...p,battalion:ev.target.value}))},
-              e("option",{value:""},"請選擇"),
-              ...(cfg?.battalions||DEF.battalions).map(o=>e("option",{key:o,value:o},o))
-            )
-          ),
-          e("div",null,
-            e("label",{style:S.lbl},"連別"),
-            e("select",{style:S.sel,value:editBatchData.company||"",onChange:ev=>setEditBatchData(p=>({...p,company:ev.target.value}))},
-              e("option",{value:""},"請選擇"),
-              ...(cfg?.companies||DEF.companies).map(o=>e("option",{key:o,value:o},o))
-            )
-          ),
-          e("div",{style:{gridColumn:"span 2"}},
-            e("label",{style:S.lbl},"梯次"),
-            e("input",{style:S.inp,placeholder:"例：第1梯",value:editBatchData.sequence||"",onChange:ev=>setEditBatchData(p=>({...p,sequence:ev.target.value})),
-              onBlur:ev=>{const v=ev.target.value.trim();if(/^\d+$/.test(v))setEditBatchData(p=>({...p,sequence:"第"+v+"梯"}));}
-            })
-          ),
-          e("div",{style:{gridColumn:"span 2"}},
-            e("label",{style:S.lbl},"報到日"),
-            e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editBatchData._reportDate||"",onChange:ev=>setEditBatchData(p=>({...p,_reportDate:ev.target.value}))})
-          ),
-          e("div",{style:{gridColumn:"span 2"}},
-            e("label",{style:S.lbl},"梯次密碼"),
-            e("input",{style:S.inp,type:"text",placeholder:"進入密碼",value:editBatchData.password||"",onChange:ev=>setEditBatchData(p=>({...p,password:ev.target.value}))})
-          )
+    e(BottomNav)
+  );
+
+  // ── Feedback sub-view ──────────────────────────────────────────────────────
+  if(adminSubView==="feedback") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    subHdr("意見回饋紀錄"),
+    e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},"共 "+feedbackList.length+" 筆"),
+      feedbackList.length===0&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無意見回饋"),
+      ...[...feedbackList].reverse().map((fb,i)=>e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
+        e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:6}},
+          e("span",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）"),
+          e("span",{style:{fontSize:10,color:"var(--txt3)"}},fb.createdAt)
         ),
-        e("div",{style:{display:"flex",gap:10}},
-          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setShowEditBatch(false)},"取消"),
-          e("button",{style:{...S.btn("primary"),flex:1},disabled:saving,onClick:async()=>{
-            setSaving(true);
-            try{
-              const newSched=(editBatchData.schedule||[]).map(s=>s.key==="report"?{...s,date:editBatchData._reportDate||""}:s);
-              const {_reportDate,...rest}=editBatchData;
-              const updated={...rest,schedule:newSched};
-              await fsSet("batches/"+updated.id,updated);
-              setBatches(p=>p.map(b=>b.id===updated.id?updated:b));
-              if(curBatch?.id===updated.id)setCurBatch(updated);
-              setShowEditBatch(false);toast_("梯次已更新 ✓");
-            }catch(err){toast_(err.message,"err");}
-            finally{setSaving(false);}
-          }},saving?"儲存中…":"儲存")
-        )
-      )
+        fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:6}},fb.name),
+        e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},fb.content)
+      )),
+      e("div",{style:{height:48}})
     ),
     e(BottomNav)
   );
 
+  // ── Main settings list ─────────────────────────────────────────────────────
+  return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e("div",{style:S.hdr},
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"後台管理"))
+    ),
+    e("div",{style:{...S.sec,paddingTop:20}},
+      adminSection("帳號管理",[
+        adminRow("users","#ef4444","待審核帳號",pendingUsers.length===0?"目前無待審核帳號":pendingUsers.length+" 人等待核准",pendingUsers.length,()=>setASV("pending")),
+        adminRow("people","#f59e0b","成員管理","共 "+allUsers.length+" 位已核准成員",0,()=>setASV("members")),
+      ]),
+      adminSection("梯次",[
+        adminRow("clipboard","#3b82f6","梯次管理","共 "+batches.length+" 個梯次",0,()=>setASV("batches")),
+      ]),
+      adminSection("系統設定",[
+        adminRow("lock","#64748b","管理員密碼",null,0,()=>setASV("system")),
+        adminRow("shield","#10b981","狀態選項・資格審查",null,0,()=>setASV("status")),
+        adminRow("cog","#a855f7","營別・連別・自訂欄位",null,0,()=>setASV("fields")),
+      ]),
+      adminSection("其他",[
+        adminRow("chat","#0ea5e9","意見回饋紀錄","共 "+feedbackList.length+" 筆",0,()=>setASV("feedback")),
+      ]),
+      e("div",{style:{height:48}})
+    ),
+    e(BottomNav)
+  );
+  }
   if(view==="batchPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:{width:"100%",maxWidth:360,padding:28}},
