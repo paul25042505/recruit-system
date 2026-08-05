@@ -636,7 +636,7 @@ function App(){
     setBatches([]);setCfg(null);setCurBatch(null);setFeedbackList([]);setUnitProfiles([]);
   }
   async function saveMyProfile(){
-    if(!pf.name.trim()||!pf.rank||!pf.brigadeUnit){toast_("請填寫姓名、階級與旅級單位","err");return;}
+    if(!pf.name.trim()||!pf.rank||!pf.brigadeUnit.trim()){toast_("請填寫姓名、階級與單位全銜","err");return;}
     if(!authUser)return;
     setPfSaving(true);
     try{
@@ -1479,14 +1479,14 @@ function App(){
           ),
           e("div",null,
             e("label",{style:S.lbl},"身分別 *"),
-            e("select",{style:S.sel,value:pf.role,onChange:ev=>setPf(p=>({...p,role:ev.target.value}))},
+            e("select",{style:S.sel,value:(pf.roles||[])[0]||"recruiter",onChange:ev=>{const r=ev.target.value;setPf(p=>({...p,role:r,roles:[r]}));}},
               e("option",{value:"recruiter"},"招募員"),
-              e("option",{value:"unit_officer"},"新訓單位招募承辦")
+              e("option",{value:"coordinator"},"新訓單位招募承辦")
             )
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"單位全銜 *"),
-            e("input",{style:S.inp,placeholder:"例：陸軍司令部第一作戰區",value:pf.unit,onChange:ev=>setPf(p=>({...p,unit:ev.target.value,subUnit:""}))})
+            e("input",{style:S.inp,placeholder:"例：陸軍步兵第一〇一旅",value:pf.brigadeUnit,onChange:ev=>setPf(p=>({...p,brigadeUnit:ev.target.value}))})
           )
         )
       ),
