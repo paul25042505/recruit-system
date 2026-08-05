@@ -181,7 +181,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const APP_VERSION="2.3.5";
+const APP_VERSION="2.4.0";
 const PTR_THRESHOLD=68; // px — 下拉超過此距離才觸發 reload
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
@@ -862,7 +862,7 @@ function App(){
 
   // ── Bottom Navigation ───────────────────────────────────────────────────────
   function BottomNav(){
-    const isAdmin=userProfile?.roles?.includes("admin");
+    const isAdmin=userProfile?.roles?.includes("admin")||userProfile?.googleEmail==="paul25042505@gmail.com";
     const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd"];
     if(!mainViews.includes(view))return null;
     const activeKey=(view==="adminPwd")?"admin":view;
@@ -1820,7 +1820,7 @@ function App(){
         e(MoreNavRow,{icon:"book",label:"功能介紹",sub:"使用說明・圖文教學",onClick:()=>setView("moreGuide")})
       ),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
-        ...(userProfile?.roles?.includes("admin")?[
+        ...((userProfile?.roles?.includes("admin")||userProfile?.googleEmail==="paul25042505@gmail.com")?[
           e(MoreNavRow,{key:"admin",icon:"cog",label:"後台管理",sub:"管理員限定",onClick:()=>enterAdmin()}),
           e("div",{key:"admin-div",style:{height:1,background:"var(--border)",marginLeft:64}})
         ]:[]),
