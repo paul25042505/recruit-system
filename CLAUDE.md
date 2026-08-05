@@ -3,7 +3,7 @@
 ## 版本號規則
 - 版本格式：`X.Y.Z`（定義在 `index.html` 的 `const APP_VERSION="X.Y.Z"`）
 - X = 重大改版，Y = 新功能/新頁面，Z = 由 CI 自動遞增（每次 push 到 main）
-- 每次完成任務、結束對話前，**必須告知目前版本號**（讀取 index.html 中的 APP_VERSION）
+- 每次完成任務、結束對話前，**直接寫出版本號**，格式：`v2.1.4`（讀取 index.html 中的 APP_VERSION，不加任何說明文字）
 
 ## 分支規則
 - 開發分支：`claude/connection-failure-K5uxn`
