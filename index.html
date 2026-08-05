@@ -469,6 +469,7 @@ function App(){
   const [editMemberSaving,setEMSaving]=useState(false);
   const [adminSubView,setASV]=useState(null);
   const [memberSearch,setMemberSearch]=useState("");
+  const [batchSearch,setBatchSearch]=useState("");
   const [recentCases,setRecentCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("riims_recent")||"[]");}catch{return[];}});
   const [showBrigadeSheet,setShowBrigadeSheet]=useState(false);
   const [winW,setWinW]=useState(window.innerWidth);
@@ -941,7 +942,7 @@ function App(){
       const autoPassword=id.slice(-6);
       const coordinator=(userProfile?.rank||"")+(userProfile?.name||"");
       const trainees=Array.from({length:count},(_,i)=>({id:uid(),seat:i+1,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",interviewLogs:[],memo:"",statusId:null,qualCheck:{},scheduleAtt:{},}));
-      const batch={id,...nb,password:autoPassword,coordinator,traineeCount:count,createdAt:todayStr(),schedule:DEF_SCHED.map(s=>({...s})),trainees};
+      const batch={id,...nb,password:autoPassword,coordinator,traineeCount:count,openEnroll:true,createdAt:todayStr(),schedule:DEF_SCHED.map(s=>({...s})),trainees};
       await fsSet("batches/"+id,batch);
       setBatches(p=>[batch,...p]);
       setShowAB(false);setNb({unit:"",battalion:"",company:"",sequence:"",traineeCount:"30"});
@@ -1095,11 +1096,28 @@ function App(){
     }catch(_){}
   }
   function utf(patch){setTf(p=>({...p,...patch}));setDirty(true);}
+  function isCoord(batchUnit){
+    return (userProfile?.roles||[userProfile?.role||""]).includes("coordinator")&&
+      (userProfile?.brigadeUnit||"")===(batchUnit||"");
+  }
+  function canManage(batchUnit){return !!af||isCoord(batchUnit);}
   function submitBPwd(){
-    if(bPwd===pendBatch.password){
-      try{sessionStorage.setItem("bpwd_"+pendBatch.id,bPwd);}catch(e){}
+    if(bPwd!==pendBatch.password){setBPwdErr(true);return;}
+    try{sessionStorage.setItem("bpwd_"+pendBatch.id,bPwd);}catch(e){}
+    const myUid=authUser?.uid;
+    const approved=(pendBatch.approvedUids||[]).includes(myUid);
+    if(pendBatch.openEnroll!==false||!myUid||approved){
       setCurBatch(pendBatch);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:pendBatch.id,tab:"list"},"訓員列表");
-    }else setBPwdErr(true);
+    }else{
+      if(myUid&&!(pendBatch.pendingMembers||[]).find(x=>x.uid===myUid)){
+        const entry={uid:myUid,name:userProfile?.name||userProfile?.googleDisplayName||"",rank:userProfile?.rank||"",email:authUser.email||""};
+        const up={...pendBatch,pendingMembers:[...(pendBatch.pendingMembers||[]),entry]};
+        fsSet("batches/"+up.id,up);
+        setBatches(p=>p.map(b=>b.id===up.id?up:b));
+        setPendBatch(up);
+      }
+      setView("batchPending");
+    }
   }
   async function loadAllUsers(){
     try{const all=await fsList("users");setAllUsers((all||[]).filter(u=>u.status==="active"));}catch(_){}
@@ -2678,6 +2696,28 @@ function App(){
     )
   );
 
+  if(view==="batchPending") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
+    e(WatermarkOverlay),e(Toast),
+    e("div",{style:{width:"100%",maxWidth:360,padding:28,textAlign:"center"}},
+      e("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:64,height:64,borderRadius:20,background:"linear-gradient(135deg,#1e3a5f,#0a0f1e)",border:"1px solid var(--border)",marginBottom:16}},
+        e(Icon,{n:"clock",s:32,c:"#f59e0b",w:1.5})
+      ),
+      e("div",{style:{fontSize:17,fontWeight:800,color:"var(--txt)",marginBottom:8}},"等待核准"),
+      e("div",{style:{fontSize:13,color:"var(--txt3)",lineHeight:1.7,marginBottom:14}},"密碼驗證成功，申請已送出。",e("br"),"請等待承辦人核准後再進入。"),
+      e("div",{style:{fontSize:11,color:"var(--txt3)",background:"var(--bg3)",borderRadius:10,padding:"10px 14px",marginBottom:24}},
+        (pendBatch?.unit||"")+"・"+(pendBatch?.battalion||"")+(pendBatch?.company&&pendBatch.company!=="（無）"?"・"+pendBatch.company:"")+"・"+fmtSeq(pendBatch?.sequence||"")
+      ),
+      e("button",{style:{...S.btn("primary"),width:"100%",marginBottom:10},onClick:()=>{
+        const b=batches.find(x=>x.id===pendBatch?.id)||pendBatch;
+        if(b&&(b.approvedUids||[]).includes(authUser?.uid)){
+          setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");
+          pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");
+        }else toast_("尚未核准，請稍後再試","err");
+      }},"重新確認狀態"),
+      e("button",{style:{...S.btn("ghost"),width:"100%"},onClick:()=>setView("home")},"返回梯次列表")
+    )
+  );
+
   if(view==="home") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
@@ -2688,14 +2728,20 @@ function App(){
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},e(Icon,{n:"logout",s:18,c:"var(--txt3)"}))
     ),
     e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
-    e("div",{style:{...S.sec,paddingTop:16}},
+    (()=>{
+      const _bq=batchSearch.trim().toLowerCase();
+      const filteredBatches=_bq?batches.filter(b=>[b.unit,b.battalion,b.sequence].join(" ").toLowerCase().includes(_bq)):batches;
+      return e("div",{style:{...S.sec,paddingTop:16}},
+      batches.length>0&&e("input",{style:{...S.inp,marginBottom:8},placeholder:"搜尋單位或梯次…",value:batchSearch,onChange:ev=>setBatchSearch(ev.target.value)}),
       batches.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"60px 0"}},e(Icon,{n:"list",s:40,c:"var(--txt3)"}),e("div",{style:{fontSize:14,marginTop:10}},"尚無梯次")),
-      ...batches.map(b=>{
+      filteredBatches.length===0&&_bq&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},"無符合「"+_bq+"」的梯次"),
+      ...filteredBatches.map(b=>{
         const st=bStats(b),hc=b.company&&b.company!=="（無）";
         const reportDate=(b.schedule||[]).find(s=>s.key==="report")?.date;
         const grad=getServiceGrad(b.unit);
+        const canDel=canManage(b.unit);
         const enterBatch=()=>{
-          try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");return;}}catch(_){}
+          try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved===b.password&&(b.openEnroll!==false||(b.approvedUids||[]).includes(authUser?.uid))){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");return;}}catch(_){}
           setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");
         };
         return e("div",{key:b.id,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden",marginBottom:10,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}},
@@ -2720,11 +2766,12 @@ function App(){
               st.conf>0&&e("div",{style:{fontSize:9,fontWeight:700,color:"#10b981",textAlign:"center"}},st.conf+" 確")
             )
           ),
-          // 底列：梯次徽章 + 刪除
+          // 底列：梯次徽章 + 刪除（限承辦人/管理員）
           e("div",{style:{padding:"6px 14px 10px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid var(--border2)"}},
             e("div",{style:{fontSize:11,fontWeight:800,padding:"3px 10px",borderRadius:6,background:grad.a,color:"#fff",letterSpacing:"0.04em"},onClick:enterBatch},fmtSeq(b.sequence)),
             e("div",{style:{flex:1}}),
-            e("button",{
+            b.openEnroll===false&&e("span",{style:{fontSize:10,fontWeight:700,color:"#f59e0b",background:"#f59e0b18",border:"1px solid #f59e0b44",borderRadius:6,padding:"2px 7px"}},"🔒 需核准"),
+            canDel&&e("button",{
               style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"3px 8px"},
               onClick:ev=>{ev.stopPropagation();setDelTarget(b);setDelPwd("");setDelPwdErr(false);setShowDelBatch(true);}
             },e(Icon,{n:"trash",s:14}))
@@ -2732,7 +2779,7 @@ function App(){
         );
       }),
       e("div",{style:{height:24}})
-    )),
+    );})()),
     // 浮動新增按鈕（FAB）
     e("button",{
       style:{position:"fixed",right:20,bottom:"calc(80px + max(env(safe-area-inset-bottom,0px),16px))",width:54,height:54,borderRadius:"50%",
@@ -2838,7 +2885,7 @@ function App(){
             e("div",{style:{fontSize:12,color:"var(--txt3)"}},
               "共 "+(curBatch.trainees?.length||0)+" 人"
             ),
-            e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"3px 10px"},onClick:()=>{setNewCountVal(String(curBatch.trainees?.length||0));setShowEC(true);}},"修改人數")
+            canManage(curBatch.unit)&&e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"3px 10px"},onClick:()=>{setNewCountVal(String(curBatch.trainees?.length||0));setShowEC(true);}},"修改人數")
           )
         )
       ),
@@ -3254,6 +3301,49 @@ function App(){
                 )
               );
             })()
+          ),
+          canManage(curBatch.unit)&&e("div",{style:{...S.card,marginBottom:10}},
+            e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:12}},"承辦人管理"),
+            // openEnroll toggle
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid var(--border2)"}},
+              e("div",null,
+                e("div",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},"開放模式"),
+                e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},curBatch.openEnroll!==false?"開啟：密碼正確直接進入":"關閉：需承辦人核准才能進入")
+              ),
+              e("button",{
+                style:{...S.btn(curBatch.openEnroll!==false?"primary":"ghost","sm"),minWidth:72},
+                onClick:async()=>{await patchBatch({openEnroll:curBatch.openEnroll===false});toast_("已更新 ✓");}
+              },curBatch.openEnroll!==false?"開放中 🔓":"需核准 🔒")
+            ),
+            // pending members
+            e("div",{style:{marginTop:12}},
+              e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt2)",marginBottom:8}},
+                "待核准申請"+(curBatch.pendingMembers?.length?"（"+(curBatch.pendingMembers?.length)+"）":"")
+              ),
+              (curBatch.pendingMembers||[]).length===0
+                ?e("div",{style:{fontSize:12,color:"var(--txt3)",textAlign:"center",padding:"10px 0"}},"目前無待核准申請")
+                :e("div",null,...(curBatch.pendingMembers||[]).map(m=>e("div",{key:m.uid,style:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                  e("div",{style:{flex:1,minWidth:0}},
+                    e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},m.rank?(m.rank+" "+(m.name||"")):m.name||m.email||m.uid.slice(-6)),
+                    m.email&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},m.email)
+                  ),
+                  e("button",{style:{...S.btn("primary","sm"),fontSize:11},
+                    onClick:async()=>{
+                      const newPending=(curBatch.pendingMembers||[]).filter(x=>x.uid!==m.uid);
+                      const newApproved=[...(curBatch.approvedUids||[]),m.uid];
+                      await patchBatch({pendingMembers:newPending,approvedUids:newApproved});
+                      toast_("已核准 ✓");
+                    }
+                  },"核准"),
+                  e("button",{style:{...S.btn("ghost","sm"),fontSize:11,color:"#ef4444",borderColor:"#ef444433"},
+                    onClick:async()=>{
+                      const newPending=(curBatch.pendingMembers||[]).filter(x=>x.uid!==m.uid);
+                      await patchBatch({pendingMembers:newPending});
+                      toast_("已拒絕");
+                    }
+                  },"拒絕")
+                )))
+            )
           ),
           e("div",{style:{height:40}})
         ),
