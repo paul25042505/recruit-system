@@ -467,6 +467,7 @@ function App(){
   // 待審核用戶列表（管理員用）
   const [pendingUsers,setPendingUsers]=useState([]);
   const [allUsers,setAllUsers]=useState([]);
+  const [membersLoading,setMembersLoading]=useState(false);
   const [showEditMember,setShowEditMember]=useState(false);
   const [editMemberDraft,setEMD]=useState(null);
   const [editMemberSaving,setEMSaving]=useState(false);
@@ -1157,7 +1158,9 @@ function App(){
     }
   }
   async function loadAllUsers(){
+    setMembersLoading(true);
     try{const all=await fsList("users");setAllUsers((all||[]).filter(u=>u.status==="active"));}catch(_){}
+    finally{setMembersLoading(false);}
   }
   async function saveMember(){
     if(!editMemberDraft)return;
@@ -2386,10 +2389,10 @@ function App(){
         e("span",{style:{fontSize:12,color:"var(--txt3)"}},
           mq?"搜尋結果 "+filteredUsers.length+" / "+allUsers.length+" 人":"共 "+allUsers.length+" 位已核准成員"
         ),
-        e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"4px 10px"},onClick:loadAllUsers},"重整")
+        e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"4px 10px",opacity:membersLoading?0.5:1},onClick:loadAllUsers,disabled:membersLoading},membersLoading?"載入中…":"重整")
       ),
       allUsers.length===0
-        ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無成員")
+        ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},membersLoading?"載入中…":"尚無成員")
         :filteredUsers.length===0
           ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"找不到符合「"+memberSearch+"」的成員")
           :e("div",{style:S.card},
@@ -2712,7 +2715,7 @@ function App(){
     e("div",{style:{...S.sec,paddingTop:20}},
       adminSection("帳號管理",[
         adminRow("users","#ef4444","待審核帳號",pendingUsers.length===0?"目前無待審核帳號":pendingUsers.length+" 人等待核准",pendingUsers.length,()=>setASV("pending")),
-        adminRow("people","#f59e0b","成員管理","共 "+allUsers.length+" 位已核准成員",0,()=>{setMemberSearch("");setASV("members");}),
+        adminRow("people","#f59e0b","成員管理","共 "+allUsers.length+" 位已核准成員",0,()=>{setMemberSearch("");setASV("members");loadAllUsers();}),
       ]),
       adminSection("梯次",[
         adminRow("clipboard","#3b82f6","梯次管理","共 "+batches.length+" 個梯次",0,()=>setASV("batches")),
