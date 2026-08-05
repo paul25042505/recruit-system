@@ -692,8 +692,10 @@ function App(){
   }
 
   // ── Pull-to-Refresh ─────────────────────────────────────────────────────────
-  // 手動重新整理資料（不重載頁面）
   const [refreshing,setRefreshing]=useState(false);
+  const [ptrProgress,setPtrProgress]=useState(0);
+  const ptrRef=React.useRef({startY:0,active:false,progress:0});
+
   async function doRefresh(){
     if(refreshing)return;
     setRefreshing(true);
@@ -701,6 +703,44 @@ function App(){
     catch(err){toast_(err?.message||"更新失敗","err");}
     finally{setRefreshing(false);}
   }
+
+  useEffect(()=>{
+    function onTS(e){
+      const el=e.target;
+      // 只在滾動容器頂部才啟動
+      const scrolled=el.closest?.(".ptr-scroll")?.scrollTop||window.scrollY;
+      if(scrolled===0){ptrRef.current.startY=e.touches[0].clientY;ptrRef.current.active=true;}
+    }
+    function onTM(e){
+      if(!ptrRef.current.active)return;
+      const dy=e.touches[0].clientY-ptrRef.current.startY;
+      const el=e.target;
+      const scrolled=el.closest?.(".ptr-scroll")?.scrollTop||window.scrollY;
+      if(dy>8&&scrolled===0){
+        const p=Math.min(1,(dy-8)/72);
+        ptrRef.current.progress=p;
+        setPtrProgress(p);
+        if(p>0.05)e.preventDefault();
+      }else if(dy<=0){ptrRef.current.active=false;ptrRef.current.progress=0;setPtrProgress(0);}
+    }
+    function onTE(){
+      if(ptrRef.current.progress>=1)window.dispatchEvent(new Event("ptr-trigger"));
+      ptrRef.current.active=false;ptrRef.current.progress=0;setPtrProgress(0);
+    }
+    document.addEventListener("touchstart",onTS,{passive:true});
+    document.addEventListener("touchmove",onTM,{passive:false});
+    document.addEventListener("touchend",onTE,{passive:true});
+    return()=>{
+      document.removeEventListener("touchstart",onTS);
+      document.removeEventListener("touchmove",onTM);
+      document.removeEventListener("touchend",onTE);
+    };
+  },[]);
+  useEffect(()=>{
+    function h(){if(!refreshing)doRefresh();}
+    window.addEventListener("ptr-trigger",h);
+    return()=>window.removeEventListener("ptr-trigger",h);
+  },[refreshing]);
 
   // ── Watermark ───────────────────────────────────────────────────────────────
   const watermarkUrl=useMemo(()=>{
@@ -726,6 +766,19 @@ function App(){
   function WatermarkOverlay(){
     if(!watermarkUrl)return null;
     return e("div",{className:"watermark-overlay",style:{backgroundImage:`url(${watermarkUrl})`,backgroundRepeat:"repeat",backgroundSize:"300px 150px"}});
+  }
+
+  function PTRIndicator(){
+    const show=ptrProgress>0||refreshing;
+    if(!show)return null;
+    const scale=refreshing?1:ptrProgress;
+    return e("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:300,display:"flex",justifyContent:"center",paddingTop:"calc(env(safe-area-inset-top,0px) + 56px)",pointerEvents:"none"}},
+      e("div",{style:{width:36,height:36,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 12px rgba(0,0,0,0.15)",transform:"scale("+scale+")",opacity:scale,transition:refreshing?"none":"transform 0.08s,opacity 0.08s"}},
+        e("div",{style:{display:"flex",animation:refreshing?"ptr-spin 0.8s linear infinite":"none"}},
+          e(Icon,{n:"refresh",s:16,c:"var(--txt2)"})
+        )
+      )
+    );
   }
 
   // ── Bottom Navigation ───────────────────────────────────────────────────────
@@ -1448,7 +1501,7 @@ function App(){
     }).filter(Boolean);
 
     return e("div",{style:S.app},
-      e(WatermarkOverlay),e(Toast),
+      e(WatermarkOverlay),e(PTRIndicator),e(Toast),
       // Header
       e("div",{style:{...S.hdr,justifyContent:"space-between"}},
         e("div",null,
@@ -1469,7 +1522,7 @@ function App(){
         )
       ),
       // Scrollable content
-      e("div",{style:{overflowY:"auto",flex:1},className:"has-bnav"},
+      e("div",{style:{overflowY:"auto",flex:1},className:"has-bnav ptr-scroll"},
 
         // ─ 身分識別卡 ─────────────────────────────────────────────────────────
         e("div",{style:{margin:"14px 14px 0",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:18,overflow:"hidden",cursor:"pointer"},onClick:()=>setView("more")},
@@ -1666,11 +1719,11 @@ function App(){
     );
   }
   if(view==="more") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-    e(WatermarkOverlay),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
     e("div",{style:S.hdr},
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"更多"))
     ),
-    e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav"},
+    e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
     e("div",{style:{...S.sec,paddingTop:16}},
       // 身分卡
       e("div",{style:{...S.card,marginBottom:16,borderTop:"3px solid #f59e0b"}},
@@ -1821,14 +1874,14 @@ function App(){
     });
     const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-      e(WatermarkOverlay),e(Toast),
+      e(WatermarkOverlay),e(PTRIndicator),e(Toast),
       e("div",{style:S.hdr},
         e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位")),
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:uvLoading?0.4:1},onClick:()=>{setUvLoading(true);fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));},disabled:uvLoading},
           e(Icon,{n:"refresh",s:18,c:"var(--txt3)"})
         )
       ),
-      e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav"},
+      e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
         e("div",{style:{...S.sec,paddingTop:16}},
           uvLoading&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},"載入中…"),
           !uvLoading&&sortedKeys.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
@@ -2037,7 +2090,7 @@ function App(){
   }
 
   if(view==="adminPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(WatermarkOverlay),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
     e("div",{style:{width:"100%",maxWidth:360,padding:28}},
       e("div",{style:{textAlign:"center",marginBottom:28}},e("div",{style:{marginBottom:10}},e(Icon,{n:"cog",s:48,c:"var(--txt2)"})),e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)"}},"後台管理")),
       e("input",{style:{...S.inp,textAlign:"center",fontSize:22,letterSpacing:"0.25em",marginBottom:10,padding:14},type:"password",placeholder:"管理員密碼",value:aPwd,autoFocus:true,onChange:ev=>{setAPwd(ev.target.value);setAPwdErr(false);},onKeyDown:ev=>ev.key==="Enter"&&submitAPwd()}),
@@ -2049,7 +2102,7 @@ function App(){
   );
 
   if(view==="admin"&&af) return e("div",{style:S.app},
-    e(WatermarkOverlay),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"後台管理")),
@@ -2318,7 +2371,7 @@ function App(){
   );
 
   if(view==="batchPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(WatermarkOverlay),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
     e("div",{style:{width:"100%",maxWidth:360,padding:28}},
       e("div",{style:{textAlign:"center",marginBottom:24}},
         e("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:64,height:64,borderRadius:20,background:"linear-gradient(135deg,#1e2d45,#0a0f1e)",border:"1px solid var(--border)",marginBottom:14}},
@@ -2345,7 +2398,7 @@ function App(){
   );
 
   if(view==="home") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-    e(WatermarkOverlay),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},
@@ -2353,7 +2406,7 @@ function App(){
         e("div",{style:{fontSize:10,color:"var(--txt3)"}},batches.length+" 個梯次")
       ),
     ),
-    e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav"},
+    e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
     e("div",{style:{...S.sec,paddingTop:16}},
       batches.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"60px 0"}},e(Icon,{n:"list",s:40,c:"var(--txt3)"}),e("div",{style:{fontSize:14,marginTop:10}},"尚無梯次")),
       ...batches.map(b=>{
@@ -2444,7 +2497,7 @@ function App(){
   );
 
   if(view==="feedback") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(Toast),
+    e(WatermarkOverlay),e(PTRIndicator),e(Toast),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"意見回饋"))
@@ -2488,7 +2541,7 @@ function App(){
     const nextBatch=curBatchIdx<batches.length-1?batches[curBatchIdx+1]:null;
     function goBatch(b){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");}
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-      e(WatermarkOverlay),e(Toast),
+      e(WatermarkOverlay),e(PTRIndicator),e(Toast),
       e("div",{style:S.hdr},
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}},e(Icon,{n:"chevL",s:18})),
         e("div",{style:{flex:1,textAlign:"center"}},
@@ -2498,7 +2551,7 @@ function App(){
         ),
         e("div",{style:{width:44,flexShrink:0}})
       ),
-      e("div",{style:{flex:1,overflowY:"auto"},className:"has-bnav"},
+      e("div",{style:{flex:1,overflowY:"auto"},className:"has-bnav ptr-scroll"},
       e("div",{style:{...S.sec,paddingTop:14,paddingBottom:0}},
         e("div",{style:{...S.card,marginBottom:0}},
           e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:4}},
