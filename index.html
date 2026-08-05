@@ -148,6 +148,7 @@ const _fbApp=initializeApp({
 const _db=getFirestore(_fbApp);
 const _auth=getAuth(_fbApp);
 const _gProvider=new GoogleAuthProvider();
+_gProvider.setCustomParameters({prompt:"select_account"});
 
 // ── 閒置登出（localStorage 版：背景分頁計時器被暫停也能正確判斷）───────────────
 const IDLE_MS=8*60*60*1000; // 8 小時
@@ -861,19 +862,21 @@ function App(){
 
   // ── Bottom Navigation ───────────────────────────────────────────────────────
   function BottomNav(){
+    const isAdmin=userProfile?.roles?.includes("admin");
     const mainViews=["dashboard","home","unitView","feedback","more","admin","adminPwd"];
     if(!mainViews.includes(view))return null;
-    const activeKey=(view==="admin"||view==="adminPwd")?"more":view;
+    const activeKey=(view==="adminPwd")?"admin":view;
     const tabs=[
       {key:"dashboard",icon:"home",label:"首頁"},
       {key:"home",icon:"list",label:"梯次"},
       {key:"unitView",icon:"building",label:"單位"},
       {key:"feedback",icon:"chat",label:"回饋"},
+      ...(isAdmin?[{key:"admin",icon:"cog",label:"後台"}]:[]),
       {key:"more",icon:"grid",label:"更多"},
     ];
     return e("div",{className:"bnav"},
       ...tabs.map(tab=>e("button",{key:tab.key,className:"bnav-item"+(activeKey===tab.key?" active":""),
-        onClick:()=>setView(tab.key)
+        onClick:()=>tab.key==="admin"?enterAdmin():setView(tab.key)
       },
         e("span",{className:"bnav-icon"},e(Icon,{n:tab.icon,s:26})),
         e("span",{className:"bnav-lbl"},tab.label),
