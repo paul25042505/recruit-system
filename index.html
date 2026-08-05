@@ -2392,8 +2392,8 @@ function App(){
             e("div",{style:{flex:1}}),
             e("button",{
               style:{...S.btn("ghost","sm"),padding:"3px 10px",gap:4,display:"flex",alignItems:"center",fontSize:11},
-              onClick:ev=>{ev.stopPropagation();navigator.clipboard?.writeText(b.password||"").catch(()=>{});toast_("已複製密碼："+b.password);}
-            },e(Icon,{n:"copy",s:13,c:"var(--txt3)"}),b.password||""),
+              onClick:ev=>{ev.stopPropagation();navigator.clipboard?.writeText(b.password||"").catch(()=>{});toast_("已複製密碼");}
+            },e(Icon,{n:"copy",s:13,c:"var(--txt3)"})),
             e("button",{
               style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"3px 8px"},
               onClick:ev=>{ev.stopPropagation();setDelTarget(b);setDelPwd("");setDelPwdErr(false);setShowDelBatch(true);}
@@ -2595,7 +2595,7 @@ function App(){
                     const logs=t.interviewLogs||[];
                     const last=logs[logs.length-1];
                     const dateStr=last?.date||last?.createdAt;
-                    if(!dateStr||fu)return null;
+                    if(!dateStr)return null;
                     const parsed=new Date(dateStr.replace(/[年月]/g,"-").replace(/日/,"").replace(/\//g,"-"));
                     const diffDays=isNaN(parsed)?null:Math.floor((Date.now()-parsed)/(1000*60*60*24));
                     const label=diffDays===null?"有紀錄":diffDays<=0?"今天":diffDays===1?"昨天":diffDays+"天前";
