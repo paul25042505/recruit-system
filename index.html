@@ -472,6 +472,7 @@ function App(){
   const [batchSearch,setBatchSearch]=useState("");
   const [recentCases,setRecentCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("riims_recent")||"[]");}catch{return[];}});
   const [showBrigadeSheet,setShowBrigadeSheet]=useState(false);
+  const [newBUInput,setNewBUInput]=useState("");
   const [winW,setWinW]=useState(window.innerWidth);
 
   // 身分驗證
@@ -1034,6 +1035,21 @@ function App(){
       setDirty(false);toast_("約談紀錄已新增 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
+  }
+  async function doAddBrigadeUnit(name){
+    const trimmed=(name||newBUInput||"").trim();
+    if(!trimmed)return;
+    const existing=cfg?.brigadeUnits||DEF.brigadeUnits;
+    if(!existing.includes(trimmed)){
+      const newList=[...existing,trimmed];
+      const newCfg={...cfg,brigadeUnits:newList};
+      await fsSet("settings/global",newCfg);
+      setCfg(newCfg);
+    }
+    setMPD(d=>({...d,brigadeUnit:trimmed}));
+    setShowBrigadeSheet(false);
+    setNewBUInput("");
+    toast_("已新增並選擇 ✓");
   }
   async function addRecruitUnit(name){
     if(!name.trim())return;
@@ -1895,10 +1911,19 @@ function App(){
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"旅級單位 *"),
             e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-              e("input",{style:{...S.inp,flex:1},placeholder:"輸入旅級單位",value:moreProfileDraft.brigadeUnit,onChange:ev=>setMPD(d=>({...d,brigadeUnit:ev.target.value}))}),
-              e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                onClick:()=>setShowBrigadeSheet(true)},"+"),
-              e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+              e("button",{
+                style:{...S.inp,flex:1,textAlign:"left",cursor:"pointer",
+                  color:moreProfileDraft.brigadeUnit?"var(--txt)":"var(--txt3)",
+                  display:"flex",alignItems:"center",justifyContent:"space-between",gap:6},
+                onClick:()=>{setNewBUInput("");setShowBrigadeSheet(true);}
+              },
+                e("span",{style:{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
+                  moreProfileDraft.brigadeUnit||"請選擇或新增旅級單位"
+                ),
+                e(Icon,{n:"chevD",s:14,c:"var(--txt3)"})
+              ),
+              moreProfileDraft.brigadeUnit&&e("button",{
+                style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
                 onClick:()=>setMPD(d=>({...d,brigadeUnit:""}))},e(Icon,{n:"trash",s:15}))
             )
           ),
@@ -1924,16 +1949,32 @@ function App(){
       )
     ),
     showBrigadeSheet&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowBrigadeSheet(false)},
-      e("div",{style:{...S.mBox,maxHeight:"70vh",display:"flex",flexDirection:"column"}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexShrink:0}},
+      e("div",{style:{...S.mBox,maxHeight:"75vh",display:"flex",flexDirection:"column"}},
+        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexShrink:0}},
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"選擇旅級單位"),
           e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowBrigadeSheet(false)},"✕")
         ),
-        e("div",{style:{overflowY:"auto"}},
-          (cfg?.brigadeUnits||DEF.brigadeUnits).map(u=>e("button",{key:u,
-            style:{display:"block",width:"100%",textAlign:"left",padding:"13px 16px",background:moreProfileDraft.brigadeUnit===u?"rgba(245,158,11,0.1)":"none",border:"none",borderBottom:"1px solid var(--border2)",cursor:"pointer",fontSize:14,color:"var(--txt)",fontWeight:moreProfileDraft.brigadeUnit===u?700:400},
-            onClick:()=>{setMPD(d=>({...d,brigadeUnit:u}));setShowBrigadeSheet(false);}
-          },u))
+        e("input",{style:{...S.inp,marginBottom:8,flexShrink:0},placeholder:"搜尋單位…",value:newBUInput,onChange:ev=>setNewBUInput(ev.target.value)}),
+        e("div",{style:{overflowY:"auto",flex:1}},
+          (()=>{
+            const q=newBUInput.trim().toLowerCase();
+            const list=(cfg?.brigadeUnits||DEF.brigadeUnits).filter(u=>!q||u.toLowerCase().includes(q));
+            const exactMatch=(cfg?.brigadeUnits||DEF.brigadeUnits).some(u=>u.toLowerCase()===q);
+            return e(React.Fragment,null,
+              list.length===0&&!q&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"24px 0",fontSize:13}},"尚無單位，請在下方新增"),
+              ...list.map(u=>e("button",{key:u,
+                style:{display:"block",width:"100%",textAlign:"left",padding:"13px 16px",background:moreProfileDraft.brigadeUnit===u?"rgba(245,158,11,0.1)":"none",border:"none",borderBottom:"1px solid var(--border2)",cursor:"pointer",fontSize:14,color:"var(--txt)",fontWeight:moreProfileDraft.brigadeUnit===u?700:400},
+                onClick:()=>{setMPD(d=>({...d,brigadeUnit:u}));setShowBrigadeSheet(false);setNewBUInput("");}
+              },u)),
+              q&&!exactMatch&&e("button",{
+                style:{display:"block",width:"100%",textAlign:"left",padding:"13px 16px",border:"none",borderBottom:"1px solid var(--border2)",cursor:"pointer",fontSize:14,color:"#f59e0b",fontWeight:700,background:"rgba(245,158,11,0.06)"},
+                onClick:()=>doAddBrigadeUnit(newBUInput)
+              },"＋ 新增「"+newBUInput.trim()+"」並選取")
+            );
+          })()
+        ),
+        e("div",{style:{padding:"12px 0 0",borderTop:"1px solid var(--border2)",flexShrink:0,marginTop:4}},
+          e("div",{style:{fontSize:11,color:"var(--txt3)",textAlign:"center"}},"搜尋框輸入名稱若不在清單中，可直接新增至資料庫")
         )
       )
     )
