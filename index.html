@@ -2,6 +2,9 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#0a0f1e"/>
@@ -695,6 +698,19 @@ function App(){
   // ── Pull-to-Refresh ─────────────────────────────────────────────────────────
   const [refreshing,setRefreshing]=useState(false);
   const [showSignoutConfirm,setShowSignoutConfirm]=useState(false);
+  const [hasUpdate,setHasUpdate]=useState(false);
+  useEffect(()=>{
+    // 啟動後 15 秒確認已連線，再比對遠端版本
+    const t=setTimeout(async()=>{
+      try{
+        const r=await fetch(location.href,{cache:"no-store"});
+        const txt=await r.text();
+        const m=txt.match(/const APP_VERSION="([^"]+)"/);
+        if(m&&m[1]&&m[1]!==APP_VERSION)setHasUpdate(true);
+      }catch(_){}
+    },15000);
+    return()=>clearTimeout(t);
+  },[]);
   function reqSignOut(){setShowSignoutConfirm(true);}
   function SignoutConfirm(){
     if(!showSignoutConfirm)return null;
@@ -794,6 +810,21 @@ function App(){
   function WatermarkOverlay(){
     if(!watermarkUrl)return null;
     return e("div",{className:"watermark-overlay",style:{backgroundImage:`url(${watermarkUrl})`,backgroundRepeat:"repeat",backgroundSize:"300px 150px"}});
+  }
+
+  function UpdateBanner(){
+    if(!hasUpdate)return null;
+    return e("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:1500,background:"linear-gradient(135deg,#1d4ed8,#1e40af)",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,boxShadow:"0 2px 12px rgba(0,0,0,0.3)"},
+      onClick:()=>location.reload()},
+      e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+        e(Icon,{n:"refresh",s:16,c:"#fff"}),
+        e("div",null,
+          e("div",{style:{fontSize:13,fontWeight:800,color:"#fff"}},"發現新版本"),
+          e("div",{style:{fontSize:11,color:"rgba(255,255,255,0.8)"}},"點此立即更新")
+        )
+      ),
+      e("div",{style:{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.9)",background:"rgba(255,255,255,0.15)",borderRadius:8,padding:"4px 10px"}},"更新")
+    );
   }
 
   function PTRIndicator(){
@@ -1529,7 +1560,7 @@ function App(){
     }).filter(Boolean);
 
     return e("div",{style:S.app},
-      e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+      e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       // Header
       e("div",{style:{...S.hdr,justifyContent:"space-between"}},
         e("div",null,
@@ -1747,7 +1778,7 @@ function App(){
     );
   }
   if(view==="more") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"更多"))
     ),
@@ -1902,7 +1933,7 @@ function App(){
     });
     const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-      e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+      e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
         e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位")),
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:uvLoading?0.4:1},onClick:()=>{setUvLoading(true);fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));},disabled:uvLoading},
@@ -2118,7 +2149,7 @@ function App(){
   }
 
   if(view==="adminPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:{width:"100%",maxWidth:360,padding:28}},
       e("div",{style:{textAlign:"center",marginBottom:28}},e("div",{style:{marginBottom:10}},e(Icon,{n:"cog",s:48,c:"var(--txt2)"})),e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)"}},"後台管理")),
       e("input",{style:{...S.inp,textAlign:"center",fontSize:22,letterSpacing:"0.25em",marginBottom:10,padding:14},type:"password",placeholder:"管理員密碼",value:aPwd,autoFocus:true,onChange:ev=>{setAPwd(ev.target.value);setAPwdErr(false);},onKeyDown:ev=>ev.key==="Enter"&&submitAPwd()}),
@@ -2130,7 +2161,7 @@ function App(){
   );
 
   if(view==="admin"&&af) return e("div",{style:S.app},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"後台管理")),
@@ -2399,7 +2430,7 @@ function App(){
   );
 
   if(view==="batchPwd") return e("div",{style:{...S.app,...S.ctr,minHeight:"100vh"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:{width:"100%",maxWidth:360,padding:28}},
       e("div",{style:{textAlign:"center",marginBottom:24}},
         e("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:64,height:64,borderRadius:20,background:"linear-gradient(135deg,#1e2d45,#0a0f1e)",border:"1px solid var(--border)",marginBottom:14}},
@@ -2426,7 +2457,7 @@ function App(){
   );
 
   if(view==="home") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},
@@ -2525,7 +2556,7 @@ function App(){
   );
 
   if(view==="feedback") return e("div",{style:S.app},
-    e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"意見回饋"))
@@ -2569,7 +2600,7 @@ function App(){
     const nextBatch=curBatchIdx<batches.length-1?batches[curBatchIdx+1]:null;
     function goBatch(b){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");}
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-      e(WatermarkOverlay),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+      e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
         e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}},e(Icon,{n:"chevL",s:18})),
         e("div",{style:{flex:1,textAlign:"center"}},
