@@ -454,6 +454,8 @@ function App(){
   // 待審核用戶列表（管理員用）
   const [pendingUsers,setPendingUsers]=useState([]);
   const [recentCases,setRecentCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("riims_recent")||"[]");}catch{return[];}});
+  const [showBrigadeSheet,setShowBrigadeSheet]=useState(false);
+  const [winW,setWinW]=useState(window.innerWidth);
 
   // 身分驗證
   const [authUser,setAuthUser]=useState(null);
@@ -791,6 +793,14 @@ function App(){
     return()=>window.removeEventListener("ptr-trigger",h);
   },[refreshing]);
 
+  // 響應式視窗寬度
+  useEffect(()=>{
+    const h=()=>setWinW(window.innerWidth);
+    window.addEventListener("resize",h);
+    window.addEventListener("orientationchange",h);
+    return()=>{window.removeEventListener("resize",h);window.removeEventListener("orientationchange",h);};
+  },[]);
+
   // ── Watermark ───────────────────────────────────────────────────────────────
   const watermarkUrl=useMemo(()=>{
     if(!userProfile)return null;
@@ -798,23 +808,26 @@ function App(){
     const rankName=(userProfile.rank||"")+(userProfile.name||"");
     const now=new Date();
     const dateStr=now.getFullYear()+"/"+(now.getMonth()+1).toString().padStart(2,"0")+"/"+now.getDate().toString().padStart(2,"0")+" "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
+    const colW=Math.max(160,Math.round(winW/2));
     const canvas=document.createElement("canvas");
-    canvas.width=300;canvas.height=150;
+    canvas.width=colW*2;canvas.height=150;
     const ctx=canvas.getContext("2d");
     if(!ctx)return null;
-    ctx.save();ctx.translate(150,75);ctx.rotate(-Math.PI/6);
-    ctx.font="600 13px 'Noto Sans TC',sans-serif";
     const isDk=!document.documentElement.classList.contains("light");
-    ctx.fillStyle=isDk?"rgba(255,255,255,0.09)":"rgba(0,0,0,0.08)";
-    ctx.textAlign="center";
-    ctx.fillText(unit,0,-20);ctx.fillText(rankName,0,4);ctx.fillText(dateStr,0,28);
-    ctx.restore();
+    [colW*0.5,colW*1.5].forEach(cx=>{
+      ctx.save();ctx.translate(cx,75);ctx.rotate(-Math.PI/6);
+      ctx.font="600 13px 'Noto Sans TC',sans-serif";
+      ctx.fillStyle=isDk?"rgba(255,255,255,0.09)":"rgba(0,0,0,0.08)";
+      ctx.textAlign="center";
+      ctx.fillText(unit,0,-20);ctx.fillText(rankName,0,4);ctx.fillText(dateStr,0,28);
+      ctx.restore();
+    });
     return canvas.toDataURL();
-  },[userProfile]);
+  },[userProfile,winW]);
 
   function WatermarkOverlay(){
     if(!watermarkUrl)return null;
-    return e("div",{className:"watermark-overlay",style:{backgroundImage:`url(${watermarkUrl})`,backgroundRepeat:"repeat",backgroundSize:"300px 150px"}});
+    return e("div",{className:"watermark-overlay",style:{backgroundImage:`url(${watermarkUrl})`,backgroundRepeat:"repeat-y",backgroundSize:"100% 150px"}});
   }
 
   function UpdateBanner(){
@@ -1572,13 +1585,6 @@ function App(){
           e("div",{style:{fontSize:9,color:"var(--txt3)",letterSpacing:"0.05em"}},"招募資訊整合管理系統")
         ),
         e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",position:"relative"},onClick:()=>setView("feedback")},
-            e(Icon,{n:"chat",s:18,c:"var(--txt3)"}),
-            feedbackList.length>0&&e("span",{style:{position:"absolute",top:4,right:4,width:7,height:7,background:"#ef4444",borderRadius:"50%",border:"2px solid var(--hdr)"}})
-          ),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:refreshing?0.5:1},onClick:doRefresh,disabled:refreshing,title:"重新整理"},
-            e(Icon,{n:"refresh",s:18,c:"var(--txt3)",style:refreshing?{animation:"ptr-spin 0.8s linear infinite"}:{}})
-          ),
           e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},
             e(Icon,{n:"logout",s:18,c:"var(--txt3)"})
           )
@@ -1783,8 +1789,9 @@ function App(){
   }
   if(view==="more") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    e("div",{style:S.hdr},
-      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"更多"))
+    e("div",{style:{...S.hdr,justifyContent:"space-between"}},
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"更多")),
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},e(Icon,{n:"logout",s:18,c:"var(--txt3)"}))
     ),
     e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
     e("div",{style:{...S.sec,paddingTop:16}},
@@ -1854,29 +1861,17 @@ function App(){
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"旅級單位 *"),
-            e("div",{style:{display:"flex",gap:6}},
-              e("select",{style:{...S.sel,flex:1},value:moreProfileDraft.brigadeUnit==="__custom__"?"__custom__":((cfg?.brigadeUnits||DEF.brigadeUnits).includes(moreProfileDraft.brigadeUnit)?moreProfileDraft.brigadeUnit:"__custom__"),
-                onChange:ev=>{if(ev.target.value==="__custom__")setMPD(d=>({...d,brigadeUnit:""}));else setMPD(d=>({...d,brigadeUnit:ev.target.value}));}},
-                e("option",{value:""},"請選擇"),
-                ...(cfg?.brigadeUnits||DEF.brigadeUnits).map(u=>e("option",{key:u,value:u},u)),
-                e("option",{value:"__custom__"},"+ 手動輸入")
-              ),
-              (!(cfg?.brigadeUnits||DEF.brigadeUnits).includes(moreProfileDraft.brigadeUnit)||moreProfileDraft.brigadeUnit==="")&&
-              e("input",{style:{...S.inp,flex:1},placeholder:"輸入旅級單位",value:moreProfileDraft.brigadeUnit,onChange:ev=>setMPD(d=>({...d,brigadeUnit:ev.target.value}))})
+            e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+              e("input",{style:{...S.inp,flex:1},placeholder:"輸入旅級單位",value:moreProfileDraft.brigadeUnit,onChange:ev=>setMPD(d=>({...d,brigadeUnit:ev.target.value}))}),
+              e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                onClick:()=>setShowBrigadeSheet(true)},"+"),
+              e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                onClick:()=>setMPD(d=>({...d,brigadeUnit:""}))},e(Icon,{n:"trash",s:15}))
             )
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"群/營級單位"),
-            e("div",{style:{display:"flex",gap:6}},
-              e("select",{style:{...S.sel,flex:1},value:(cfg?.battalionUnits||DEF.battalionUnits).includes(moreProfileDraft.battalionUnit)?moreProfileDraft.battalionUnit:"__custom__",
-                onChange:ev=>{if(ev.target.value==="__custom__")setMPD(d=>({...d,battalionUnit:""}));else setMPD(d=>({...d,battalionUnit:ev.target.value}));}},
-                e("option",{value:""},"（選填）"),
-                ...(cfg?.battalionUnits||DEF.battalionUnits).map(u=>e("option",{key:u,value:u},u)),
-                e("option",{value:"__custom__"},"+ 手動輸入")
-              ),
-              (!(cfg?.battalionUnits||DEF.battalionUnits).includes(moreProfileDraft.battalionUnit)&&moreProfileDraft.battalionUnit!=="")&&
-              e("input",{style:{...S.inp,flex:1},placeholder:"輸入群/營級",value:moreProfileDraft.battalionUnit,onChange:ev=>setMPD(d=>({...d,battalionUnit:ev.target.value}))})
-            )
+            e("input",{style:S.inp,placeholder:"輸入群/營級單位（選填）",value:moreProfileDraft.battalionUnit,onChange:ev=>setMPD(d=>({...d,battalionUnit:ev.target.value}))})
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"角色（可複選）"),
@@ -1888,6 +1883,20 @@ function App(){
               })
             )
           )
+        )
+      )
+    ),
+    showBrigadeSheet&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowBrigadeSheet(false)},
+      e("div",{style:{...S.mBox,maxHeight:"70vh",display:"flex",flexDirection:"column"}},
+        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexShrink:0}},
+          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"選擇旅級單位"),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowBrigadeSheet(false)},"✕")
+        ),
+        e("div",{style:{overflowY:"auto"}},
+          (cfg?.brigadeUnits||DEF.brigadeUnits).map(u=>e("button",{key:u,
+            style:{display:"block",width:"100%",textAlign:"left",padding:"13px 16px",background:moreProfileDraft.brigadeUnit===u?"rgba(245,158,11,0.1)":"none",border:"none",borderBottom:"1px solid var(--border2)",cursor:"pointer",fontSize:14,color:"var(--txt)",fontWeight:moreProfileDraft.brigadeUnit===u?700:400},
+            onClick:()=>{setMPD(d=>({...d,brigadeUnit:u}));setShowBrigadeSheet(false);}
+          },u))
         )
       )
     )
@@ -1938,10 +1947,13 @@ function App(){
     const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-      e("div",{style:S.hdr},
+      e("div",{style:{...S.hdr,justifyContent:"space-between"}},
         e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位")),
-        e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:uvLoading?0.4:1},onClick:()=>{setUvLoading(true);fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));},disabled:uvLoading},
-          e(Icon,{n:"refresh",s:18,c:"var(--txt3)"})
+        e("div",{style:{display:"flex",gap:4}},
+          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:uvLoading?0.4:1},onClick:()=>{setUvLoading(true);fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));},disabled:uvLoading},
+            e(Icon,{n:"refresh",s:18,c:"var(--txt3)"})
+          ),
+          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},e(Icon,{n:"logout",s:18,c:"var(--txt3)"}))
         )
       ),
       e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
@@ -2055,9 +2067,8 @@ function App(){
       e("div",{style:{...S.card,padding:0,marginBottom:16}},
         ...[
           ["版本","v"+APP_VERSION],
-          ["BUILD","Web / PWA"],
-          ["發布日期","2025年"],
-          ["最後更新","2026年"],
+          ["發布日期","2025年5月"],
+          ["最後更新","2026年8月"],
         ].map(([k,v],i,arr)=>e("div",{key:k,style:{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none"}},
           e("span",{style:{fontSize:13,color:"var(--txt3)",flex:1}},k),
           e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},v)
@@ -2067,45 +2078,95 @@ function App(){
       e("div",{style:{...S.slbl,marginBottom:8}},"開發資訊"),
       e("div",{style:{...S.card,padding:0,marginBottom:16}},
         ...[
-          ["開發單位","招募系統開發小組"],
-          ["系統維護","系統管理員"],
-          ["技術支援","Google Firebase / GitHub"],
+          ["開發單位","陸軍第五地區支援指揮部衛生營"],
+          ["系統維護","上士林伯霖　0975-763-658"],
         ].map(([k,v],i,arr)=>e("div",{key:k,style:{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none"}},
           e("span",{style:{fontSize:13,color:"var(--txt3)",flex:1}},k),
-          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},v)
+          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)",textAlign:"right"}},v)
         ))
       ),
       // ─ 法律資訊
       e("div",{style:{...S.slbl,marginBottom:8}},"法律資訊"),
-      e("div",{style:{...S.card,padding:0,marginBottom:16}},
-        ...[
-          {label:"使用條款",icon:"clipboard",color:"#3b82f6"},
-          {label:"隱私政策",icon:"lock",color:"#22c55e"},
-          {label:"資訊安全說明",icon:"shield",color:"#f59e0b"},
-          {label:"開源授權",icon:"book",color:"#a855f7"},
-        ].map((item,i,arr)=>e("div",{key:item.label,style:{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none",cursor:"default"}},
-          e("div",{style:{width:32,height:32,borderRadius:8,background:item.color+"15",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
-            e(Icon,{n:item.icon,s:16,c:item.color})
+      e("div",{style:{...S.card,padding:"4px 0",marginBottom:16}},
+        // 使用條款
+        e("div",{style:{padding:"14px 16px",borderBottom:"1px solid var(--border2)"}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
+            e("div",{style:{width:28,height:28,borderRadius:8,background:"rgba(59,130,246,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:"clipboard",s:14,c:"#3b82f6"})),
+            e("span",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"使用條款")
           ),
-          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)",flex:1}},item.label),
-          e(Icon,{n:"chevR",s:14,c:"var(--txt3)"})
-        ))
-      ),
-      // ─ 支援
-      e("div",{style:{...S.slbl,marginBottom:8}},"支援"),
-      e("div",{style:{...S.card,padding:0,marginBottom:24}},
-        e("div",{style:{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",cursor:"default"}},
-          e("div",{style:{width:32,height:32,borderRadius:8,background:"rgba(245,158,11,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
-            e(Icon,{n:"list",s:16,c:"#f59e0b"})
+          e("div",{style:{fontSize:12,color:"var(--txt2)",lineHeight:1.8,paddingLeft:38}},
+            "本系統（RIIMS）為軍事招募資訊管理專用平台，僅限陸軍第五地區支援指揮部衛生營授權招募人員使用。",
+            e("br"),
+            "• 使用者須以個人Google帳號登入，帳號由管理員審核後方可使用。",
+            e("br"),
+            "• 禁止將帳號、密碼或系統存取權限轉借他人。",
+            e("br"),
+            "• 禁止將系統內任何訓員資料用於非招募業務之目的。",
+            e("br"),
+            "• 違反使用規定者，管理員得立即停用其帳號，並依相關規定移送處理。"
+          )
+        ),
+        // 隱私政策
+        e("div",{style:{padding:"14px 16px",borderBottom:"1px solid var(--border2)"}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
+            e("div",{style:{width:28,height:28,borderRadius:8,background:"rgba(34,197,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:"lock",s:14,c:"#22c55e"})),
+            e("span",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"隱私政策")
           ),
-          e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)",flex:1}},"更新紀錄"),
-          e(Icon,{n:"chevR",s:14,c:"var(--txt3)"})
+          e("div",{style:{fontSize:12,color:"var(--txt2)",lineHeight:1.8,paddingLeft:38}},
+            "本系統蒐集之個人資料（姓名、階級、聯絡方式）僅用於招募業務管理，不對外提供或販售。",
+            e("br"),
+            "• 資料儲存於Google Firebase，受Google企業級安全機制保護。",
+            e("br"),
+            "• 訓員個人資料依招募業務需要保存，業務結束後由管理員定期清理。",
+            e("br"),
+            "• 使用者離職或帳號停用後，其操作記錄仍依規定保留供稽核。"
+          )
+        ),
+        // 資訊安全說明
+        e("div",{style:{padding:"14px 16px",borderBottom:"1px solid var(--border2)"}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
+            e("div",{style:{width:28,height:28,borderRadius:8,background:"rgba(245,158,11,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:"shield",s:14,c:"#f59e0b"})),
+            e("span",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"資訊安全說明")
+          ),
+          e("div",{style:{fontSize:12,color:"var(--txt2)",lineHeight:1.8,paddingLeft:38}},
+            "本系統採用多層次安全機制保護資料：",
+            e("br"),
+            "• 身份驗證：Google OAuth 2.0，所有通訊均透過HTTPS加密傳輸。",
+            e("br"),
+            "• 存取控制：Firebase Security Rules逐條驗證存取權限，未授權帳號無法讀取任何資料。",
+            e("br"),
+            "• 梯次保護：每個梯次設有獨立密碼，僅持有密碼之人員可查閱訓員名單。",
+            e("br"),
+            "• 浮水印機制：所有頁面顯示使用者身份浮水印，防止截圖外流之責任歸屬不明問題。",
+            e("br"),
+            "• 請勿在公用裝置登入本系統，使用完畢請務必登出。"
+          )
+        ),
+        // 開源授權
+        e("div",{style:{padding:"14px 16px"}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
+            e("div",{style:{width:28,height:28,borderRadius:8,background:"rgba(168,85,247,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:"book",s:14,c:"#a855f7"})),
+            e("span",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"開源授權")
+          ),
+          e("div",{style:{fontSize:12,color:"var(--txt2)",lineHeight:1.8,paddingLeft:38}},
+            "本系統使用以下開源技術：",
+            e("br"),
+            "• React 18（MIT License）— 使用者介面框架",
+            e("br"),
+            "• Firebase SDK 10（Apache 2.0）— 資料庫與身份驗證",
+            e("br"),
+            "• Noto Sans TC（SIL Open Font License）— 中文字型",
+            e("br"),e("br"),
+            "本系統原始碼為內部使用，不對外公開發布。系統本身非開源軟體，上述授權條款適用於各第三方元件，不代表本系統採用相同授權。",
+            e("br"),e("br"),
+            "安全聲明：本系統不收集任何用於商業目的之資料，所有Firebase存取均透過安全規則限制，服務帳號私鑰嚴格保管於管理員本機，不存在於任何程式碼倉庫中。"
+          )
         )
       ),
       // ─ 著作權
       e("div",{style:{textAlign:"center",padding:"20px 0 8px",borderTop:"1px solid var(--border2)"}},
         e("div",{style:{fontSize:12,color:"var(--txt3)",lineHeight:2}},
-          "© 2025–2026 招募資訊整合管理系統",
+          "© 2025–2026 陸軍第五地區支援指揮部衛生營",
           e("br"),
           "本系統為軍事招募專用平台，僅限授權人員使用",
           e("br"),
@@ -2462,12 +2523,12 @@ function App(){
 
   if(view==="home") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
+    e("div",{style:{...S.hdr,justifyContent:"space-between"}},
       e("div",{style:{flex:1}},
         e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"梯次列表"),
         e("div",{style:{fontSize:10,color:"var(--txt3)"}},batches.length+" 個梯次")
       ),
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},e(Icon,{n:"logout",s:18,c:"var(--txt3)"}))
     ),
     e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
     e("div",{style:{...S.sec,paddingTop:16}},
@@ -2502,14 +2563,10 @@ function App(){
               st.conf>0&&e("div",{style:{fontSize:9,fontWeight:700,color:"#10b981",textAlign:"center"}},st.conf+" 確")
             )
           ),
-          // 底列：梯次徽章 + 複製密碼 + 刪除
+          // 底列：梯次徽章 + 刪除
           e("div",{style:{padding:"6px 14px 10px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid var(--border2)"}},
             e("div",{style:{fontSize:11,fontWeight:800,padding:"3px 10px",borderRadius:6,background:grad.a,color:"#fff",letterSpacing:"0.04em"},onClick:enterBatch},fmtSeq(b.sequence)),
             e("div",{style:{flex:1}}),
-            e("button",{
-              style:{...S.btn("ghost","sm"),padding:"3px 10px",gap:4,display:"flex",alignItems:"center",fontSize:11},
-              onClick:ev=>{ev.stopPropagation();navigator.clipboard?.writeText(b.password||"").catch(()=>{});toast_("已複製密碼");}
-            },e(Icon,{n:"copy",s:13,c:"var(--txt3)"})),
             e("button",{
               style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"transparent",padding:"3px 8px"},
               onClick:ev=>{ev.stopPropagation();setDelTarget(b);setDelPwd("");setDelPwdErr(false);setShowDelBatch(true);}
@@ -2561,9 +2618,9 @@ function App(){
 
   if(view==="feedback") return e("div",{style:S.app},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
-    e("div",{style:S.hdr},
-      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setView("dashboard")},e(Icon,{n:"chevL",s:18})),
-      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"意見回饋"))
+    e("div",{style:{...S.hdr,justifyContent:"space-between"}},
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"意見回饋")),
+      e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},e(Icon,{n:"logout",s:18,c:"var(--txt3)"}))
     ),
     e("div",{style:{...S.sec,paddingTop:16}},
       e("div",{style:{...S.card,marginBottom:14}},
@@ -2612,7 +2669,7 @@ function App(){
             fmtSeq(curBatch.sequence)+" | "+curBatch.unit
           )
         ),
-        e("div",{style:{width:44,flexShrink:0}})
+        e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},e(Icon,{n:"logout",s:18,c:"var(--txt3)"}))
       ),
       e("div",{style:{flex:1,overflowY:"auto"},className:"ptr-scroll"},
       e("div",{style:{...S.sec,paddingTop:14,paddingBottom:0}},
