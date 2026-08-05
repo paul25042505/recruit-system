@@ -2237,12 +2237,25 @@ function App(){
           )
         ),
         pendingUsers.length===0&&e("div",{style:{color:"var(--txt3)",fontSize:12}},"目前無待審核帳號"),
-        ...pendingUsers.map(u=>e("div",{key:u.uid,style:{display:"flex",alignItems:"center",gap:10,marginBottom:10,paddingBottom:10,borderBottom:"1px solid var(--border2)"}},
-          e("div",{style:{flex:1,minWidth:0}},
-            e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},(u.rank||"")+" "+(u.googleDisplayName||u.googleEmail)),
-            e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},u.unit||"未填單位")
-          ),
-          e("button",{style:{...S.btn("primary","sm"),padding:"5px 12px"},onClick:()=>approveUser(u)},"核准")
+        ...pendingUsers.map(u=>e("div",{key:u.uid,style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
+          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}},
+            e("div",{style:{flex:1,minWidth:0}},
+              e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:3}},
+                (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||u.googleDisplayName||"（未填姓名）")
+              ),
+              u.brigadeUnit&&e("div",{style:{fontSize:12,fontWeight:700,color:"#f59e0b",marginBottom:2}},
+                u.brigadeUnit+(u.battalionUnit?"　"+u.battalionUnit:"")
+              ),
+              !u.brigadeUnit&&e("div",{style:{fontSize:12,color:"#ef4444",marginBottom:2}},"未填單位"),
+              e("div",{style:{fontSize:11,color:"var(--txt3)"}},u.googleEmail),
+              (u.roles||[]).length>0&&e("div",{style:{marginTop:4,display:"flex",gap:4}},
+                ...(u.roles||[]).map(r=>e("span",{key:r,style:{fontSize:10,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:6,padding:"1px 6px",color:"var(--txt2)"}},
+                  r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r
+                ))
+              )
+            ),
+            e("button",{style:{...S.btn("primary","sm"),padding:"5px 12px",flexShrink:0},onClick:()=>approveUser(u)},"核准")
+          )
         ))
       ),
       e("div",{style:{...S.card,marginBottom:10}},
