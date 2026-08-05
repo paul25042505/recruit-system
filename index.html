@@ -379,6 +379,65 @@ function Icon({n,s=20,c="currentColor",w=1.75}){
 function BackBtn({onClick,disabled}){
   return e("button",{onClick,disabled,style:{width:40,height:40,borderRadius:12,background:"var(--bg3)",border:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"center",cursor:disabled?"not-allowed":"pointer",flexShrink:0,opacity:disabled?0.5:1}},e(Icon,{n:"chevL",s:20,c:"var(--txt2)"}));
 }
+function DatePicker({value,onChange,placeholder,style}){
+  const [open,setOpen]=useState(false);
+  const [viewYear,setViewYear]=useState(()=>{const d=value?new Date(value+"T00:00:00"):new Date();return d.getFullYear();});
+  const [viewMonth,setViewMonth]=useState(()=>{const d=value?new Date(value+"T00:00:00"):new Date();return d.getMonth();});
+  const ph=placeholder||"請選擇日期";
+  const displayVal=value?value.replace(/^(\d{4})-(\d{2})-(\d{2})$/,(_,y,m,d)=>y+"年"+parseInt(m)+"月"+parseInt(d)+"日"):null;
+  function openPicker(){const d=value?new Date(value+"T00:00:00"):new Date();setViewYear(d.getFullYear());setViewMonth(d.getMonth());setOpen(true);}
+  function selectDay(y,m,d){onChange(y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"));setOpen(false);}
+  const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+  const firstDow=new Date(viewYear,viewMonth,1).getDay();
+  const todayStr=(()=>{const t=new Date();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");})();
+  let selY=null,selM=null,selD=null;
+  if(value&&/^\d{4}-\d{2}-\d{2}$/.test(value)){const p=value.split("-").map(Number);selY=p[0];selM=p[1]-1;selD=p[2];}
+  const cells=[];
+  for(let i=0;i<firstDow;i++)cells.push(null);
+  for(let d=1;d<=daysInMonth;d++)cells.push(d);
+  while(cells.length%7!==0)cells.push(null);
+  const prevM=()=>{if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1);};
+  const nextM=()=>{if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1);};
+  const MN=["1","2","3","4","5","6","7","8","9","10","11","12"];
+  const WDS=["日","一","二","三","四","五","六"];
+  return e(React.Fragment,null,
+    e("button",{type:"button",style:{...S.inp,...(style||{}),display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",textAlign:"left",boxSizing:"border-box"},onClick:openPicker},
+      e("span",{style:{color:value?"var(--txt)":"var(--txt3)",fontSize:14,flex:1,pointerEvents:"none"}},displayVal||ph),
+      e(Icon,{n:"calendar",s:16,c:"var(--txt3)"})
+    ),
+    open&&e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:9999},onClick:ev=>ev.target===ev.currentTarget&&setOpen(false)},
+      e("div",{style:{background:"var(--bg2)",borderRadius:"20px 20px 0 0",padding:"20px 16px 36px",width:"100%",maxWidth:480}},
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}},
+          e("div",{style:{fontSize:17,fontWeight:800,color:"var(--txt)"}},viewYear+"年 "+MN[viewMonth]+"月"),
+          e("div",{style:{display:"flex",gap:8}},
+            e("button",{type:"button",style:{...S.btn("ghost","sm"),padding:"4px 10px"},onClick:prevM},e(Icon,{n:"chevL",s:18})),
+            e("button",{type:"button",style:{...S.btn("ghost","sm"),padding:"4px 10px"},onClick:nextM},e(Icon,{n:"chevR",s:18}))
+          )
+        ),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:4}},
+          ...WDS.map(w=>e("div",{key:w,style:{textAlign:"center",fontSize:12,color:"var(--txt3)",padding:"4px 0",fontWeight:600}},w))
+        ),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}},
+          ...cells.map((d,i)=>{
+            if(!d)return e("div",{key:"e"+i,style:{height:40}});
+            const ds=viewYear+"-"+String(viewMonth+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+            const isSel=selY===viewYear&&selM===viewMonth&&selD===d;
+            const isToday=ds===todayStr&&!isSel;
+            return e("button",{key:d,type:"button",
+              style:{height:40,width:"100%",borderRadius:"50%",background:isSel?"#3b82f6":isToday?"var(--bg3)":"transparent",border:isToday?"1px solid var(--border)":"none",cursor:"pointer",fontSize:15,fontWeight:isSel||isToday?700:400,color:isSel?"#fff":"var(--txt)",display:"flex",alignItems:"center",justifyContent:"center"},
+              onClick:()=>selectDay(viewYear,viewMonth,d)
+            },d);
+          })
+        ),
+        e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:20}},
+          e("button",{type:"button",style:{height:44,minWidth:80,borderRadius:22,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt)",fontSize:15,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},onClick:()=>{onChange("");setOpen(false);}
+          },"重置"),
+          e("button",{type:"button",style:{width:44,height:44,borderRadius:"50%",background:"#3b82f6",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},onClick:()=>setOpen(false)},e(Icon,{n:"checkCircle",s:22,c:"#fff"}))
+        )
+      )
+    )
+  );
+}
 
 // ═══ APP ══════════════════════════════════════════════════════════════════════
 
@@ -1383,11 +1442,11 @@ function App(){
           ),
           e("div",null,
             e("label",{style:S.lbl},"核發日期"),
-            e("input",{style:S.inp,type:"date",value:pf.licenseIssueDate,onChange:ev=>setPf(p=>({...p,licenseIssueDate:ev.target.value}))})
+            e(DatePicker,{value:pf.licenseIssueDate||"",onChange:v=>setPf(p=>({...p,licenseIssueDate:v}))})
           ),
           e("div",null,
             e("label",{style:S.lbl},"效期截止"),
-            e("input",{style:S.inp,type:"date",value:pf.licenseExpiryDate,onChange:ev=>setPf(p=>({...p,licenseExpiryDate:ev.target.value}))})
+            e(DatePicker,{value:pf.licenseExpiryDate||"",onChange:v=>setPf(p=>({...p,licenseExpiryDate:v}))})
           )
         )
       ),
@@ -1802,11 +1861,11 @@ function App(){
           ),
           e("div",null,
             e("label",{style:S.lbl},"核發日期"),
-            e("input",{style:S.inp,type:"date",value:moreLicenseDraft.licenseIssueDate,onChange:ev=>setMLD(d=>({...d,licenseIssueDate:ev.target.value}))})
+            e(DatePicker,{value:moreLicenseDraft.licenseIssueDate||"",onChange:v=>setMLD(d=>({...d,licenseIssueDate:v}))})
           ),
           e("div",null,
             e("label",{style:S.lbl},"效期截止"),
-            e("input",{style:S.inp,type:"date",value:moreLicenseDraft.licenseExpiryDate,onChange:ev=>setMLD(d=>({...d,licenseExpiryDate:ev.target.value}))})
+            e(DatePicker,{value:moreLicenseDraft.licenseExpiryDate||"",onChange:v=>setMLD(d=>({...d,licenseExpiryDate:v}))})
           )
         )
       )
@@ -2323,7 +2382,7 @@ function App(){
               onBlur:ev=>{const v=ev.target.value.trim();if(/^\d+$/.test(v))setEditBatchData(p=>({...p,sequence:"第"+v+"梯"}));}})
           ),
           e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"報到日"),
-            e("input",{style:S.inp,type:"date",value:editBatchData._reportDate||"",onChange:ev=>setEditBatchData(p=>({...p,_reportDate:ev.target.value}))})
+            e(DatePicker,{value:editBatchData._reportDate||"",onChange:v=>setEditBatchData(p=>({...p,_reportDate:v}))})
           ),
           e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"梯次密碼"),
             e("input",{style:S.inp,type:"text",value:editBatchData.password||"",onChange:ev=>setEditBatchData(p=>({...p,password:ev.target.value}))})
@@ -2766,10 +2825,7 @@ function App(){
             e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
               ...sched.map((s,i)=>e("div",{key:s.key||i},
                 e("label",{style:S.lbl},s.label),
-                e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-                  e("input",{style:{...S.inp,flex:1},type:"date",placeholder:"YYYY-MM-DD",value:s.date||"",onChange:ev=>{const ns=sched.map((x,j)=>j===i?{...x,date:ev.target.value}:x);patchBatch({schedule:ns});}}),
-                  s.date&&e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433",flexShrink:0},onClick:()=>{const ns=sched.map((x,j)=>j===i?{...x,date:""}:x);patchBatch({schedule:ns});}},"✕")
-                )
+                e(DatePicker,{value:s.date||"",onChange:v=>{const ns=sched.map((x,j)=>j===i?{...x,date:v}:x);patchBatch({schedule:ns});}})
               ))
             )
           ),
@@ -2883,11 +2939,11 @@ function App(){
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"起始日期"),
-              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",placeholder:"YYYY-MM-DD",value:queryDateFrom||"",onChange:ev=>{setQueryDateFrom(ev.target.value);setQuerySubmitted(false);}})
+              e(DatePicker,{value:queryDateFrom||"",onChange:v=>{setQueryDateFrom(v);setQuerySubmitted(false);}})
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"結束日期"),
-              e("input",{style:{...S.inp,display:"block",width:"100%",maxWidth:"100%",boxSizing:"border-box"},type:"date",placeholder:"YYYY-MM-DD",value:queryDateTo||"",onChange:ev=>{setQueryDateTo(ev.target.value);setQuerySubmitted(false);}})
+              e(DatePicker,{value:queryDateTo||"",onChange:v=>{setQueryDateTo(v);setQuerySubmitted(false);}})
             ),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"時段"),
@@ -3206,7 +3262,7 @@ function App(){
                   const setVal=v=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:v}}));
                   let input;
                   if(f.type==="date")
-                    input=e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    input=e(DatePicker,{value:val||"",onChange:v=>setVal(v)});
                   else if(f.type==="number")
                     input=e("input",{style:S.inp,type:"number",placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
                   else if(f.type==="phone")
@@ -3318,9 +3374,7 @@ function App(){
               ),
               medDate&&expItem?.date&&e("span",{style:{...S.tag(medExpired?"#ef4444":"#22c55e"),display:"inline-flex",alignItems:"center",gap:3}},e(Icon,{n:medExpired?"warning":"checkCircle",s:12,c:medExpired?"#ef4444":"#22c55e"}),medExpired?"已過期":"有效")
             ),
-            e("input",{style:{...S.inp,width:"100%",minWidth:0,maxWidth:"100%",boxSizing:"border-box",display:"block"},type:"date",placeholder:"YYYY-MM-DD",value:qa.medicalDate||"",onChange:ev=>uqa({medicalDate:ev.target.value})}),
-            e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:3}},"格式：年-月-日，例：2026-05-04"),
-            qa.medicalDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>uqa({medicalDate:""})},"✕ 清除日期")
+            e(DatePicker,{value:qa.medicalDate||"",onChange:v=>uqa({medicalDate:v})})
           ),
           ...qualItems.map(({id,label,desc})=>e("div",{key:id,style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
             e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}},
@@ -3424,7 +3478,7 @@ function App(){
                     // 訪談日期
                     e("div",null,
                       e("label",{style:S.lbl},"訪談日期"),
-                      e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:newItvw.date,onChange:ev=>setNewItvw(p=>({...p,date:ev.target.value}))})
+                      e(DatePicker,{value:newItvw.date||"",onChange:v=>setNewItvw(p=>({...p,date:v}))})
                     ),
                     // 時段
                     e("div",null,
@@ -3455,13 +3509,11 @@ function App(){
                     // 電訪/家訪日期（意願狀態下方，依選擇顯示）
                     (newItvw.statusId===4||newItvw.statusId===5)&&e("div",null,
                       e("label",{style:S.lbl},"電訪日期"),
-                      e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:tf.phoneVisitDate||"",onChange:ev=>{setTf(p=>({...p,phoneVisitDate:ev.target.value}));setDirty(true);}}),
-                      tf.phoneVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setTf(p=>({...p,phoneVisitDate:""}));setDirty(true);}},"✕ 清除電訪日期")
+                      e(DatePicker,{value:tf.phoneVisitDate||"",onChange:v=>{setTf(p=>({...p,phoneVisitDate:v}));setDirty(true);}})
                     ),
                     newItvw.statusId===5&&e("div",null,
                       e("label",{style:S.lbl},"家訪日期"),
-                      e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:tf.homeVisitDate||"",onChange:ev=>{setTf(p=>({...p,homeVisitDate:ev.target.value}));setDirty(true);}}),
-                      tf.homeVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setTf(p=>({...p,homeVisitDate:""}));setDirty(true);}},"✕ 清除家訪日期")
+                      e(DatePicker,{value:tf.homeVisitDate||"",onChange:v=>{setTf(p=>({...p,homeVisitDate:v}));setDirty(true);}})
                     )
                   ),
                   e("button",{style:{...S.btn("primary"),width:"100%",marginTop:14},onClick:addItvwLog,disabled:saving},saving?"新增中…":"新增約談紀錄")
@@ -3554,7 +3606,7 @@ function App(){
             // 訪談日期
             e("div",null,
               e("label",{style:S.lbl},"訪談日期"),
-              e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editLogData.date||"",onChange:ev=>setEditLogData(p=>({...p,date:ev.target.value}))})
+              e(DatePicker,{value:editLogData.date||"",onChange:v=>setEditLogData(p=>({...p,date:v}))})
             ),
             // 時段
             e("div",null,
@@ -3579,14 +3631,12 @@ function App(){
             // 電訪日期（中意願或高意願才顯示）
             (editLogData.statusId===4||editLogData.statusId===5)&&e("div",null,
               e("label",{style:S.lbl},"電訪日期"),
-              e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editLogData.phoneVisitDate||"",onChange:ev=>setEditLogData(p=>({...p,phoneVisitDate:ev.target.value}))}),
-              editLogData.phoneVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setEditLogData(p=>({...p,phoneVisitDate:""}))},"✕ 清除電訪日期")
+              e(DatePicker,{value:editLogData.phoneVisitDate||"",onChange:v=>setEditLogData(p=>({...p,phoneVisitDate:v}))})
             ),
             // 家訪日期（高意願才顯示）
             editLogData.statusId===5&&e("div",null,
               e("label",{style:S.lbl},"家訪日期"),
-              e("input",{style:S.inp,type:"date",placeholder:"YYYY-MM-DD",value:editLogData.homeVisitDate||"",onChange:ev=>setEditLogData(p=>({...p,homeVisitDate:ev.target.value}))}),
-              editLogData.homeVisitDate&&e("button",{style:{...S.btn("ghost","sm"),marginTop:6,color:"#ef4444",borderColor:"#ef444433"},onClick:()=>setEditLogData(p=>({...p,homeVisitDate:""}))},"✕ 清除家訪日期")
+              e(DatePicker,{value:editLogData.homeVisitDate||"",onChange:v=>setEditLogData(p=>({...p,homeVisitDate:v}))})
             ),
             // 約談內容
             e("div",null,
