@@ -2305,7 +2305,7 @@ function App(){
       e("input",{style:{...S.inp,textAlign:"center",fontSize:22,letterSpacing:"0.25em",marginBottom:10,padding:14},type:"password",placeholder:"管理員密碼",value:aPwd,autoFocus:true,onChange:ev=>{setAPwd(ev.target.value);setAPwdErr(false);},onKeyDown:ev=>ev.key==="Enter"&&submitAPwd()}),
       aPwdErr&&e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10,fontWeight:600}},"密碼錯誤"),
       e("button",{style:{...S.btn("primary"),width:"100%",padding:13,fontSize:15,marginBottom:8},onClick:submitAPwd},"進入後台"),
-      e("div",{style:{display:"flex",justifyContent:"center",marginTop:4}},e(BackBtn,{onClick:()=>setView("dashboard")}))
+      e("button",{style:{...S.btn("ghost"),width:"100%",padding:10},onClick:()=>setView("dashboard")},"← 返回")
     ),
     e(BottomNav)
   );
@@ -2756,7 +2756,7 @@ function App(){
       ),
       bPwdErr&&e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10,fontWeight:600}},"密碼錯誤"),
       e("button",{style:{...S.btn("primary"),width:"100%",padding:13,fontSize:15,marginBottom:8},onClick:submitBPwd},"進入"),
-      e("div",{style:{display:"flex",justifyContent:"center",marginTop:4}},e(BackBtn,{onClick:()=>{setView("home");}}))
+      e("button",{style:{...S.btn("ghost"),width:"100%",padding:10},onClick:()=>{setView("home");}},"返回梯次列表")
     )
   );
 
@@ -2778,7 +2778,7 @@ function App(){
           pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");
         }else toast_("尚未核准，請稍後再試","err");
       }},"重新確認狀態"),
-      e("div",{style:{display:"flex",justifyContent:"center",marginTop:4}},e(BackBtn,{onClick:()=>setView("home")}))
+      e("button",{style:{...S.btn("ghost"),width:"100%"},onClick:()=>setView("home")},"返回梯次列表")
     )
   );
 
