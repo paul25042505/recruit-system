@@ -71,6 +71,7 @@ button{touch-action:manipulation;cursor:pointer;}
 .bnav-pip{width:5px;height:5px;border-radius:50%;background:#f59e0b;}
 /* 有底部導覽列的頁面，最底部留白 */
 .has-bnav{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));}
+.bnav-inline{position:relative;display:flex;background:var(--hdr);border-top:1px solid var(--border);height:calc(80px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;z-index:100;}
 /* 浮水印覆蓋層 */
 .watermark-overlay{position:fixed;inset:0;pointer-events:none;user-select:none;z-index:50;}
 /* 身分識別卡 */
@@ -2610,7 +2611,7 @@ function App(){
         ),
         e("div",{style:{width:44,flexShrink:0}})
       ),
-      e("div",{style:{flex:1,overflowY:"auto"},className:"has-bnav ptr-scroll"},
+      e("div",{style:{flex:1,overflowY:"auto"},className:"ptr-scroll"},
       e("div",{style:{...S.sec,paddingTop:14,paddingBottom:0}},
         e("div",{style:{...S.card,marginBottom:0}},
           e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",marginBottom:4}},
@@ -3053,7 +3054,17 @@ function App(){
         )
       )
       ),
-      e(BottomNav)
+      (()=>{
+        const activeKey="home";
+        const tabs=[{key:"dashboard",icon:"home",label:"首頁"},{key:"home",icon:"list",label:"梯次"},{key:"unitView",icon:"building",label:"單位"},{key:"feedback",icon:"chat",label:"回饋"},{key:"more",icon:"grid",label:"更多"}];
+        return e("div",{className:"bnav-inline"},
+          ...tabs.map(tab=>e("button",{key:tab.key,className:"bnav-item"+(activeKey===tab.key?" active":""),onClick:()=>setView(tab.key)},
+            e("span",{className:"bnav-icon"},e(Icon,{n:tab.icon,s:26})),
+            e("span",{className:"bnav-lbl"},tab.label),
+            activeKey===tab.key&&e("span",{className:"bnav-pip"})
+          ))
+        );
+      })()
     );
   }
 
