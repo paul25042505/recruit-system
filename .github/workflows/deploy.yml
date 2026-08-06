@@ -5,9 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write   # 寫回版號 commit 所需
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -16,9 +14,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,19 +37,32 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.ver.outputs.new }} [skip ci]"
           git push
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      - name: Deploy to gh-pages branch
+        run: |
+          # 儲存要部署的檔案
+          cp index.html /tmp/deploy-index.html
+          cp logo.png /tmp/deploy-logo.png
+          [ -f sw.js ] && cp sw.js /tmp/deploy-sw.js || true
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
+          # 切到 gh-pages branch（已存在則更新，不存在則建立 orphan）
+          git fetch origin gh-pages:gh-pages 2>/dev/null || true
+          if git show-ref --verify --quiet refs/heads/gh-pages; then
+            git checkout gh-pages
+            git rm -rf . 2>/dev/null || true
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . 2>/dev/null || true
+          fi
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          # 放入檔案
+          cp /tmp/deploy-index.html index.html
+          cp /tmp/deploy-logo.png logo.png
+          [ -f /tmp/deploy-sw.js ] && cp /tmp/deploy-sw.js sw.js || true
+          touch .nojekyll
+
+          git add .
+          git commit -m "deploy: v${{ steps.ver.outputs.new }}"
+          git push --force origin gh-pages
 
       - name: 發布版本通知
         run: |
@@ -64,4 +72,3 @@ jobs:
           echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| **版本號** | \`v${{ steps.ver.outputs.new }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **發布時間** | $(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S') 台北時間 |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **網址** | ${{ steps.deployment.outputs.page_url }} |" >> "$GITHUB_STEP_SUMMARY"
