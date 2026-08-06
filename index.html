@@ -596,8 +596,12 @@ function App(){
     const missing=(settings.recruitUnits||[]).filter(n=>!existingNames.includes(n));
     const mergedProfiles=[...(settings.recruitUnitProfiles||[]),...missing.map(n=>({id:uid(),name:n,recruiters:[]}))];
     const sortedProfiles=[...mergedProfiles].sort((a,b)=>a.name.localeCompare(b.name,"zh-TW",{sensitivity:"base"}));
-    if(missing.length>0){
-      const syncCfg={...settings,recruitUnitProfiles:sortedProfiles,recruitUnits:[...new Set([...sortedProfiles.map(p=>p.name)])]};
+    // 把 RECRUIT_UNITS 裡缺漏的單位合併進 brigadeUnits
+    const existingBU=settings.brigadeUnits||[];
+    const missingBU=RECRUIT_UNITS.filter(u=>!existingBU.includes(u));
+    const mergedBU=missingBU.length>0?[...existingBU,...missingBU]:existingBU;
+    if(missing.length>0||missingBU.length>0){
+      const syncCfg={...settings,brigadeUnits:mergedBU,recruitUnitProfiles:sortedProfiles,recruitUnits:[...new Set([...sortedProfiles.map(p=>p.name)])]};
       fsSet("settings/global",syncCfg).catch(()=>{}); // 非同步寫入，不阻塞載入
       setCfg(syncCfg);
     }else{setCfg(settings);}
