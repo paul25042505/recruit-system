@@ -3540,7 +3540,10 @@ function App(){
         ),
         // 意願訪談
         e("div",{style:{...S.card,marginBottom:10}},
-          e("div",{style:S.slbl},"▍ 意願訪談"),
+          e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:14}},
+            e("div",{style:{width:3,height:16,background:"#f59e0b",borderRadius:3,flexShrink:0}}),
+            e("span",{style:{fontSize:12,fontWeight:800,color:"var(--txt)",letterSpacing:"0.04em"}},"意願訪談")
+          ),
           qa.result==="fail"
             ? e("div",{style:{background:"#ef444415",border:"1px solid #ef444433",borderRadius:10,padding:"14px 16px",marginBottom:14,textAlign:"center"}},
                 e("div",{style:{marginBottom:6}},e(Icon,{n:"xCircle",s:20,c:"#ef4444"})),
