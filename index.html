@@ -2777,30 +2777,32 @@ function App(){
       // ── 統計卡片（進入梯次後顯示）─────────────────────────────────────────
       (()=>{
         const bGrad=getServiceGrad(curBatch.unit);
-        const bs=bStats(curBatch);
-        const tiles=[
-          {label:"總人數",val:bs.total,color:"var(--txt)",sub:null},
-          {label:"已訪談",val:bs.rev,color:"#f59e0b",sub:bs.total?Math.round(bs.rev/bs.total*100)+"%":null},
-          {label:"高意願",val:bs.high,color:"#22c55e",sub:bs.rev&&bs.high?Math.round(bs.high/bs.rev*100)+"%":null},
-          {label:"確簽",val:bs.conf,color:"#10b981",sub:bs.total?Math.round(bs.conf/bs.total*100)+"%":null},
-          {label:"未接觸",val:bs.none,color:"var(--txt3)",sub:null},
+        const allT=curBatch.trainees||[];
+        function getStId(x){if(x.qualCheck?.result==="fail")return 1;const logs=x.interviewLogs||[];const last=logs[logs.length-1];const fallback=(x.qualCheck?.result==="pass"&&x.statusId===1)?null:x.statusId;return last?.statusId||fallback;}
+        const counts={all:allT.length,null:allT.filter(t=>!getStId(t)&&t.qualCheck?.result!=="fail").length};
+        sts.forEach(s=>{counts[s.id]=allT.filter(t=>getStId(t)===s.id).length;});
+        const chips=[
+          {key:"all",label:"全部",count:counts.all,color:"#475569"},
+          {key:"null",label:"未訪談",count:counts.null,color:"#64748b"},
+          ...sts.map(s=>({key:String(s.id),label:s.label,count:counts[s.id]||0,color:s.color}))
         ];
         return e("div",{style:{padding:"0 16px 0",maxWidth:640,margin:"0 auto"}},
-          // 梯次色頂線
           e("div",{style:{height:2,background:"linear-gradient(90deg,"+bGrad.a+","+bGrad.b+",transparent)",borderRadius:2,marginBottom:10}}),
-          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:2}},
-            ...tiles.map(t=>e("div",{key:t.label,style:{
-              background:"var(--bg2)",
-              border:"1px solid var(--border)",
-              borderRadius:12,
-              padding:"10px 4px 8px",
-              display:"flex",flexDirection:"column",alignItems:"center",gap:2,
-              boxShadow:"0 1px 4px rgba(0,0,0,0.06)"
-            }},
-              e("div",{style:{fontSize:19,fontWeight:900,lineHeight:1,color:t.color,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}},t.val),
-              t.sub&&e("div",{style:{fontSize:9,color:bGrad.a,fontWeight:700,letterSpacing:"0.02em"}},t.sub),
-              e("div",{style:{fontSize:9,color:"var(--txt3)",fontWeight:600,textAlign:"center",marginTop:1}},t.label)
-            ))
+          e("div",{className:"hs",style:{display:"flex",gap:6,overflowX:"auto",paddingBottom:6}},
+            ...chips.map(chip=>{
+              const active=fst===chip.key;
+              return e("div",{key:chip.key,onClick:()=>setFst(chip.key),style:{
+                background:active?chip.color:"var(--bg2)",
+                border:"1px solid "+(active?chip.color:chip.color+"44"),
+                borderRadius:12,padding:"8px 10px 7px",
+                display:"flex",flexDirection:"column",alignItems:"center",gap:1,
+                flexShrink:0,cursor:"pointer",minWidth:52,
+                boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
+              }},
+                e("div",{style:{fontSize:18,fontWeight:900,lineHeight:1,color:active?"#fff":chip.color,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}},chip.count),
+                e("div",{style:{fontSize:9,color:active?"rgba(255,255,255,0.8)":"var(--txt3)",fontWeight:600,textAlign:"center",marginTop:2,whiteSpace:"nowrap"}},chip.label)
+              );
+            })
           )
         );
       })(),
@@ -2866,25 +2868,6 @@ function App(){
 
         batchTab==="list"&&e(React.Fragment,null,
           e("input",{style:{...S.inp,marginBottom:8},placeholder:"搜尋姓名或座號…",value:sq,onChange:ev=>setSq(ev.target.value)}),
-          (()=>{
-            const allT=curBatch.trainees||[];
-            function getLatestStId(t){
-              // 資格不符：看資格審查的整體資格判定
-              if(t.qualCheck?.result==="fail") return 1;
-              const logs=t.interviewLogs||[];
-              const last=logs[logs.length-1];
-              // 若 qualCheck.result 為 pass，舊的 statusId=1（資格不符）不應繼續使用
-              const fallback=(t.qualCheck?.result==="pass"&&t.statusId===1)?null:t.statusId;
-              return last?.statusId||fallback;
-            }
-            const counts={all:allT.length,null:allT.filter(t=>!getLatestStId(t)&&t.qualCheck?.result!=="fail").length};
-            sts.forEach(s=>{counts[s.id]=allT.filter(t=>getLatestStId(t)===s.id).length;});
-            return e("div",{className:"hs",style:{display:"flex",gap:6,overflowX:"auto",paddingBottom:8}},
-              e("button",{style:{...S.btn(fst==="all"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFst("all")},"全部 "+counts.all),
-              e("button",{style:{...S.btn(fst==="null"?"primary":"ghost","sm"),flexShrink:0},onClick:()=>setFst("null")},"未訪談 "+counts.null),
-              ...sts.map(s=>e("button",{key:s.id,style:{...S.btn(fst===String(s.id)?"primary":"ghost","sm"),flexShrink:0,color:fst===String(s.id)?"#fff":s.color,border:"1px solid "+(fst===String(s.id)?"transparent":s.color+"44")},onClick:()=>setFst(String(s.id))},s.label+" "+(counts[s.id]||0)))
-            );
-          })(),
           e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"10px 0 8px"}},
             e("div",{style:{fontSize:12,color:"var(--txt3)"}},"顯示 "+trainees.length+" 人"),
             
