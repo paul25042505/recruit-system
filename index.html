@@ -2499,7 +2499,7 @@ function App(){
       ),
       pendBatch?.coordinator&&e("div",{style:{...S.card,marginBottom:14,padding:"10px 14px",textAlign:"center"}},
         e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},"承辦人"),
-        e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"承辦人"+pendBatch.coordinator)
+        e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},pendBatch.coordinator)
       ),
       e("div",{style:{position:"relative",marginBottom:10}},
         e("input",{style:{...S.inp,textAlign:"center",fontSize:22,letterSpacing:"0.3em",padding:"14px 48px 14px 14px"},type:"password",placeholder:"••••••",value:bPwd,autoFocus:true,autoCapitalize:"characters",
