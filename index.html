@@ -89,6 +89,7 @@ button{touch-action:manipulation;cursor:pointer;}
 .skeleton{border-radius:8px;background:linear-gradient(90deg,var(--bg3) 25%,color-mix(in srgb,var(--bg3) 60%,var(--bg2)) 50%,var(--bg3) 75%);background-size:200% 100%;animation:sk-sh 1.5s ease-in-out infinite;}
 .work-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;cursor:pointer;text-align:center;flex:1;min-width:0;}
 .work-tile:active{opacity:0.65;}
+.inp-edit:focus{border-color:#f59e0b!important;box-shadow:0 0 0 3px rgba(245,158,11,0.12)!important;outline:none!important;}
 </style>
 <script>
 if('serviceWorker' in navigator){
@@ -3305,67 +3306,82 @@ function App(){
         // 基本資料 tab
         traineeTab==="basic"&&e(React.Fragment,null,
         basicEditing&&basicDraft
-          ? e("div",{style:{...S.card,marginBottom:10}},
-              e("div",{style:{...S.slbl,marginBottom:12}},"▍ 基本資料"),
-              e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}},
-                e("div",null,
-                  e("label",{style:S.lbl},"座號"),
-                  e("div",{style:{...S.inp,background:"var(--bg3)",color:"var(--txt3)",cursor:"not-allowed",display:"flex",alignItems:"center"}},"#"+tf.seat+" （不可修改）")
-                ),
-                e("div",null,e("label",{style:S.lbl},"姓名"),e("input",{style:S.inp,value:basicDraft.name||"",placeholder:"請輸入",onChange:ev=>setBasicDraft(p=>({...p,name:ev.target.value}))})),
-                e("div",null,e("label",{style:S.lbl},"畢業學歷"),
-                  e("select",{style:S.sel,value:basicDraft.education||"",onChange:ev=>setBasicDraft(p=>({...p,education:ev.target.value,dropoutSemester:""}))},
-                    e("option",{value:""},"請選擇"),...EDUCATIONS.map(v=>e("option",{key:v},v))
+          ? (()=>{
+              const inpSt={...S.inp,borderRadius:10};
+              const selSt={...S.sel,borderRadius:10};
+              const fld=(lbl,child)=>e("div",{style:{marginBottom:14}},e("label",{style:{...S.lbl,marginBottom:6}},lbl),child);
+              const secHdr=(title)=>e("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",borderBottom:"1px solid var(--border2)",marginBottom:14}},
+                e("div",{style:{width:3,height:16,background:"#f59e0b",borderRadius:3,flexShrink:0}}),
+                e("span",{style:{fontSize:12,fontWeight:800,color:"var(--txt)",letterSpacing:"0.04em"}},title)
+              );
+              const secCard=(title,children)=>e("div",{style:{...S.card,marginBottom:10,padding:0,overflow:"hidden"}},
+                secHdr(title),
+                e("div",{style:{padding:"2px 16px 16px"}},children)
+              );
+              const cfields=DEF.customFields||[];
+              return e(React.Fragment,null,
+                secCard("基本資訊",e(React.Fragment,null,
+                  fld("座號",e("div",{style:{...inpSt,background:"var(--bg3)",color:"var(--txt3)",cursor:"not-allowed",display:"flex",alignItems:"center",gap:8,userSelect:"none"}},
+                    e(Icon,{n:"lock",s:13,c:"var(--txt3)"}),
+                    e("span",null,"#"+tf.seat)
+                  )),
+                  fld("姓名",e("input",{className:"inp-edit",style:inpSt,value:basicDraft.name||"",placeholder:"請輸入姓名",onChange:ev=>setBasicDraft(p=>({...p,name:ev.target.value}))})),
+                  e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}},
+                    fld("居住城市",e("select",{className:"inp-edit",style:selSt,value:basicDraft.city||"",onChange:ev=>setBasicDraft(p=>({...p,city:ev.target.value,district:""}))},
+                      e("option",{value:""},"請選擇"),...CITIES.map(v=>e("option",{key:v},v))
+                    )),
+                    fld("行政區",e("select",{className:"inp-edit",style:selSt,value:basicDraft.district||"",onChange:ev=>setBasicDraft(p=>({...p,district:ev.target.value}))},
+                      e("option",{value:""},"請選擇"),...(DISTRICTS[basicDraft.city]||[]).map(d=>e("option",{key:d,value:d},d))
+                    ))
                   )
-                ),
-                basicDraft.education==="高中職肄業"
-                  ? e("div",null,e("label",{style:S.lbl},"肄業學期"),
-                      e("select",{style:S.sel,value:basicDraft.dropoutSemester||"",onChange:ev=>setBasicDraft(p=>({...p,dropoutSemester:ev.target.value}))},
+                )),
+                secCard("學歷背景",e(React.Fragment,null,
+                  fld("畢業學歷",e("select",{className:"inp-edit",style:selSt,value:basicDraft.education||"",onChange:ev=>setBasicDraft(p=>({...p,education:ev.target.value,dropoutSemester:""}))},
+                    e("option",{value:""},"請選擇"),...EDUCATIONS.map(v=>e("option",{key:v},v))
+                  )),
+                  basicDraft.education==="高中職肄業"
+                    ? fld("肄業學期",e("select",{className:"inp-edit",style:selSt,value:basicDraft.dropoutSemester||"",onChange:ev=>setBasicDraft(p=>({...p,dropoutSemester:ev.target.value}))},
                         e("option",{value:""},"請選擇"),
                         ...["一年級上","一年級下","二年級上","二年級下","三年級上","三年級下"].map(v=>e("option",{key:v,value:v},v+"學期"))
+                      ))
+                    : e(React.Fragment,null,
+                        fld("學校名稱",e("input",{className:"inp-edit",style:inpSt,placeholder:"就讀或畢業的學校",value:basicDraft.school||"",onChange:ev=>setBasicDraft(p=>({...p,school:ev.target.value}))})),
+                        fld("就讀科系",e("input",{className:"inp-edit",style:inpSt,placeholder:"就讀或畢業的科系",value:basicDraft.department||"",onChange:ev=>setBasicDraft(p=>({...p,department:ev.target.value}))}))
                       )
-                    )
-                  : e("div",null,e("label",{style:S.lbl},"學校"),e("input",{style:S.inp,placeholder:"就讀／畢業學校",value:basicDraft.school||"",onChange:ev=>setBasicDraft(p=>({...p,school:ev.target.value}))})),
-                e("div",null,e("label",{style:S.lbl},"科系"),e("input",{style:S.inp,placeholder:"就讀／畢業科系",value:basicDraft.department||"",onChange:ev=>setBasicDraft(p=>({...p,department:ev.target.value}))})),
-                e("div",null,e("label",{style:S.lbl},"居住城市"),
-                  e("select",{style:S.sel,value:basicDraft.city||"",onChange:ev=>setBasicDraft(p=>({...p,city:ev.target.value,district:""}))},
-                    e("option",{value:""},"請選擇"),...CITIES.map(v=>e("option",{key:v},v))
-                  )
-                ),
-                e("div",null,e("label",{style:S.lbl},"區 / 鄉鎮市"),
-                  e("select",{style:S.sel,value:basicDraft.district||"",onChange:ev=>setBasicDraft(p=>({...p,district:ev.target.value}))},
-                    e("option",{value:""},"請選擇"),...(DISTRICTS[basicDraft.city]||[]).map(d=>e("option",{key:d,value:d},d))
-                  )
-                ),
-                e("div",null,e("label",{style:S.lbl},"工作經驗"),
-                  e("select",{style:S.sel,value:basicDraft.workExp||"",onChange:ev=>setBasicDraft(p=>({...p,workExp:ev.target.value}))},
+                )),
+                secCard("工作經歷",e(React.Fragment,null,
+                  fld("工作經驗",e("select",{className:"inp-edit",style:selSt,value:basicDraft.workExp||"",onChange:ev=>setBasicDraft(p=>({...p,workExp:ev.target.value}))},
                     e("option",{value:""},"請選擇"),e("option",{value:"無"},"無"),e("option",{value:"有"},"有")
+                  )),
+                  basicDraft.workExp==="有"&&e(React.Fragment,null,
+                    fld("目前／上一份工作單位",e("input",{className:"inp-edit",style:inpSt,placeholder:"例：台積電",value:basicDraft.workPlace||"",onChange:ev=>setBasicDraft(p=>({...p,workPlace:ev.target.value}))})),
+                    fld("工作年資（年）",e("input",{className:"inp-edit",style:inpSt,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))}))
                   )
-                ),
-                basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作單位"),e("input",{style:S.inp,placeholder:"例：台積電",value:basicDraft.workPlace||"",onChange:ev=>setBasicDraft(p=>({...p,workPlace:ev.target.value}))})),
-                basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作年資（年）"),e("input",{style:S.inp,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))})),
-                ...(DEF.customFields).map(f=>{
-                  const val=basicDraft.customData?.[f.id];
-                  const setVal=v=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:v}}));
-                  let input;
-                  if(f.type==="date")input=e(DatePicker,{value:val||"",onChange:v=>setVal(v)});
-                  else if(f.type==="number")input=e("input",{style:S.inp,type:"number",placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="phone")input=e("input",{style:S.inp,type:"tel",placeholder:f.placeholder||"例：0912345678",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="email")input=e("input",{style:S.inp,type:"email",placeholder:f.placeholder||"例：abc@mail.com",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="url")input=e("input",{style:S.inp,type:"url",placeholder:f.placeholder||"https://",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="textarea")input=e("textarea",{style:{...S.inp,minHeight:72,lineHeight:1.6},placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="select")input=e("select",{style:S.sel,value:val||"",onChange:ev=>setVal(ev.target.value)},e("option",{value:""},"— 請選擇 —"),...(f.options||[]).map(o=>e("option",{key:o,value:o},o)));
-                  else if(f.type==="radio")input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},...(f.options||[]).map(o=>e("button",{key:o,style:{...S.btn(val===o?"primary":"ghost","sm"),fontSize:13},onClick:()=>setVal(val===o?"":o)},o)));
-                  else if(f.type==="checkbox")input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},...(f.options||[]).map(o=>{const arr=(val||"").split(",").filter(Boolean);const checked=arr.includes(o);return e("button",{key:o,style:{...S.btn(checked?"primary":"ghost","sm"),fontSize:13},onClick:()=>{const a=checked?arr.filter(x=>x!==o):[...arr,o];setVal(a.join(","));}},(checked?"■ ":"○ ")+o);}));
-                  else input=e("input",{style:S.inp,placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  return e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
-                    e("label",{style:S.lbl},f.label+(f.required?" *":"")),
-                    f.desc&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},f.desc),
-                    input
-                  );
-                })
-              )
-            )
+                )),
+                cfields.length>0&&secCard("其他資訊",e("div",null,
+                  ...cfields.map(f=>{
+                    const val=basicDraft.customData?.[f.id];
+                    const setVal=v=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:v}}));
+                    let input;
+                    if(f.type==="date")input=e(DatePicker,{value:val||"",onChange:v=>setVal(v)});
+                    else if(f.type==="number")input=e("input",{className:"inp-edit",style:inpSt,type:"number",placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    else if(f.type==="phone")input=e("input",{className:"inp-edit",style:inpSt,type:"tel",placeholder:f.placeholder||"例：0912345678",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    else if(f.type==="email")input=e("input",{className:"inp-edit",style:inpSt,type:"email",placeholder:f.placeholder||"例：abc@mail.com",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    else if(f.type==="url")input=e("input",{className:"inp-edit",style:inpSt,type:"url",placeholder:f.placeholder||"https://",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    else if(f.type==="textarea")input=e("textarea",{className:"inp-edit",style:{...inpSt,minHeight:72,lineHeight:1.6},placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    else if(f.type==="select")input=e("select",{className:"inp-edit",style:selSt,value:val||"",onChange:ev=>setVal(ev.target.value)},e("option",{value:""},"— 請選擇 —"),...(f.options||[]).map(o=>e("option",{key:o,value:o},o)));
+                    else if(f.type==="radio")input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},...(f.options||[]).map(o=>e("button",{key:o,style:{...S.btn(val===o?"primary":"ghost","sm"),fontSize:13},onClick:()=>setVal(val===o?"":o)},o)));
+                    else if(f.type==="checkbox")input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},...(f.options||[]).map(o=>{const arr=(val||"").split(",").filter(Boolean);const checked=arr.includes(o);return e("button",{key:o,style:{...S.btn(checked?"primary":"ghost","sm"),fontSize:13},onClick:()=>{const a=checked?arr.filter(x=>x!==o):[...arr,o];setVal(a.join(","));}},(checked?"■ ":"○ ")+o);}));
+                    else input=e("input",{className:"inp-edit",style:inpSt,placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                    return e("div",{key:f.id,style:{marginBottom:14}},
+                      e("label",{style:{...S.lbl,marginBottom:6}},f.label+(f.required?" *":"")),
+                      f.desc&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},f.desc),
+                      input
+                    );
+                  })
+                ))
+              );
+            })()
           : (()=>{
               const row=(lbl,val,last)=>e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:last?"none":"1px solid var(--border2)"}},
                 e("span",{style:{fontSize:12,color:"var(--txt3)",fontWeight:600}},lbl),
