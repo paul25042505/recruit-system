@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -13,6 +15,9 @@ concurrency:
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,32 +42,17 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.ver.outputs.new }} [skip ci]"
           git push
 
-      - name: Deploy to gh-pages branch
-        run: |
-          # 儲存要部署的檔案
-          cp index.html /tmp/deploy-index.html
-          cp logo.png /tmp/deploy-logo.png
-          [ -f sw.js ] && cp sw.js /tmp/deploy-sw.js || true
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
-          # 切到 gh-pages branch（已存在則更新，不存在則建立 orphan）
-          git fetch origin gh-pages:gh-pages 2>/dev/null || true
-          if git show-ref --verify --quiet refs/heads/gh-pages; then
-            git checkout gh-pages
-            git rm -rf . 2>/dev/null || true
-          else
-            git checkout --orphan gh-pages
-            git rm -rf . 2>/dev/null || true
-          fi
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
 
-          # 放入檔案
-          cp /tmp/deploy-index.html index.html
-          cp /tmp/deploy-logo.png logo.png
-          [ -f /tmp/deploy-sw.js ] && cp /tmp/deploy-sw.js sw.js || true
-          touch .nojekyll
-
-          git add .
-          git commit -m "deploy: v${{ steps.ver.outputs.new }}"
-          git push --force origin gh-pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       - name: 發布版本通知
         run: |
