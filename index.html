@@ -2822,40 +2822,53 @@ function App(){
               });
               if(!members.length)return e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",padding:"28px 16px",fontSize:13}},"尚無招募員加入此梯次");
               const LINE_SVG="<path d='M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314'/>";
+              const mkCard=(u,cardKey,showBU)=>{
+                const isCoordinator=u.uid===coordUid;
+                return e("div",{key:cardKey,style:{...S.card,marginBottom:8,padding:"14px 16px"}},
+                  e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
+                    e("div",{style:{width:38,height:38,borderRadius:"50%",background:isCoordinator?"#f59e0b18":"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:isCoordinator?"#f59e0b":"#60a5fa",flexShrink:0}},
+                      (u.name||u.googleDisplayName||"？")[0]
+                    ),
+                    e("div",{style:{flex:1,minWidth:0}},
+                      e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)"}},
+                        (u.rank||"")+(u.rank?" ":"")+(u.name||u.googleDisplayName||"（未填）")
+                      ),
+                      showBU&&u.brigadeUnit&&e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:1}},u.brigadeUnit),
+                      u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit)
+                    ),
+                    e("span",{style:{fontSize:10,background:isCoordinator?"#f59e0b18":"var(--bg3)",border:"1px solid "+(isCoordinator?"#f59e0b44":"var(--border)"),borderRadius:6,padding:"2px 7px",color:isCoordinator?"#f59e0b":"var(--txt2)",fontWeight:700,flexShrink:0}},
+                      isCoordinator?"承辦人":"招募員"
+                    )
+                  ),
+                  !u._notFound&&(u.phone||u.lineId)&&e("div",{style:{display:"flex",alignItems:"center",gap:12,paddingTop:8,borderTop:"1px solid var(--border2)",flexWrap:"wrap"}},
+                    u.phone&&e("div",{style:{display:"flex",alignItems:"center",gap:6}},
+                      e(Icon,{n:"phone",s:13,c:"var(--txt3)"}),
+                      e("span",{style:{fontSize:12,color:"var(--txt)",fontWeight:600}},u.phone)
+                    ),
+                    u.lineId&&e("div",{style:{display:"flex",alignItems:"center",gap:6}},
+                      e("div",{style:{width:13,height:13,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}},
+                        e("svg",{viewBox:"0 0 24 24",width:13,height:13,fill:"#06c755",dangerouslySetInnerHTML:{__html:LINE_SVG}})
+                      ),
+                      e("span",{style:{fontSize:12,color:"#06c755",fontWeight:700}},u.lineId)
+                    )
+                  )
+                );
+              };
+              const coordMember=members.find(u=>u.uid===coordUid);
+              const others=members.filter(u=>u.uid!==coordUid);
+              const grpMap={};
+              others.forEach(u=>{const k=u.brigadeUnit||"（未填單位）";(grpMap[k]=grpMap[k]||[]).push(u);});
+              const grpKeys=Object.keys(grpMap).sort((a,b)=>a==="（未填單位）"?1:b==="（未填單位）"?-1:a.localeCompare(b,"zh-TW"));
               return e("div",null,
                 e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:8}},"共 "+members.length+" 人"),
-                ...members.map((u,i)=>{
-                  const isCoordinator=u.uid===coordUid;
-                  return e("div",{key:u.uid||i,style:{...S.card,marginBottom:8,padding:"14px 16px"}},
-                    e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
-                      e("div",{style:{width:38,height:38,borderRadius:"50%",background:isCoordinator?"#f59e0b18":"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:isCoordinator?"#f59e0b":"#60a5fa",flexShrink:0}},
-                        (u.name||u.googleDisplayName||"？")[0]
-                      ),
-                      e("div",{style:{flex:1,minWidth:0}},
-                        e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)"}},
-                          (u.rank||"")+(u.rank?" ":"")+(u.name||u.googleDisplayName||"（未填）")
-                        ),
-                        u.brigadeUnit&&e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:1}},u.brigadeUnit),
-                        u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit)
-                      ),
-                      e("span",{style:{fontSize:10,background:isCoordinator?"#f59e0b18":"var(--bg3)",border:"1px solid "+(isCoordinator?"#f59e0b44":"var(--border)"),borderRadius:6,padding:"2px 7px",color:isCoordinator?"#f59e0b":"var(--txt2)",fontWeight:700,flexShrink:0}},
-                        isCoordinator?"承辦人":"招募員"
-                      )
-                    ),
-                    !u._notFound&&(u.phone||u.lineId)&&e("div",{style:{display:"flex",alignItems:"center",gap:12,paddingTop:8,borderTop:"1px solid var(--border2)",flexWrap:"wrap"}},
-                      u.phone&&e("div",{style:{display:"flex",alignItems:"center",gap:6}},
-                        e(Icon,{n:"phone",s:13,c:"var(--txt3)"}),
-                        e("span",{style:{fontSize:12,color:"var(--txt)",fontWeight:600}},u.phone)
-                      ),
-                      u.lineId&&e("div",{style:{display:"flex",alignItems:"center",gap:6}},
-                        e("div",{style:{width:13,height:13,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}},
-                          e("svg",{viewBox:"0 0 24 24",width:13,height:13,fill:"#06c755",dangerouslySetInnerHTML:{__html:LINE_SVG}})
-                        ),
-                        e("span",{style:{fontSize:12,color:"#06c755",fontWeight:700}},u.lineId)
-                      )
-                    )
-                  );
-                })
+                coordMember&&mkCard(coordMember,"coord",true),
+                ...grpKeys.map(k=>e("div",{key:k},
+                  e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt2)",margin:"12px 0 6px",display:"flex",alignItems:"center",gap:6}},
+                    e("span",null,k),
+                    e("span",{style:{fontWeight:400,color:"var(--txt3)"}},grpMap[k].length+" 人")
+                  ),
+                  ...grpMap[k].map((u,i)=>mkCard(u,u.uid||i,false))
+                ))
               );
             })(),
           e("div",{style:{height:40}})
