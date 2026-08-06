@@ -3375,11 +3375,17 @@ function App(){
                   fld("家庭狀況",e("select",{className:"inp-edit",style:selSt,value:basicDraft.familySituation||"",onChange:ev=>setBasicDraft(p=>({...p,familySituation:ev.target.value}))},
                     e("option",{value:""},"請選擇"),...FAMILY_SIT_OPTS.map(v=>e("option",{key:v},v))
                   )),
-                  fld("家中成員",e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:2}},
+                  fld("家中成員",e("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,paddingTop:2}},
                     ...FAMILY_MEMBER_OPTS.map(opt=>{
                       const arr=basicDraft.familyMembers||[];
                       const on=arr.includes(opt);
-                      return e("button",{key:opt,type:"button",style:{...S.btn(on?"primary":"ghost","sm"),fontSize:12},onClick:()=>setBasicDraft(p=>{const a=p.familyMembers||[];return{...p,familyMembers:on?a.filter(x=>x!==opt):[...a,opt]};})},opt);
+                      return e("button",{key:opt,type:"button",
+                        style:{minHeight:44,borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",
+                          background:on?"linear-gradient(135deg,#f59e0b,#ef4444)":"transparent",
+                          color:on?"#fff":"var(--txt3)",
+                          border:"1px solid "+(on?"transparent":"var(--border)")},
+                        onClick:()=>setBasicDraft(p=>{const a=p.familyMembers||[];return{...p,familyMembers:on?a.filter(x=>x!==opt):[...a,opt]};})
+                      },opt);
                     })
                   )),
                   fld("負債狀況",e("select",{className:"inp-edit",style:selSt,value:basicDraft.hasDebt||"",onChange:ev=>setBasicDraft(p=>({...p,hasDebt:ev.target.value,debtNote:""}))},
