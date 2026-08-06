@@ -1717,6 +1717,41 @@ function App(){
       e(Icon,{n:"chevR",s:16,c:danger?"#ef444466":"var(--txt3)"})
     );
   }
+  if(view==="unitFeedback"){
+    const myUnit=userProfile?.brigadeUnit||"";
+    const myFb=[...feedbackList].reverse().filter(fb=>fb.unit===myUnit||(fb.type==="recruit"&&fb.targetUnit===myUnit));
+    return e("div",{style:S.app},
+      e(WatermarkOverlay),e(Toast),
+      e("div",{style:S.hdr},
+        e(BackBtn,{onClick:()=>setView("more")}),
+        e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位回饋紀錄")
+      ),
+      e("div",{style:{...S.sec,paddingTop:16,overflowY:"auto",flex:1}},
+        e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},myUnit+"・共 "+myFb.length+" 筆"),
+        myFb.length===0&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"目前無相關回饋"),
+        ...myFb.map((fb,i)=>{
+          const catLabel=FB_CATS.find(c=>c.key===fb.category)?.label||fb.category||"";
+          const isRecruit=fb.type==="recruit";
+          return e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}},
+              e("div",{style:{flex:1,minWidth:0}},
+                e("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginBottom:4}},
+                  isRecruit
+                    ?e("span",{style:{display:"inline-block",fontSize:10,background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:6,padding:"2px 7px",color:"#3b82f6",fontWeight:700}},"招募問題")
+                    :catLabel&&e("span",{style:{display:"inline-block",fontSize:10,background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:6,padding:"2px 7px",color:"#f59e0b",fontWeight:700}},catLabel)
+                ),
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）"),
+                fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},fb.name)
+              ),
+              e("span",{style:{fontSize:10,color:"var(--txt3)",flexShrink:0,marginLeft:8}},fb.createdAt)
+            ),
+            e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},fb.content)
+          );
+        }),
+        e("div",{style:{height:48}})
+      )
+    );
+  }
   if(view==="more") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
@@ -1744,6 +1779,19 @@ function App(){
       Shdr("帳號設定",8),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:16}},
         e(MoreNavRow,{icon:"user",label:"個人資料",sub:(userProfile?.rank||"")+" "+(userProfile?.name||""),onClick:()=>{const parts=(userProfile?.unit||"").split("・");const bg=userProfile?.brigadeUnit||(parts[0]||"");const bn=userProfile?.battalionUnit||(parts.slice(1).join("・")||"");setMPD({name:userProfile?.name||"",rank:userProfile?.rank||"",unit:userProfile?.unit||"",brigadeUnit:bg,battalionUnit:bn,lineId:userProfile?.lineId||"",phone:userProfile?.phone||"",roles:userProfile?.roles||["recruiter"]});setView("moreProfile");}})
+      ),
+      // 承辦人：單位回饋入口
+      (userProfile?.roles||[]).includes("coordinator")&&e(React.Fragment,null,
+        Shdr("單位管理",8),
+        e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
+          (()=>{
+            const myUnit=userProfile?.brigadeUnit||"";
+            const myFb=feedbackList.filter(fb=>fb.unit===myUnit||(fb.type==="recruit"&&fb.targetUnit===myUnit));
+            return e(MoreNavRow,{icon:"chat",label:"單位回饋紀錄",
+              sub:myFb.length?"共 "+myFb.length+" 筆":"目前無回饋",
+              onClick:()=>setView("unitFeedback")});
+          })()
+        )
       ),
       // 系統
       Shdr("系統",8),
