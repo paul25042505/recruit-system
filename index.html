@@ -3590,7 +3590,7 @@ function App(){
                               ...unitMembers.map(u=>{
                                 const lbl=u.rank?u.rank+" "+u.name:u.name;
                                 const contact=[u.phone,u.lineId].filter(Boolean).join(" / ");
-                                return e("option",{key:u.uid,value:lbl},lbl+(contact?" ｜ "+contact:""));
+                                return e("option",{key:u.uid,value:lbl},lbl);
                               })
                             )
                             :e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})
