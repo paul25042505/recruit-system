@@ -316,6 +316,10 @@ const S={
   toast:t=>({position:"fixed",top:18,left:"50%",transform:"translateX(-50%)",background:t==="ok"?"#10b981":"#ef4444",color:"#fff",borderRadius:10,padding:"10px 22px",fontSize:13,fontWeight:700,zIndex:999,whiteSpace:"nowrap",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}),
   slbl:{fontSize:11,fontWeight:800,color:"#f59e0b",letterSpacing:"0.12em",marginBottom:12},
 };
+const Shdr=(title,mb=12)=>e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:mb}},
+  e("div",{style:{width:3,height:16,background:"#f59e0b",borderRadius:3,flexShrink:0}}),
+  e("span",{style:{fontSize:12,fontWeight:800,color:"var(--txt)",letterSpacing:"0.04em"}},title)
+);
 
 // ═══ SVG ICONS ════════════════════════════════════════════════════════════════
 const ICONS={
@@ -1481,7 +1485,7 @@ function App(){
         )
       ),
       pf.role==="recruiter"&&e("div",{style:{...S.card,marginBottom:10}},
-        e("div",{style:S.slbl},"招募員簽證"),
+        Shdr("招募員簽證"),
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 12px"}},
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"招募類別"),
@@ -1593,7 +1597,7 @@ function App(){
 
         // ─ 我的統計 ──────────────────────────────────────────────────────────
         e("div",{style:{padding:"16px 14px 0"}},
-          e("div",{style:{...S.slbl,marginBottom:10}},"我的統計"),
+          Shdr("我的統計",10),
           e("div",{style:{display:"flex",gap:8}},
             ...[
               {label:"約談紀錄",count:myInterviews,color:"#f59e0b",icon:"chat"},
@@ -1608,7 +1612,7 @@ function App(){
 
         // ─ 提醒 ──────────────────────────────────────────────────────────────
         (lic&&lic.type!=="ok"||upcomingBatches.length>0)&&e("div",{style:{margin:"14px 14px 0"}},
-          e("div",{style:{...S.slbl,marginBottom:8}},"提醒"),
+          Shdr("提醒",8),
           lic&&lic.type!=="ok"&&e("div",{style:{display:"flex",alignItems:"center",gap:10,background:lic.bg,border:"1px solid "+lic.color+"44",borderRadius:12,padding:"10px 12px",marginBottom:8,cursor:"pointer"},onClick:()=>setView("moreLicense")},
             e(Icon,{n:"clipboard",s:20,c:lic.color}),
             e("div",{style:{flex:1}},
@@ -1638,7 +1642,7 @@ function App(){
 
         // ─ 最近案件 ──────────────────────────────────────────────────────────
         recentWithBatch.length>0&&e("div",{style:{margin:"14px 14px 0"}},
-          e("div",{style:{...S.slbl,marginBottom:8}},"最近案件"),
+          Shdr("最近案件",8),
           e("div",{style:{...S.card,padding:0,overflow:"hidden"}},
             ...recentWithBatch.map((r,i)=>{
               const t=r.trainee;
@@ -1735,12 +1739,12 @@ function App(){
         )
       ),
       // 帳號設定
-      e("div",{style:{...S.slbl,marginBottom:8}},"帳號設定"),
+      Shdr("帳號設定",8),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:16}},
         e(MoreNavRow,{icon:"user",label:"個人資料",sub:(userProfile?.rank||"")+" "+(userProfile?.name||""),onClick:()=>{const parts=(userProfile?.unit||"").split("・");const bg=userProfile?.brigadeUnit||(parts[0]||"");const bn=userProfile?.battalionUnit||(parts.slice(1).join("・")||"");setMPD({name:userProfile?.name||"",rank:userProfile?.rank||"",unit:userProfile?.unit||"",brigadeUnit:bg,battalionUnit:bn,lineId:userProfile?.lineId||"",phone:userProfile?.phone||"",roles:userProfile?.roles||["recruiter"]});setView("moreProfile");}})
       ),
       // 系統
-      e("div",{style:{...S.slbl,marginBottom:8}},"系統"),
+      Shdr("系統",8),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
         e(MoreNavRow,{icon:"book",label:"功能介紹",sub:"使用說明・圖文教學",onClick:()=>setView("moreGuide")}),
         e("div",{style:{height:1,background:"var(--border)",marginLeft:64}}),
@@ -2017,7 +2021,7 @@ function App(){
         e("span",{style:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:20,padding:"3px 14px",fontSize:11,fontWeight:700,color:"var(--txt3)"}},"v"+APP_VERSION)
       ),
       // ─ 系統資訊
-      e("div",{style:{...S.slbl,marginBottom:8}},"系統資訊"),
+      Shdr("系統資訊",8),
       e("div",{style:{...S.card,padding:0,marginBottom:16}},
         ...[
           ["版本","v"+APP_VERSION],
@@ -2029,7 +2033,7 @@ function App(){
         ))
       ),
       // ─ 開發資訊
-      e("div",{style:{...S.slbl,marginBottom:8}},"開發資訊"),
+      Shdr("開發資訊",8),
       e("div",{style:{...S.card,padding:0,marginBottom:16}},
         ...[
           ["開發單位","陸軍第五地區支援指揮部衛生營"],
@@ -2040,7 +2044,7 @@ function App(){
         ))
       ),
       // ─ 法律資訊
-      e("div",{style:{...S.slbl,marginBottom:8}},"法律資訊"),
+      Shdr("法律資訊",8),
       e("div",{style:{...S.card,padding:"4px 0",marginBottom:16}},
         // 使用條款
         e("div",{style:{padding:"14px 16px",borderBottom:"1px solid var(--border2)"}},
@@ -2654,7 +2658,7 @@ function App(){
       e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:reqSignOut,title:"登出"},e(Icon,{n:"logout",s:18,c:"var(--txt3)"}))
     ),
     e("div",{style:{...S.sec,paddingTop:16}},
-      e("div",{style:{...S.slbl,marginBottom:10}},"填寫意見"),
+      Shdr("填寫意見",10),
       e("div",{style:{...S.card,marginBottom:14}},
         e("div",{style:{background:"var(--bg3)",borderRadius:10,padding:"10px 12px",marginBottom:14,display:"flex",alignItems:"center",gap:10}},
           e("div",{style:{width:36,height:36,borderRadius:"50%",background:"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#60a5fa",flexShrink:0}},
@@ -2701,7 +2705,7 @@ function App(){
         e("button",{style:{...S.btn("primary"),width:"100%"},onClick:saveFeedback,disabled:saving},saving?"送出中…":"送出意見")
       ),
       (()=>{const myFb=[...feedbackList].filter(fb=>!fb.submitterUid||fb.submitterUid===authUser?.uid).reverse().slice(0,5);return myFb.length>0&&e("div",null,
-        e("div",{style:{...S.slbl,marginBottom:10}},"我送出的意見"),
+        Shdr("我送出的意見",10),
         ...myFb.map((fb,i)=>{
           const catLabel=FB_CATS.find(c=>c.key===fb.category)?.label||fb.category||"";
           const isRecruit=fb.type==="recruit";
@@ -2726,7 +2730,7 @@ function App(){
         if(!isCoordUser||!myBU)return null;
         const unitFeedback=[...feedbackList].filter(fb=>fb.type==="recruit"&&fb.targetUnit===myBU).reverse();
         return e("div",{style:{marginTop:20}},
-          e("div",{style:{...S.slbl,marginBottom:10}},"我的單位收到的招募回饋"),
+          Shdr("我的單位收到的招募回饋",10),
           unitFeedback.length===0
             ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"20px 16px"}},"尚無針對本單位的招募回饋")
             :e("div",null,
@@ -2920,7 +2924,7 @@ function App(){
         ),
         batchTab==="sched"&&e(React.Fragment,null,
           e("div",{style:{...S.card,marginBottom:10}},
-            e("div",{style:S.slbl},"▍ 梯次期程設定"),
+            Shdr("梯次期程設定"),
             e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
               ...sched.map((s,i)=>e("div",{key:s.key||i},
                 e("label",{style:S.lbl},s.label),
@@ -3025,7 +3029,7 @@ function App(){
         ),
         batchTab==="query"&&e(React.Fragment,null,
           e("div",{style:{...S.card,marginBottom:10}},
-            e("div",{style:S.slbl},"▍ 查詢條件"),
+            Shdr("查詢條件"),
             e("div",{style:{marginBottom:10}},
               e("label",{style:S.lbl},"約談單位"),
               e("select",{style:S.sel,value:queryUnit,onChange:ev=>{setQueryUnit(ev.target.value);setQuerySubmitted(false);}},
@@ -3070,7 +3074,7 @@ function App(){
               return e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:10}},"共 "+talked.length+" 位訓員・"+units.size+" 個單位");
             })(),
             e("div",{style:{...S.card,marginBottom:10}},
-              e("div",{style:S.slbl},"▍ 已約談訓員"),
+              Shdr("已約談訓員"),
               (()=>{
                 const talked=(curBatch.trainees||[]).filter(t=>(t.interviewLogs||[]).some(l=>
                   (!queryUnit||l.unit===queryUnit)&&(!queryDateFrom||l.date>=queryDateFrom)&&(!queryDateTo||l.date<=queryDateTo)&&(!queryPeriod||l.period===queryPeriod)
@@ -3106,7 +3110,7 @@ function App(){
         ),
         batchTab==="info"&&e(React.Fragment,null,
           e("div",{style:{...S.card,marginBottom:10}},
-            e("div",{style:S.slbl},"▍ 梯次基本資訊"),
+            Shdr("梯次基本資訊"),
             e("div",{style:{display:"flex",flexDirection:"column",gap:0}},
               e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
                 e("div",{style:{fontSize:12,color:"var(--txt3)"}},"單位"),
@@ -3461,7 +3465,7 @@ function App(){
         // 資格審查 tab
         traineeTab==="qual"&&e(React.Fragment,null,
         e("div",{style:{...S.card,marginBottom:10}},
-          e("div",{style:S.slbl},"▍ 資格審查"),
+          Shdr("資格審查"),
           e("div",{style:{marginBottom:12,paddingBottom:12,borderBottom:"1px solid var(--border2)"}},
             e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}},
               e("div",null,
@@ -3681,7 +3685,7 @@ function App(){
         // ── 時間軸 tab ────────────────────────────────────────────────────────
         traineeTab==="timeline"&&e(React.Fragment,null,
         e("div",{style:S.card},
-          e("div",{style:S.slbl},"▍ 招募歷程時間軸"),
+          Shdr("招募歷程時間軸"),
           e("div",{style:{marginTop:12}},
             (()=>{
               const events=[];
