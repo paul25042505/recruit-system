@@ -377,15 +377,17 @@ function DatePicker({value,onChange,placeholder,style}){
   const [open,setOpen]=useState(false);
   const [viewYear,setViewYear]=useState(()=>{const d=value?new Date(value+"T00:00:00"):new Date();return d.getFullYear();});
   const [viewMonth,setViewMonth]=useState(()=>{const d=value?new Date(value+"T00:00:00"):new Date();return d.getMonth();});
+  const [pending,setPending]=useState(null); // "YYYY-MM-DD" 暫選，按✓才確認
   const ph=placeholder||"請選擇日期";
   const displayVal=value||null;
-  function openPicker(){const d=value?new Date(value+"T00:00:00"):new Date();setViewYear(d.getFullYear());setViewMonth(d.getMonth());setOpen(true);}
-  function selectDay(y,m,d){onChange(y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"));setOpen(false);}
+  function openPicker(){const d=value?new Date(value+"T00:00:00"):new Date();setViewYear(d.getFullYear());setViewMonth(d.getMonth());setPending(value||null);setOpen(true);}
+  function confirm(){if(pending!==null){onChange(pending);}setOpen(false);}
   const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
   const firstDow=new Date(viewYear,viewMonth,1).getDay();
   const todayStr=(()=>{const t=new Date();return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0");})();
-  let selY=null,selM=null,selD=null;
-  if(value&&/^\d{4}-\d{2}-\d{2}$/.test(value)){const p=value.split("-").map(Number);selY=p[0];selM=p[1]-1;selD=p[2];}
+  // pending 解析
+  let pendY=null,pendM=null,pendD=null;
+  if(pending&&/^\d{4}-\d{2}-\d{2}$/.test(pending)){const p=pending.split("-").map(Number);pendY=p[0];pendM=p[1]-1;pendD=p[2];}
   const cells=[];
   for(let i=0;i<firstDow;i++)cells.push(null);
   for(let d=1;d<=daysInMonth;d++)cells.push(d);
@@ -415,18 +417,18 @@ function DatePicker({value,onChange,placeholder,style}){
           ...cells.map((d,i)=>{
             if(!d)return e("div",{key:"e"+i,style:{height:40}});
             const ds=viewYear+"-"+String(viewMonth+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
-            const isSel=selY===viewYear&&selM===viewMonth&&selD===d;
+            const isSel=pendY===viewYear&&pendM===viewMonth&&pendD===d;
             const isToday=ds===todayStr&&!isSel;
             return e("button",{key:d,type:"button",
               style:{height:40,width:"100%",borderRadius:"50%",background:isSel?"#3b82f6":isToday?"var(--bg3)":"transparent",border:isToday?"1px solid var(--border)":"none",cursor:"pointer",fontSize:15,fontWeight:isSel||isToday?700:400,color:isSel?"#fff":"var(--txt)",display:"flex",alignItems:"center",justifyContent:"center"},
-              onClick:()=>selectDay(viewYear,viewMonth,d)
+              onClick:()=>setPending(viewYear+"-"+String(viewMonth+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"))
             },d);
           })
         ),
         e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:20}},
-          e("button",{type:"button",style:{height:44,minWidth:80,borderRadius:22,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt)",fontSize:15,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},onClick:()=>{onChange("");setOpen(false);}
+          e("button",{type:"button",style:{height:44,minWidth:80,borderRadius:22,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt)",fontSize:15,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},onClick:()=>{setPending(null);onChange("");setOpen(false);}
           },"重置"),
-          e("button",{type:"button",style:{width:44,height:44,borderRadius:"50%",background:"#3b82f6",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},onClick:()=>setOpen(false)},e(Icon,{n:"checkCircle",s:22,c:"#fff"}))
+          e("button",{type:"button",style:{width:44,height:44,borderRadius:"50%",background:pending?"#3b82f6":"#94a3b8",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},onClick:confirm},e(Icon,{n:"checkCircle",s:22,c:"#fff"}))
         )
       )
     )
