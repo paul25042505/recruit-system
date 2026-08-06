@@ -2551,7 +2551,15 @@ function App(){
         const grad=getServiceGrad(b.unit);
         const canDel=canManage(b.unit);
         const enterBatch=()=>{
-          try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved&&saved.toUpperCase()===(b.password||"").toUpperCase()&&(b.openEnroll!==false||(b.approvedUids||[]).includes(authUser?.uid))){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");return;}}catch(_){}
+          try{const saved=sessionStorage.getItem("bpwd_"+b.id);if(saved&&saved.toUpperCase()===(b.password||"").toUpperCase()&&(b.openEnroll!==false||(b.approvedUids||[]).includes(authUser?.uid))){
+            const myUid=authUser?.uid;
+            let target=b;
+            if(myUid&&b.openEnroll!==false&&!(b.approvedUids||[]).includes(myUid)){
+              target={...b,approvedUids:[...(b.approvedUids||[]),myUid]};
+              fsSet("batches/"+target.id,target).catch(()=>{});
+              setBatches(p=>p.map(x=>x.id===target.id?target:x));
+            }
+            setCurBatch(target);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:target.id,tab:"list"},"訓員列表");return;}}catch(_){}
           setPendBatch(b);setBPwd("");setBPwdErr(false);setView("batchPwd");
         };
         return e("div",{key:b.id,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden",marginBottom:10,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}},
