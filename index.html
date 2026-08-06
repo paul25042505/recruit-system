@@ -1595,43 +1595,6 @@ function App(){
           )
         ),
 
-        // ─ 績效概覽 ──────────────────────────────────────────────────────────
-        e("div",{style:{margin:"14px 14px 0",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:"14px"}},
-          e("div",{style:{...S.slbl,marginBottom:12}},"績效概覽"),
-          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"8px 12px",marginBottom:12}},
-            ...[
-              {n:batches.length,label:"梯次",color:"#f59e0b"},
-              {n:totalTrainees,label:"訓員總數",color:"var(--txt)"},
-              {n:totalConf,label:"確簽",color:"#10b981"},
-              {n:totalVisited,label:"已約談",color:"#3b82f6"},
-            ].map(({n,label,color})=>e("div",{key:label,style:{textAlign:"center",background:"var(--bg3)",borderRadius:10,padding:"10px 6px"}},
-              e("div",{style:{fontSize:22,fontWeight:900,color,letterSpacing:"-0.02em",fontVariantNumeric:"tabular-nums"}},n),
-              e("div",{style:{fontSize:10,color:"var(--txt3)",marginTop:2}},label)
-            ))
-          ),
-          // 漏斗視覺化
-          totalTrainees>0&&e("div",null,
-            e("div",{style:{height:1,background:"var(--border2)",marginBottom:10}}),
-            e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:6,fontWeight:600}},"意願漏斗"),
-            ...[
-              {label:"中意願",count:totalMidWill,color:"#3b82f6"},
-              {label:"高意願",count:totalHighWill,color:"#22c55e"},
-              {label:"確簽",count:totalConf,color:"#10b981"},
-            ].map(({label,count,color})=>{
-              const pct=Math.round(count/totalTrainees*100);
-              return e("div",{key:label,style:{marginBottom:6}},
-                e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:3}},
-                  e("span",{style:{fontSize:11,color:"var(--txt3)"}},label),
-                  e("span",{style:{fontSize:11,fontWeight:700,color}},count+"人 "+pct+"%")
-                ),
-                e("div",{style:{height:4,background:"var(--bg3)",borderRadius:4,overflow:"hidden"}},
-                  e("div",{style:{height:"100%",width:pct+"%",background:color,borderRadius:4,transition:"width 0.4s",minWidth:count>0?4:0}})
-                )
-              );
-            })
-          )
-        ),
-
         // ─ 提醒 ──────────────────────────────────────────────────────────────
         (lic&&lic.type!=="ok"||upcomingBatches.length>0)&&e("div",{style:{margin:"14px 14px 0"}},
           e("div",{style:{...S.slbl,marginBottom:8}},"提醒"),
@@ -1687,25 +1650,6 @@ function App(){
                 e(Icon,{n:"chevR",s:14,c:"var(--txt3)"})
               );
             })
-          )
-        ),
-
-        // ─ 快速操作 ──────────────────────────────────────────────────────────
-        e("div",{style:{padding:"14px 14px 0"}},
-          e("div",{style:{...S.slbl,marginBottom:10}},"快速操作"),
-          e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
-            ...[
-              {icon:"list",ic:"#4a88d8",label:"梯次列表",sub:batches.length+"個梯次",bg:"rgba(74,136,216,0.12)",action:()=>setView("home")},
-              ...(isAdminUser()||(userProfile?.roles||[]).includes("coordinator")?[{icon:"plus",ic:"#22c55e",label:"新增梯次",sub:"建立新梯次",bg:"rgba(34,197,94,0.12)",action:()=>{if(!isAdminUser()&&(userProfile?.roles||[]).includes("coordinator"))setNb(p=>({...p,unit:userProfile?.brigadeUnit||""}));setShowAB(true);}}]:[]),
-              {icon:"people",ic:"#a855f7",label:"單位目錄",sub:uvUsers.length?"共"+uvUsers.length+"位":"查看所有招募員",bg:"rgba(168,85,247,0.12)",action:()=>setView("unitView")},
-              {icon:"user",ic:"#f59e0b",label:"個人設定",sub:userProfile?.rank||"我的資料",bg:"rgba(245,158,11,0.12)",action:()=>setView("more")},
-            ].map(tile=>e("div",{key:tile.label,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:"14px 12px 12px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"},onClick:tile.action},
-              e("div",{style:{width:40,height:40,borderRadius:12,background:tile.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:tile.icon,s:20,c:tile.ic})),
-              e("div",{style:{flex:1,minWidth:0}},
-                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},tile.label),
-                e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},tile.sub)
-              )
-            ))
           )
         ),
 
