@@ -1919,7 +1919,7 @@ function App(){
   if(view==="unitView"){
     const grouped={};
     uvUsers.forEach(u=>{
-      const key=u.brigadeUnit||u.unit||"未填單位";
+      const key=(u.brigadeUnit||u.unit||"未填單位").trim();
       if(!grouped[key])grouped[key]=[];
       grouped[key].push(u);
     });
