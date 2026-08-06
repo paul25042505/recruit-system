@@ -2761,10 +2761,7 @@ function App(){
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
-        e(BackBtn,{onClick:()=>{
-          if(batchTab!=="list"){setBatchTab("list");pushState({page:"batch",batchId:curBatch?.id,tab:"list"},"訓員列表");}
-          else{setView("home");pushState({page:"home"},"梯次列表");}
-        }}),
+        e(BackBtn,{onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}}),
         e("div",{style:{flex:1,textAlign:"center",minWidth:0}},
           e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
             fmtSeq(curBatch.sequence)+" | "+curBatch.unit
@@ -2786,8 +2783,8 @@ function App(){
           )
         )
       ),
-      // ── 統計卡片（進入梯次後顯示）─────────────────────────────────────────
-      (()=>{
+      // ── 統計卡片（僅訓員列表 tab 顯示）───────────────────────────────────────
+      batchTab==="list"&&(()=>{
         const bGrad=getServiceGrad(curBatch.unit);
         const allT=curBatch.trainees||[];
         function getStId(x){if(x.qualCheck?.result==="fail")return 1;const logs=x.interviewLogs||[];const last=logs[logs.length-1];const fallback=(x.qualCheck?.result==="pass"&&x.statusId===1)?null:x.statusId;return last?.statusId||fallback;}
@@ -3252,7 +3249,7 @@ function App(){
         )
       )
       ),
-      batchTab==="list"&&e("div",{className:"bnav-inline"},
+      e("div",{className:"bnav-inline"},
         ...[
           {key:"list",icon:"users",label:"訓員列表"},
           {key:"recruiter",icon:"megaphone",label:"招募員"},
