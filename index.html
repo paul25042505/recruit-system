@@ -3285,7 +3285,14 @@ function App(){
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},tf.name||"（未填姓名）"),
           e("div",{style:{fontSize:11,color:"var(--txt3)"}},"#"+tf.seat)
         ),
-
+        traineeTab==="basic"
+          ? basicEditing
+            ? e("div",{style:{display:"flex",gap:6}},
+                e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setBasicEditing(false);setBasicDraft(null);}},"✕"),
+                e("button",{style:S.btn("primary","sm"),onClick:()=>{setTf(p=>({...p,...basicDraft,customData:{...(p.customData||{}),...(basicDraft.customData||{})}}));setDirty(true);setBasicEditing(false);setBasicDraft(null);}},"✓ 確定")
+              )
+            : e("button",{style:S.btn("ghost","sm"),onClick:()=>{setBasicDraft({name:tf.name,education:tf.education,dropoutSemester:tf.dropoutSemester,school:tf.school,department:tf.department,city:tf.city,district:tf.district,workExp:tf.workExp,workPlace:tf.workPlace,workYears:tf.workYears});setBasicEditing(true);}},"✏ 編輯")
+          : null
       ),
 
       e("div",{style:{...S.sec,paddingTop:20}},
@@ -3297,22 +3304,10 @@ function App(){
         ),
         // 基本資料 tab
         traineeTab==="basic"&&e(React.Fragment,null,
-        e("div",{style:{...S.card,marginBottom:10}},
-          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}},
-            e("div",{style:S.slbl},"▍ 基本資料"),
-            basicEditing
-              ? e("div",{style:{display:"flex",gap:8}},
-                  e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setBasicEditing(false);setBasicDraft(null);}},"✕ 取消"),
-                  e("button",{style:S.btn("primary","sm"),onClick:()=>{
-                    setTf(p=>({...p,...basicDraft,customData:{...(p.customData||{}),...(basicDraft.customData||{})}}));setDirty(true);
-                    setBasicEditing(false);setBasicDraft(null);
-                  }},"✓ 確定")
-                )
-              : e("button",{style:S.btn("ghost","sm"),onClick:()=>{setBasicDraft({name:tf.name,education:tf.education,dropoutSemester:tf.dropoutSemester,school:tf.school,department:tf.department,city:tf.city,district:tf.district,workExp:tf.workExp,workPlace:tf.workPlace,workYears:tf.workYears});setBasicEditing(true);}},"編輯")
-          ),
-          // 座號放入 grid，佔半行
-          basicEditing&&basicDraft
-            ? e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}},
+        basicEditing&&basicDraft
+          ? e("div",{style:{...S.card,marginBottom:10}},
+              e("div",{style:{...S.slbl,marginBottom:12}},"▍ 基本資料"),
+              e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px"}},
                 e("div",null,
                   e("label",{style:S.lbl},"座號"),
                   e("div",{style:{...S.inp,background:"var(--bg3)",color:"var(--txt3)",cursor:"not-allowed",display:"flex",alignItems:"center"}},"#"+tf.seat+" （不可修改）")
@@ -3349,48 +3344,20 @@ function App(){
                 ),
                 basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作單位"),e("input",{style:S.inp,placeholder:"例：台積電",value:basicDraft.workPlace||"",onChange:ev=>setBasicDraft(p=>({...p,workPlace:ev.target.value}))})),
                 basicDraft.workExp==="有"&&e("div",null,e("label",{style:S.lbl},"工作年資（年）"),e("input",{style:S.inp,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))})),
-                // 自訂欄位編輯（支援全部類型）
                 ...(DEF.customFields).map(f=>{
                   const val=basicDraft.customData?.[f.id];
                   const setVal=v=>setBasicDraft(p=>({...p,customData:{...(p.customData||{}),[f.id]:v}}));
                   let input;
-                  if(f.type==="date")
-                    input=e(DatePicker,{value:val||"",onChange:v=>setVal(v)});
-                  else if(f.type==="number")
-                    input=e("input",{style:S.inp,type:"number",placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="phone")
-                    input=e("input",{style:S.inp,type:"tel",placeholder:f.placeholder||"例：0912345678",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="email")
-                    input=e("input",{style:S.inp,type:"email",placeholder:f.placeholder||"例：abc@mail.com",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="url")
-                    input=e("input",{style:S.inp,type:"url",placeholder:f.placeholder||"https://",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="textarea")
-                    input=e("textarea",{style:{...S.inp,minHeight:72,lineHeight:1.6},placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
-                  else if(f.type==="select")
-                    input=e("select",{style:S.sel,value:val||"",onChange:ev=>setVal(ev.target.value)},
-                      e("option",{value:""},"— 請選擇 —"),
-                      ...(f.options||[]).map(o=>e("option",{key:o,value:o},o))
-                    );
-                  else if(f.type==="radio")
-                    input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},
-                      ...(f.options||[]).map(o=>e("button",{key:o,
-                        style:{...S.btn(val===o?"primary":"ghost","sm"),fontSize:13},
-                        onClick:()=>setVal(val===o?"":o)
-                      },o))
-                    );
-                  else if(f.type==="checkbox")
-                    input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},
-                      ...(f.options||[]).map(o=>{
-                        const arr=(val||"").split(",").filter(Boolean);
-                        const checked=arr.includes(o);
-                        return e("button",{key:o,
-                          style:{...S.btn(checked?"primary":"ghost","sm"),fontSize:13},
-                          onClick:()=>{const a=checked?arr.filter(x=>x!==o):[...arr,o];setVal(a.join(","));}
-                        },(checked?"■ ":"○ ")+o);
-                      })
-                    );
-                  else
-                    input=e("input",{style:S.inp,placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  if(f.type==="date")input=e(DatePicker,{value:val||"",onChange:v=>setVal(v)});
+                  else if(f.type==="number")input=e("input",{style:S.inp,type:"number",placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="phone")input=e("input",{style:S.inp,type:"tel",placeholder:f.placeholder||"例：0912345678",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="email")input=e("input",{style:S.inp,type:"email",placeholder:f.placeholder||"例：abc@mail.com",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="url")input=e("input",{style:S.inp,type:"url",placeholder:f.placeholder||"https://",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="textarea")input=e("textarea",{style:{...S.inp,minHeight:72,lineHeight:1.6},placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
+                  else if(f.type==="select")input=e("select",{style:S.sel,value:val||"",onChange:ev=>setVal(ev.target.value)},e("option",{value:""},"— 請選擇 —"),...(f.options||[]).map(o=>e("option",{key:o,value:o},o)));
+                  else if(f.type==="radio")input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},...(f.options||[]).map(o=>e("button",{key:o,style:{...S.btn(val===o?"primary":"ghost","sm"),fontSize:13},onClick:()=>setVal(val===o?"":o)},o)));
+                  else if(f.type==="checkbox")input=e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:4}},...(f.options||[]).map(o=>{const arr=(val||"").split(",").filter(Boolean);const checked=arr.includes(o);return e("button",{key:o,style:{...S.btn(checked?"primary":"ghost","sm"),fontSize:13},onClick:()=>{const a=checked?arr.filter(x=>x!==o):[...arr,o];setVal(a.join(","));}},(checked?"■ ":"○ ")+o);}));
+                  else input=e("input",{style:S.inp,placeholder:f.placeholder||"",value:val||"",onChange:ev=>setVal(ev.target.value)});
                   return e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
                     e("label",{style:S.lbl},f.label+(f.required?" *":"")),
                     f.desc&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},f.desc),
@@ -3398,61 +3365,38 @@ function App(){
                   );
                 })
               )
-            : e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 14px"}},
-                // 固定欄位：完全對應編輯模式排版
-                e("div",{key:"seat"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"座號"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},"#"+tf.seat)
+            )
+          : (()=>{
+              const row=(lbl,val,last)=>e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:last?"none":"1px solid var(--border2)"}},
+                e("span",{style:{fontSize:12,color:"var(--txt3)",fontWeight:600}},lbl),
+                e("span",{style:{fontSize:13,color:"var(--txt)",fontWeight:600,textAlign:"right",maxWidth:"60%"}},String(val||"—"))
+              );
+              const sec=(title,rows)=>e("div",{style:{...S.card,marginBottom:8,padding:0,overflow:"hidden"}},
+                e("div",{style:{padding:"7px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--border)"}},
+                  e("span",{style:{fontSize:10,fontWeight:800,color:"var(--txt3)",textTransform:"uppercase",letterSpacing:"0.06em"}},title)
                 ),
-                e("div",{key:"name"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"姓名"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.name||"（未填）")
+                e("div",{style:{padding:"0 14px"}},...rows.filter(Boolean))
+              );
+              const cfields=DEF.customFields||[];
+              return e(React.Fragment,null,
+                sec("個人",[row("座號","#"+tf.seat),row("姓名",tf.name,true)]),
+                sec("學業",tf.education==="高中職肄業"
+                  ?[row("學歷",tf.education),row("肄業學期",tf.dropoutSemester,true)]
+                  :[row("學歷",tf.education),row("學校",tf.school),row("科系",tf.department,true)]
                 ),
-                e("div",{key:"edu"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"畢業學歷"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.education||"—")
-                ),
-                e("div",{key:"school"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},tf.education==="高中職肄業"?"肄業學期":"學校"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.dropoutSemester||tf.school||"—")
-                ),
-                e("div",{key:"dept"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"科系"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.department||"—")
-                ),
-                e("div",{key:"city"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"居住城市"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.city||"—")
-                ),
-                e("div",{key:"district"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"區 / 鄉鎮市"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.district||"—")
-                ),
-                e("div",{key:"workexp"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"工作經驗"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.workExp||"—")
-                ),
-                tf.workExp==="有"&&e("div",{key:"workplace"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"工作單位"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.workPlace||"—")
-                ),
-                tf.workExp==="有"&&e("div",{key:"workyears"},
-                  e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},"工作年資"),
-                  e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500}},tf.workYears?tf.workYears+"年":"—")
-                ),
-                // 自訂欄位唯讀顯示（照 width 設定排版）
-                ...(DEF.customFields).map(f=>{
+                sec("地區",[row("城市",tf.city),row("行政區",tf.district,true)]),
+                sec("工作",[
+                  row("工作經驗",tf.workExp,tf.workExp!=="有"),
+                  tf.workExp==="有"&&row("工作單位",tf.workPlace,!tf.workYears),
+                  tf.workExp==="有"&&tf.workYears&&row("工作年資",tf.workYears+"年",true),
+                ].filter(Boolean)),
+                cfields.length>0&&sec("其他",cfields.map((f,i)=>{
                   const val=tf.customData?.[f.id]||"";
-                  const display=f.type==="checkbox"
-                    ? (val?val.split(",").join("、"):"—")
-                    : (val||"—");
-                  return e("div",{key:f.id,style:{gridColumn:f.width==="full"?"span 2":"auto"}},
-                    e("div",{style:{fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:3}},f.label),
-                    e("div",{style:{fontSize:14,color:"var(--txt)",fontWeight:500,whiteSpace:"pre-wrap"}},display)
-                  );
-                })
-              )
-        ),// end 基本資料 card
+                  const display=f.type==="checkbox"?(val?val.split(",").join("、"):"—"):(val||"—");
+                  return row(f.label,display,i===cfields.length-1);
+                }))
+              );
+            })(),
         e("div",{style:{height:16}})
         ),// end basic tab
         // 資格審查 tab
