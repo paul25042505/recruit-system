@@ -2779,7 +2779,7 @@ function App(){
             e("div",{style:{fontSize:12,color:"var(--txt3)"}},
               "共 "+(curBatch.trainees?.length||0)+" 人"
             ),
-            canManage(curBatch.unit)&&e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"3px 10px"},onClick:()=>{setNewCountVal(String(curBatch.trainees?.length||0));setShowEC(true);}},"修改人數")
+            null
           )
         )
       ),
@@ -3143,50 +3143,12 @@ function App(){
               )
             )
           ),
-          e("div",{style:{...S.card,marginBottom:10}},
-            e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:10}},"電訪及家訪名單"),
-            (()=>{
-              const allT=curBatch.trainees||[];
-              const midHighWill=allT.filter(t=>{
-                const logs=t.interviewLogs||[];
-                const last=logs[logs.length-1];
-                const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);
-                return sid===4||sid===5;
-              });
-              if(!midHighWill.length) return e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"20px 0"}},
-                e("div",{style:{marginBottom:8}},e(Icon,{n:"phone",s:28,c:"var(--txt3)"})),
-                e("div",{style:{fontSize:13}},"目前無中高意願訓員")
-              );
-              const mid=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===4;});
-              const high=midHighWill.filter(t=>{const logs=t.interviewLogs||[];const last=logs[logs.length-1];const sid=last?.statusId||(t.qualCheck?.result==="pass"&&t.statusId===1?null:t.statusId);return sid===5;});
-              function VisitRow2({t,showHome}){
-                return e("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid var(--border2)",cursor:"pointer"},onClick:()=>openT(t)},
-                  e("div",{style:{width:32,height:32,background:"var(--bg3)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"var(--txt3)",flexShrink:0}},t.seat||"?"),
-                  e("div",{style:{flex:1,minWidth:0}},
-                    e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},t.name||"（未填）"),
-                    e("div",{style:{display:"flex",gap:12,marginTop:4,flexWrap:"wrap"}},
-                      e("span",{style:{fontSize:12,color:"#3b82f6",fontWeight:600}},"電訪："+(t.phoneVisitDate||"未填")),
-                      showHome&&e("span",{style:{fontSize:12,color:"#22c55e",fontWeight:600}},"家訪："+(t.homeVisitDate||"未填"))
-                    )
-                  ),
-                  e("span",{style:{color:"var(--txt3)",fontSize:18}},"›")
-                );
-              }
-              return e(React.Fragment,null,
-                e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},"中高意願共 "+midHighWill.length+" 人"),
-                mid.length>0&&e("div",{style:{marginBottom:10}},
-                  e("div",{style:{fontSize:13,fontWeight:800,color:"#3b82f6",marginBottom:6}},"中意願（"+mid.length+" 人）"),
-                  ...mid.map(t=>e(VisitRow2,{key:t.id,t,showHome:false}))
-                ),
-                high.length>0&&e("div",null,
-                  e("div",{style:{fontSize:13,fontWeight:800,color:"#22c55e",marginBottom:6}},"高意願（"+high.length+" 人）"),
-                  ...high.map(t=>e(VisitRow2,{key:t.id,t,showHome:true}))
-                )
-              );
-            })()
-          ),
-          canManage(curBatch.unit)&&e("div",{style:{...S.card,marginBottom:10}},
+          (isAdminUser()||curBatch.coordinatorUid===userProfile?.uid)&&e("div",{style:{...S.card,marginBottom:10}},
             e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:12}},"承辦人管理"),
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid var(--border2)"}},
+              e("div",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},"訓員人數"),
+              e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"3px 10px"},onClick:()=>{setNewCountVal(String(curBatch.trainees?.length||0));setShowEC(true);}},"修改人數")
+            ),
             // openEnroll toggle
             e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid var(--border2)"}},
               e("div",null,
