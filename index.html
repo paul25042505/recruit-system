@@ -2925,14 +2925,55 @@ function App(){
           }),
           e("div",{style:{height:40}})
         ),
-        batchTab==="sched"&&e(React.Fragment,null,
+        batchTab==="sched"&&(()=>{
+          const sk={};sched.forEach(s=>{sk[s.key]=s;});
+          const updSched=(key,val)=>{
+            const exists=sched.some(s=>s.key===key);
+            const ns=exists?sched.map(s=>s.key===key?{...s,date:val}:s):[...sched,{key,label:sk[key]?.label||key,date:val}];
+            patchBatch({schedule:ns});
+          };
+          const SF=(key,compact)=>e("div",null,
+            e("label",{style:{...S.lbl,...(compact?{fontSize:11}:{})}},sk[key]?.label||key),
+            e(DatePicker,{value:sk[key]?.date||"",onChange:v=>updSched(key,v)})
+          );
+          const StageHdr=(color,title)=>e("div",{style:{display:"flex",alignItems:"center",gap:8,paddingBottom:10,marginBottom:12,borderBottom:"1px solid var(--border2)"}},
+            e("span",{style:{width:8,height:8,borderRadius:"50%",background:color,flexShrink:0,display:"inline-block"}}),
+            e("span",{style:{fontSize:11,fontWeight:800,color:"var(--txt3)",letterSpacing:"0.05em"}},title)
+          );
+          return e(React.Fragment,null,
+          e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+              e(Icon,{n:"calendar",s:16,c:"#f59e0b"}),
+              e("span",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"梯次期程設定")
+            ),
+            e("button",{style:{...S.btn("ghost","sm"),fontSize:11,color:"#f59e0b",borderColor:"rgba(245,158,11,0.3)"},
+              onClick:()=>patchBatch({schedule:sched.map(s=>({...s,date:""}))})
+            },"一次清除")
+          ),
           e("div",{style:{...S.card,marginBottom:10}},
-            Shdr("梯次期程設定"),
-            e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
-              ...sched.map((s,i)=>e("div",{key:s.key||i},
-                e("label",{style:S.lbl},s.label),
-                e(DatePicker,{value:s.date||"",onChange:v=>{const ns=sched.map((x,j)=>j===i?{...x,date:v}:x);patchBatch({schedule:ns});}})
-              ))
+            StageHdr("#f59e0b","階段一：報到與宣導"),
+            e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+              SF("report"),
+              e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},SF("army_pre",true),SF("army_ext",true)),
+              e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},SF("central_ext",true),SF("carnival",true))
+            )
+          ),
+          e("div",{style:{...S.card,marginBottom:10}},
+            StageHdr("#3b82f6","階段二：意願審查"),
+            SF("will_deadline")
+          ),
+          e("div",{style:{...S.card,marginBottom:10}},
+            StageHdr("#22c55e","階段三：役期與體檢"),
+            e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+              e("div",{style:{background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.18)",borderRadius:10,padding:"10px 12px"}},
+                e("div",{style:{fontSize:12,fontWeight:800,color:"#15803d",marginBottom:8}},"八週階段"),
+                e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},SF("w8_supplement",true),SF("w8_enlist",true))
+              ),
+              e("div",{style:{background:"rgba(168,85,247,0.06)",border:"1px solid rgba(168,85,247,0.18)",borderRadius:10,padding:"10px 12px"}},
+                e("div",{style:{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:8}},"十二週階段"),
+                e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},SF("w12_supplement",true),SF("w12_enlist",true))
+              ),
+              SF("medical_exp")
             )
           ),
           // 月曆視覺化（橫向滑動，只顯示今天及之後的月份）
@@ -3029,7 +3070,7 @@ function App(){
             );
           })(),
           e("div",{style:{height:40}})
-        ),
+        );})(),
         batchTab==="query"&&e(React.Fragment,null,
           e("div",{style:{...S.card,marginBottom:10}},
             Shdr("查詢條件"),
