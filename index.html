@@ -30,7 +30,7 @@ html.light{
   --inp-bg:#f8fafc;
   --scrollbar:#cbd5e1;
 }
-body{background:var(--bg);color:var(--txt);font-family:'Noto Sans TC',sans-serif;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;}
+body{background:var(--bg);color:var(--txt);font-family:'Noto Sans TC',sans-serif;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;overflow-x:hidden;}
 .ptr-scroll{overscroll-behavior-y:contain;}
 #root{min-height:100vh;}
 select option{background:var(--bg2);color:var(--txt);}
@@ -90,6 +90,11 @@ button{touch-action:manipulation;cursor:pointer;}
 .work-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;cursor:pointer;text-align:center;flex:1;min-width:0;}
 .work-tile:active{opacity:0.65;}
 .inp-edit:focus{border-color:#f59e0b!important;box-shadow:0 0 0 3px rgba(245,158,11,0.12)!important;outline:none!important;}
+/* ─ 切換頁面動畫 ─ */
+@keyframes navSlideRight{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes navSlideLeft{from{transform:translateX(-32px);opacity:0}to{transform:translateX(0);opacity:1}}
+#root.nav-fwd{animation:navSlideRight 230ms cubic-bezier(.4,0,.2,1) both}
+#root.nav-bck{animation:navSlideLeft 230ms cubic-bezier(.4,0,.2,1) both}
 </style>
 <script>
 if('serviceWorker' in navigator){
@@ -127,7 +132,7 @@ window.addEventListener("unhandledrejection",function(ev){__showBootError((ev.re
   "firebase/auth":"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"
 }}</script>
 <script type="module">
-import React,{useState,useEffect,useRef,useMemo} from"react";
+import React,{useState,useEffect,useRef,useMemo,useLayoutEffect} from"react";
 import {createRoot} from"react-dom/client";
 import {initializeApp} from"firebase/app";
 import {
@@ -439,7 +444,10 @@ function DatePicker({value,onChange,placeholder,style}){
 
 function App(){
   // ── State ───────────────────────────────────────────────────────────────────
-  const [view,setView]=useState("loading");
+  const [view,setViewRaw]=useState("loading");
+  const _navDir=useRef("fwd");
+  const _prevView=useRef("loading");
+  function setView(v,dir="fwd"){_navDir.current=dir;setViewRaw(v);}
   const [cfg,setCfg]=useState(null);
   const [batches,setBatches]=useState([]);
   const [curBatch,setCurBatch]=useState(null);
@@ -560,6 +568,17 @@ function App(){
   const toastRef=useRef(null);
   // 使用者有操作時更新活躍時間戳
   useEffect(()=>{if(view&&view!=="loading")touchActivity();},[view]);
+  // 切換頁面滑入動畫
+  useLayoutEffect(()=>{
+    const SKIP=["loading","login","pendingApproval","profileSetup","error"];
+    const prev=_prevView.current;
+    _prevView.current=view;
+    if(SKIP.includes(view)||prev==="loading")return;
+    const r=document.getElementById("root");
+    r.classList.remove("nav-fwd","nav-bck");
+    void r.offsetWidth;
+    r.classList.add(_navDir.current==="fwd"?"nav-fwd":"nav-bck");
+  },[view]);
   // 閒置 8 小時自動登出（背景回來時檢查 localStorage）
   useEffect(()=>{
     function onVis(){
@@ -1723,7 +1742,7 @@ function App(){
     return e("div",{style:S.app},
       e(WatermarkOverlay),e(Toast),
       e("div",{style:S.hdr},
-        e(BackBtn,{onClick:()=>setView("more")}),
+        e(BackBtn,{onClick:()=>setView("more","bck")}),
         e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位回饋紀錄")
       ),
       e("div",{style:{...S.sec,paddingTop:16,overflowY:"auto",flex:1}},
@@ -1819,7 +1838,7 @@ function App(){
   if(view==="moreProfile") return e("div",{style:S.app},
     e(Toast),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
-      e(BackBtn,{onClick:()=>setView("more")}),
+      e(BackBtn,{onClick:()=>setView("more","bck")}),
       e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"個人資料"),
       e("button",{style:{...S.btn("primary","sm"),padding:"6px 16px"},onClick:saveMPD},"儲存")
     ),
@@ -1893,7 +1912,7 @@ function App(){
   if(view==="moreLicense") return e("div",{style:S.app},
     e(Toast),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
-      e(BackBtn,{onClick:()=>setView("more")}),
+      e(BackBtn,{onClick:()=>setView("more","bck")}),
       e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"招募員簽證"),
       e("button",{style:{...S.btn("primary","sm"),padding:"6px 16px"},onClick:saveMLD},"儲存")
     ),
@@ -2004,7 +2023,7 @@ function App(){
   if(view==="moreGuide") return e("div",{style:S.app},
     e(Toast),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
-      e(BackBtn,{onClick:()=>setView("more")}),
+      e(BackBtn,{onClick:()=>setView("more","bck")}),
       e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"功能介紹"),
       e("div",{style:{width:60}})
     ),
@@ -2053,7 +2072,7 @@ function App(){
   if(view==="moreAbout") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
     e(Toast),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
-      e(BackBtn,{onClick:()=>setView("more")}),
+      e(BackBtn,{onClick:()=>setView("more","bck")}),
       e("div",{style:{flex:1,textAlign:"center",fontSize:15,fontWeight:800,color:"var(--txt)"}},"關於系統"),
       e("div",{style:{width:60}})
     ),
@@ -2463,7 +2482,7 @@ function App(){
   return e("div",{style:S.app},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
-      e(BackBtn,{onClick:()=>setView("dashboard")}),
+      e(BackBtn,{onClick:()=>setView("dashboard","bck")}),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"後台管理"))
     ),
     e("div",{style:{...S.sec,paddingTop:20}},
@@ -2486,7 +2505,7 @@ function App(){
   if(view==="memberProfile"&&editMemberDraft) return e("div",{style:S.app},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
     e("div",{style:S.hdr},
-      e(BackBtn,{onClick:()=>{setView("admin");setASV("members");pushState({page:"admin"},"後台管理");}}),
+      e(BackBtn,{onClick:()=>{setView("admin","bck");setASV("members");pushState({page:"admin"},"後台管理");}}),
       e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"個人資料"))
     ),
     e("div",{style:{...S.sec,paddingTop:16,display:"flex",flexDirection:"column",gap:12}},
@@ -2561,7 +2580,7 @@ function App(){
       ),
       bPwdErr&&e("div",{style:{textAlign:"center",color:"#ef4444",fontSize:13,marginBottom:10,fontWeight:600}},"密碼錯誤"),
       e("button",{style:{...S.btn("primary"),width:"100%",padding:13,fontSize:15,marginBottom:8},onClick:submitBPwd},"進入"),
-      e("button",{style:{...S.btn("ghost"),width:"100%",padding:10},onClick:()=>{setView("home");}},"返回梯次列表")
+      e("button",{style:{...S.btn("ghost"),width:"100%",padding:10},onClick:()=>{setView("home","bck");}},"返回梯次列表")
     )
   );
 
@@ -2583,7 +2602,7 @@ function App(){
           pushState({page:"batch",batchId:b.id,tab:"list"},"訓員列表");
         }else toast_("尚未核准，請稍後再試","err");
       }},"重新確認狀態"),
-      e("button",{style:{...S.btn("ghost"),width:"100%"},onClick:()=>setView("home")},"返回梯次列表")
+      e("button",{style:{...S.btn("ghost"),width:"100%"},onClick:()=>setView("home","bck")},"返回梯次列表")
     )
   );
 
@@ -2811,7 +2830,7 @@ function App(){
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
-        e(BackBtn,{onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}}),
+        e(BackBtn,{onClick:()=>{setView("home","bck");pushState({page:"home"},"梯次列表");}}),
         e("div",{style:{flex:1,textAlign:"center",minWidth:0}},
           e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
             fmtSeq(curBatch.sequence)+" | "+curBatch.unit
@@ -3337,7 +3356,7 @@ function App(){
         e(BackBtn,{disabled:saving,onClick:async()=>{
           if(dirty){await saveTF(true);}
           setScrollToSeat(tf?.seat);
-          setView("batch");
+          setView("batch","bck");
           const tab=batchTab||"list";
           const tabTitle={"list":"訓員列表","query":"約談內容","sched":"梯次期程","info":"梯次資訊"}[tab]||"梯次";
           document.title=tabTitle+" | 招募資訊整合管理系統";
