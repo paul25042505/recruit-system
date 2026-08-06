@@ -378,7 +378,7 @@ function DatePicker({value,onChange,placeholder,style}){
   const [viewYear,setViewYear]=useState(()=>{const d=value?new Date(value+"T00:00:00"):new Date();return d.getFullYear();});
   const [viewMonth,setViewMonth]=useState(()=>{const d=value?new Date(value+"T00:00:00"):new Date();return d.getMonth();});
   const ph=placeholder||"請選擇日期";
-  const displayVal=value?value.replace(/^(\d{4})-(\d{2})-(\d{2})$/,(_,y,m,d)=>y+"年"+parseInt(m)+"月"+parseInt(d)+"日"):null;
+  const displayVal=value||null;
   function openPicker(){const d=value?new Date(value+"T00:00:00"):new Date();setViewYear(d.getFullYear());setViewMonth(d.getMonth());setOpen(true);}
   function selectDay(y,m,d){onChange(y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"));setOpen(false);}
   const daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
@@ -3000,14 +3000,14 @@ function App(){
             // 未來活動清單（今天含在內）
             const futureEvents=allEvents.filter(ev=>ev.date>=todayStr2);
             return e("div",null,
-              // 橫向滑動月曆
-              e("div",{className:"hs",style:{display:"flex",gap:12,overflowX:"auto",paddingBottom:8,marginBottom:12}},
+              // 月曆（垂直排列，全寬）
+              e("div",{style:{display:"flex",flexDirection:"column",gap:12,marginBottom:12}},
                 ...months.map(m=>{
                   const yr=m.getFullYear(),mo=m.getMonth();
                   const firstDay=new Date(yr,mo,1).getDay();
                   const daysInMonth=new Date(yr,mo+1,0).getDate();
                   const moKey=yr+"-"+String(mo+1).padStart(2,"0");
-                  return e("div",{key:yr+"-"+mo,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:"12px",flexShrink:0,width:"calc(100vw - 64px)",maxWidth:360}},
+                  return e("div",{key:yr+"-"+mo,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:"12px"}},
                     e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:8,textAlign:"center"}},yr+"年"+(mo+1)+"月"),
                     e("div",{style:{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:4}},
                       ...["日","一","二","三","四","五","六"].map(d=>e("div",{key:d,style:{textAlign:"center",fontSize:10,color:"var(--txt3)",fontWeight:700,padding:"3px 0"}},d))
