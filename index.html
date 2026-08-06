@@ -198,7 +198,12 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const APP_VERSION="2.5.89";
+const BUILD_TAG="2026-08-06-89-squircle-border";
+const APP_MAJOR_MINOR="2.5";
+function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
+function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
+function buildTagDate(){const m=BUILD_TAG.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[1]+"年"+parseInt(m[2])+"月":"";}
+const APP_VERSION=appVersion();
 const PTR_THRESHOLD=68; // px — 下拉超過此距離才觸發 reload
 
 // ═══ CONSTANTS ════════════════════════════════════════════════════════════════
@@ -803,8 +808,8 @@ function App(){
       try{
         const r=await fetch(location.href,{cache:"no-store"});
         const txt=await r.text();
-        const m=txt.match(/APP_VERSION="(\d[^"]+)"/);
-        if(m&&m[1]&&m[1]!==APP_VERSION)setHasUpdate(true);
+        const m=txt.match(/BUILD_TAG="([^"]+)"/);
+        if(m&&m[1]&&m[1]!==BUILD_TAG)setHasUpdate(true);
       }catch(_){}
     },15000);
     return()=>clearTimeout(t);
@@ -2100,9 +2105,9 @@ function App(){
       Shdr("系統資訊",8),
       e("div",{style:{...S.card,padding:0,marginBottom:16}},
         ...[
-          ["版本","v"+APP_VERSION],
-          ["發布日期","2025年5月"],
-          ["最後更新","2026年8月"],
+          ["版本","v"+appVersion()],
+          ["發布日期",buildTagDate()],
+          ["最後更新",buildTagDate()],
         ].map(([k,v],i,arr)=>e("div",{key:k,style:{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none"}},
           e("span",{style:{fontSize:13,color:"var(--txt3)",flex:1}},k),
           e("span",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},v)
