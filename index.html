@@ -1229,7 +1229,13 @@ function App(){
     const myUid=authUser?.uid;
     const approved=(pendBatch.approvedUids||[]).includes(myUid);
     if(pendBatch.openEnroll!==false||!myUid||approved){
-      setCurBatch(pendBatch);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:pendBatch.id,tab:"list"},"訓員列表");
+      let target=pendBatch;
+      if(myUid&&!approved){
+        target={...pendBatch,approvedUids:[...(pendBatch.approvedUids||[]),myUid]};
+        fsSet("batches/"+target.id,target).catch(()=>{});
+        setBatches(p=>p.map(b=>b.id===target.id?target:b));
+      }
+      setCurBatch(target);setSq("");setFst("all");setBatchTab("list");setView("batch");pushState({page:"batch",batchId:target.id,tab:"list"},"訓員列表");
     }else{
       if(myUid&&!(pendBatch.pendingMembers||[]).find(x=>x.uid===myUid)){
         const entry={uid:myUid,name:userProfile?.name||userProfile?.googleDisplayName||"",rank:userProfile?.rank||"",email:authUser.email||""};
