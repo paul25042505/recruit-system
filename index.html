@@ -2761,10 +2761,7 @@ function App(){
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
-        e(BackBtn,{onClick:()=>{
-          if(batchTab!=="list"){setBatchTab("list");pushState({page:"batch",batchId:curBatch?.id,tab:"list"},"訓員列表");}
-          else{setView("home");pushState({page:"home"},"梯次列表");}
-        }}),
+        e(BackBtn,{onClick:()=>{setView("home");pushState({page:"home"},"梯次列表");}}),
         e("div",{style:{flex:1,textAlign:"center",minWidth:0}},
           e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},
             fmtSeq(curBatch.sequence)+" | "+curBatch.unit
