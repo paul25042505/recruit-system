@@ -475,7 +475,8 @@ function App(){
   const [curTIdx,setCurTIdx]=useState(0);
   // 後台
   // 意見回饋
-  const [feedbackForm,setFeedbackForm]=useState({unit:"",name:"",content:""});
+  const [feedbackForm,setFeedbackForm]=useState({category:"",content:""});
+  const FB_CATS=[{key:"bug",label:"🐛 系統異常"},{key:"feature",label:"💡 功能建議"},{key:"account",label:"👤 帳號問題"},{key:"batch",label:"📋 梯次資料"},{key:"password",label:"🔑 密碼問題"},{key:"other",label:"💬 其他"}];
   const [feedbackList,setFeedbackList]=useState([]);
   // 漢堡選單
   const [showMenu,setShowMenu]=useState(false);
@@ -1061,14 +1062,17 @@ function App(){
     finally{setSaving(false);}
   }
   async function saveFeedback(){
+    if(!feedbackForm.category){toast_("請選擇意見類別","err");return;}
     if(!feedbackForm.content.trim()){toast_("請填寫意見內容","err");return;}
     setSaving(true);
     try{
-      const fb={id:uid(),createdAt:todayStr(),...feedbackForm};
+      const unit=userProfile?.brigadeUnit||userProfile?.unit||"";
+      const name=(userProfile?.rank||"")+(userProfile?.name||"");
+      const fb={id:uid(),createdAt:todayStr(),unit,name,...feedbackForm};
       const updated=[...(await fsGet("feedback/list")||[]),fb];
       await fsSet("feedback/list",updated);
       setFeedbackList(updated);
-      setFeedbackForm({unit:"",name:"",content:""});
+      setFeedbackForm({category:"",content:""});
       toast_("意見已送出 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
@@ -2450,14 +2454,20 @@ function App(){
     e("div",{style:{...S.sec,paddingTop:16}},
       e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},"共 "+feedbackList.length+" 筆"),
       feedbackList.length===0&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無意見回饋"),
-      ...[...feedbackList].reverse().map((fb,i)=>e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
-        e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:6}},
-          e("span",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）"),
-          e("span",{style:{fontSize:10,color:"var(--txt3)"}},fb.createdAt)
-        ),
-        fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:6}},fb.name),
-        e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},fb.content)
-      )),
+      ...[...feedbackList].reverse().map((fb,i)=>{
+        const catLabel=FB_CATS.find(c=>c.key===fb.category)?.label||fb.category||"";
+        return e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
+          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}},
+            e("div",{style:{flex:1,minWidth:0}},
+              catLabel&&e("span",{style:{display:"inline-block",fontSize:10,background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:6,padding:"2px 7px",color:"#f59e0b",fontWeight:700,marginBottom:4}},catLabel),
+              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）"),
+              fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},fb.name)
+            ),
+            e("span",{style:{fontSize:10,color:"var(--txt3)",flexShrink:0,marginLeft:8}},fb.createdAt)
+          ),
+          e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.7,whiteSpace:"pre-wrap"}},fb.content)
+        );
+      }),
       e("div",{style:{height:48}})
     ),
     e(BottomNav)
@@ -2646,26 +2656,50 @@ function App(){
     e("div",{style:{...S.sec,paddingTop:16}},
       e("div",{style:{...S.card,marginBottom:14}},
         e("div",{style:S.slbl},"填寫意見"),
-        e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 10px",marginBottom:10}},
-          e("div",null,e("label",{style:S.lbl},"單位"),e("input",{style:S.inp,placeholder:"例：陸軍司令部",value:feedbackForm.unit,onChange:ev=>setFeedbackForm(p=>({...p,unit:ev.target.value}))})),
-          e("div",null,e("label",{style:S.lbl},"級職姓名"),e("input",{style:S.inp,placeholder:"例：上士王大明",value:feedbackForm.name,onChange:ev=>setFeedbackForm(p=>({...p,name:ev.target.value}))}))
+        e("div",{style:{background:"var(--bg3)",borderRadius:10,padding:"10px 12px",marginBottom:14,display:"flex",alignItems:"center",gap:10}},
+          e("div",{style:{width:36,height:36,borderRadius:"50%",background:"#3b82f618",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#60a5fa",flexShrink:0}},
+            (userProfile?.name||"？")[0]
+          ),
+          e("div",null,
+            e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},
+              (userProfile?.rank||"")+(userProfile?.name?"  "+userProfile.name:"")
+            ),
+            e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},
+              userProfile?.brigadeUnit||userProfile?.unit||"未填單位"
+            )
+          ),
+          e(Icon,{n:"lock",s:13,c:"var(--txt3)",style:{marginLeft:"auto"}})
         ),
-        e("div",{style:{marginBottom:10}},
+        e("div",{style:{marginBottom:14}},
+          e("label",{style:S.lbl},"意見類別"),
+          e("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}},
+            ...FB_CATS.map(cat=>e("button",{key:cat.key,
+              style:{padding:"7px 13px",borderRadius:20,border:"1px solid "+(feedbackForm.category===cat.key?"#f59e0b":"var(--border)"),background:feedbackForm.category===cat.key?"rgba(245,158,11,0.15)":"var(--bg3)",color:feedbackForm.category===cat.key?"#f59e0b":"var(--txt2)",fontSize:12,fontWeight:feedbackForm.category===cat.key?700:500,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",transition:"all 0.15s"},
+              onClick:()=>setFeedbackForm(p=>({...p,category:cat.key}))},cat.label))
+          )
+        ),
+        e("div",{style:{marginBottom:14}},
           e("label",{style:S.lbl},"意見內容"),
-          e("textarea",{style:{...S.inp,minHeight:100,lineHeight:1.7},placeholder:"請填寫您的意見或建議…",value:feedbackForm.content,onChange:ev=>setFeedbackForm(p=>({...p,content:ev.target.value}))})
+          e("textarea",{style:{...S.inp,minHeight:110,lineHeight:1.7},placeholder:"請填寫您的意見或建議…",value:feedbackForm.content,onChange:ev=>setFeedbackForm(p=>({...p,content:ev.target.value}))})
         ),
         e("button",{style:{...S.btn("primary"),width:"100%"},onClick:saveFeedback,disabled:saving},saving?"送出中…":"送出意見")
       ),
       feedbackList.length>0&&e("div",null,
         e("div",{style:{...S.slbl,marginBottom:10}},"最近送出的意見"),
-        ...[...feedbackList].reverse().slice(0,5).map((fb,i)=>e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
-          e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}},
-            e("span",{style:{fontSize:12,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）"),
-            e("span",{style:{fontSize:10,color:"var(--txt3)"}},fb.createdAt)
-          ),
-          fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},fb.name),
-          e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.6}},fb.content)
-        ))
+        ...[...feedbackList].reverse().slice(0,5).map((fb,i)=>{
+          const catLabel=FB_CATS.find(c=>c.key===fb.category)?.label||fb.category||"";
+          return e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
+            e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}},
+              e("div",null,
+                catLabel&&e("span",{style:{fontSize:10,background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:6,padding:"2px 7px",color:"#f59e0b",fontWeight:700,marginRight:6}},catLabel),
+                e("span",{style:{fontSize:12,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）")
+              ),
+              e("span",{style:{fontSize:10,color:"var(--txt3)",flexShrink:0}},fb.createdAt)
+            ),
+            fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},fb.name),
+            e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.6}},fb.content)
+          );
+        })
       ),
       e("div",{style:{height:80}})
     ),
