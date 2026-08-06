@@ -984,6 +984,9 @@ function App(){
   }
   async function doAddBatch(){
     if(!nb.unit||!nb.battalion||!nb.sequence){toast_("請填寫所有必填欄位","err");return;}
+    const _roles=userProfile?.roles||[];
+    if(!isAdminUser()&&!_roles.includes("coordinator")){toast_("權限不足","err");return;}
+    if(!isAdminUser()&&_roles.includes("coordinator")&&nb.unit!==(userProfile?.brigadeUnit||"")){toast_("只能建立本單位梯次","err");return;}
     setSaving(true);
     try{
       const id=uid(),count=Math.max(0,parseInt(nb.traineeCount)||0);
@@ -1667,7 +1670,7 @@ function App(){
           e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
             ...[
               {icon:"list",ic:"#4a88d8",label:"梯次列表",sub:batches.length+"個梯次",bg:"rgba(74,136,216,0.12)",action:()=>setView("home")},
-              {icon:"plus",ic:"#22c55e",label:"新增梯次",sub:"建立新梯次",bg:"rgba(34,197,94,0.12)",action:()=>setShowAB(true)},
+              ...(isAdminUser()||(userProfile?.roles||[]).includes("coordinator")?[{icon:"plus",ic:"#22c55e",label:"新增梯次",sub:"建立新梯次",bg:"rgba(34,197,94,0.12)",action:()=>{if(!isAdminUser()&&(userProfile?.roles||[]).includes("coordinator"))setNb(p=>({...p,unit:userProfile?.brigadeUnit||""}));setShowAB(true);}}]:[]),
               {icon:"people",ic:"#a855f7",label:"單位目錄",sub:uvUsers.length?"共"+uvUsers.length+"位":"查看所有招募員",bg:"rgba(168,85,247,0.12)",action:()=>setView("unitView")},
               {icon:"user",ic:"#f59e0b",label:"個人設定",sub:userProfile?.rank||"我的資料",bg:"rgba(245,158,11,0.12)",action:()=>setView("more")},
             ].map(tile=>e("div",{key:tile.label,style:{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:"14px 12px 12px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"},onClick:tile.action},
@@ -1686,7 +1689,11 @@ function App(){
         e("div",{style:S.mBox},
           e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}},e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)"}},"新增梯次"),e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowAB(false)},"✕")),
           e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:12}},
-            e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...RECRUIT_UNITS.map(o=>e("option",{key:o},o)))),
+            e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),
+              (!isAdminUser()&&(userProfile?.roles||[]).includes("coordinator"))
+                ?e("div",{style:{...S.inp,background:"var(--bg3)",color:"var(--txt)",pointerEvents:"none"}},userProfile?.brigadeUnit||"（未填）")
+                :e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...RECRUIT_UNITS.map(o=>e("option",{key:o},o)))
+            ),
             e("div",null,e("label",{style:S.lbl},"營別 *"),e("select",{style:S.sel,value:nb.battalion,onChange:ev=>setNb(p=>({...p,battalion:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.battalions||DEF.battalions).map(o=>e("option",{key:o},o)))),
             e("div",null,e("label",{style:S.lbl},"連別"),e("select",{style:S.sel,value:nb.company,onChange:ev=>setNb(p=>({...p,company:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.companies||DEF.companies).map(o=>e("option",{key:o},o)))),
             e("div",{style:{gridColumn:"span 2"}},
@@ -2589,19 +2596,23 @@ function App(){
       }),
       e("div",{style:{height:24}})
     );})()),
-    // 浮動新增按鈕（FAB）
-    e("button",{
+    // 浮動新增按鈕（FAB）— 只有 admin 或 coordinator 才顯示
+    (isAdminUser()||(userProfile?.roles||[]).includes("coordinator"))&&e("button",{
       style:{position:"fixed",right:20,bottom:"calc(80px + max(env(safe-area-inset-bottom,0px),16px))",width:54,height:54,borderRadius:"50%",
         background:"linear-gradient(135deg,#f59e0b,#ef4444)",border:"none",
         boxShadow:"0 4px 20px rgba(245,158,11,0.45)",cursor:"pointer",
         display:"flex",alignItems:"center",justifyContent:"center",zIndex:50},
-      onClick:()=>setShowAB(true)
+      onClick:()=>{if(!isAdminUser()&&(userProfile?.roles||[]).includes("coordinator"))setNb(p=>({...p,unit:userProfile?.brigadeUnit||""}));setShowAB(true);}
     },e(Icon,{n:"plus",s:26,c:"#fff",w:2.5})),
     showAB&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowAB(false)},
       e("div",{style:S.mBox},
         e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}},e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)"}},"新增梯次"),e("button",{style:{...S.btn("ghost","sm"),padding:"4px 8px"},onClick:()=>setShowAB(false)},"✕")),
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 14px",marginBottom:12}},
-          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...RECRUIT_UNITS.map(o=>e("option",{key:o},o)))),
+          e("div",{style:{gridColumn:"span 2"}},e("label",{style:S.lbl},"接訓單位 *"),
+            (!isAdminUser()&&(userProfile?.roles||[]).includes("coordinator"))
+              ?e("div",{style:{...S.inp,background:"var(--bg3)",color:"var(--txt)",pointerEvents:"none"}},userProfile?.brigadeUnit||"（未填）")
+              :e("select",{style:S.sel,value:nb.unit,onChange:ev=>setNb(p=>({...p,unit:ev.target.value}))},e("option",{value:""},"請選擇"),...RECRUIT_UNITS.map(o=>e("option",{key:o},o)))
+          ),
           e("div",null,e("label",{style:S.lbl},"營別 *"),e("select",{style:S.sel,value:nb.battalion,onChange:ev=>setNb(p=>({...p,battalion:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.battalions||DEF.battalions).map(o=>e("option",{key:o},o)))),
           e("div",null,e("label",{style:S.lbl},"連別"),e("select",{style:S.sel,value:nb.company,onChange:ev=>setNb(p=>({...p,company:ev.target.value}))},e("option",{value:""},"請選擇"),...(cfg?.companies||DEF.companies).map(o=>e("option",{key:o},o)))),
           e("div",{style:{gridColumn:"span 2"}},
