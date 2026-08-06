@@ -1,43 +1,17 @@
-name: Deploy to GitHub Pages
+name: Deploy Notification
 
 on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
       - name: 發布版本通知
         run: |
-          TAG=$(grep -oP 'BUILD_TAG="\K[^"]+' index.html | head -1)
+          TAG=$(curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/index.html" \
+            | grep -oP 'BUILD_TAG="\K[^"]+' | head -1)
           echo "## 🚀 發布完成" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| 項目 | 內容 |" >> "$GITHUB_STEP_SUMMARY"
