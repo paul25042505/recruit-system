@@ -2835,6 +2835,7 @@ function App(){
                         e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)"}},
                           (u.rank||"")+(u.rank?" ":"")+(u.name||u.googleDisplayName||"（未填）")
                         ),
+                        u.brigadeUnit&&e("div",{style:{fontSize:11,color:"#f59e0b",fontWeight:700,marginTop:1}},u.brigadeUnit),
                         u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit)
                       ),
                       e("span",{style:{fontSize:10,background:isCoordinator?"#f59e0b18":"var(--bg3)",border:"1px solid "+(isCoordinator?"#f59e0b44":"var(--border)"),borderRadius:6,padding:"2px 7px",color:isCoordinator?"#f59e0b":"var(--txt2)",fontWeight:700,flexShrink:0}},
