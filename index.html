@@ -547,9 +547,9 @@ function App(){
     return()=>mq.removeEventListener("change",handler);
   },[]);
 
-  // 單位 tab 或招募員 tab：切換進來時載入招募員列表
+  // 單位 tab、招募員 tab、或開啟梯次時載入招募員列表
   useEffect(()=>{
-    if(view==="unitView"||(view==="home"&&batchTab==="recruiter")){
+    if(view==="unitView"||(view==="home"&&batchTab==="recruiter")||view==="batch"){
       setUvLoading(true);
       fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));
     }
@@ -3559,53 +3559,41 @@ function App(){
                 e("div",{style:{marginBottom:14,paddingBottom:14,borderBottom:"1px solid var(--border)"}},
                   e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt2)",marginBottom:12,letterSpacing:"0.05em"}},"＋ 新增約談紀錄"),
                   e("div",{style:{display:"flex",flexDirection:"column",gap:12}},
-                    // 約談單位：旅級單位同款 toggle 模式
-                    e("div",null,
-                      e("label",{style:S.lbl},"約談單位"),
-                      itvwUnitMode
-                        ?e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-                            e("input",{style:{...S.inp,flex:1},placeholder:"輸入單位全銜",value:itvwUnitInput,autoFocus:true,
-                              onChange:ev=>setItvwUnitInput(ev.target.value),
-                              onKeyDown:ev=>ev.key==="Enter"&&doAddItvwUnit()}),
-                            e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#10b981",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                              onClick:doAddItvwUnit},e(Icon,{n:"checkCircle",s:18,c:"#fff"})),
-                            e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                              onClick:()=>{setItvwUnitMode(false);setItvwUnitInput("");}},e(Icon,{n:"xmark",s:18}))
+                    // 約談單位：從本梯次招募員的 brigadeUnit 取得
+                    (()=>{
+                      const batchUids=[...new Set([curBatch?.coordinatorUid,...(curBatch?.approvedUids||[])].filter(Boolean))];
+                      const batchMembers=batchUids.map(uid2=>uvUsers.find(u=>u.uid===uid2)).filter(Boolean);
+                      const batchUnits=[...new Set(batchMembers.map(u=>u.brigadeUnit).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-TW"));
+                      const unitMembers=newItvw.unit?batchMembers.filter(u=>u.brigadeUnit===newItvw.unit):[];
+                      return e(React.Fragment,null,
+                        e("div",null,
+                          e("label",{style:S.lbl},"約談單位"),
+                          e("select",{style:S.sel,value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value,interviewer:"",contact:""}))},
+                            e("option",{value:""},"請選擇單位"),
+                            ...batchUnits.map(u=>e("option",{key:u,value:u},u))
                           )
-                        :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-                            e("select",{style:{...S.sel,flex:1},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value,interviewer:"",contact:""}))},
-                              e("option",{value:""},"請選擇單位"),
-                              ...(unitProfiles||[]).map(u=>e("option",{key:u.name,value:u.name},u.name))
-                            ),
-                            e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                              onClick:()=>{setItvwUnitMode(true);setItvwUnitInput("");}},"+"),
-                            newItvw.unit&&e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
-                              onClick:()=>setNewItvw(p=>({...p,unit:""}))},e(Icon,{n:"trash",s:15}))
-                          )
-                    ),
-                    // 招募員：依選取的約談單位過濾，有就顯示下拉
-                    e("div",null,
-                      e("label",{style:S.lbl},"招募員級職姓名"),
-                      (()=>{
-                        const unitProfile=(unitProfiles||[]).find(u=>u.name===newItvw.unit);
-                        const recruiters=unitProfile?.recruiters||[];
-                        if(recruiters.length>0){
-                          return e("select",{style:S.sel,value:newItvw.interviewer,
-                            onChange:ev=>{
-                              const r=recruiters.find(x=>(x.rank?x.rank+" "+x.name:x.name)===ev.target.value);
-                              setNewItvw(p=>({...p,interviewer:ev.target.value,contact:r?.contact||""}));
-                            }
-                          },
-                            e("option",{value:""},"— 選擇招募員 —"),
-                            ...recruiters.map(r=>{
-                              const label=r.rank?r.rank+" "+r.name:r.name;
-                              return e("option",{key:r.id||label,value:label},label+(r.contact?" ｜ "+r.contact:""));
-                            })
-                          );
-                        }
-                        return e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))});
-                      })()
-                    ),
+                        ),
+                        e("div",null,
+                          e("label",{style:S.lbl},"招募員級職姓名"),
+                          unitMembers.length>0
+                            ?e("select",{style:S.sel,value:newItvw.interviewer,
+                                onChange:ev=>{
+                                  const m=unitMembers.find(u=>{const lbl=(u.rank?u.rank+" "+u.name:u.name);return lbl===ev.target.value;});
+                                  const contact=m?[m.phone,m.lineId].filter(Boolean).join(" / "):"";
+                                  setNewItvw(p=>({...p,interviewer:ev.target.value,contact}));
+                                }
+                              },
+                              e("option",{value:""},"— 選擇招募員 —"),
+                              ...unitMembers.map(u=>{
+                                const lbl=u.rank?u.rank+" "+u.name:u.name;
+                                const contact=[u.phone,u.lineId].filter(Boolean).join(" / ");
+                                return e("option",{key:u.uid,value:lbl},lbl+(contact?" ｜ "+contact:""));
+                              })
+                            )
+                            :e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})
+                        )
+                      );
+                    })(),
                     e("div",null,e("label",{style:S.lbl},"聯絡方式"),e("input",{style:S.inp,placeholder:"電話 / LINE",value:newItvw.contact,onChange:ev=>setNewItvw(p=>({...p,contact:ev.target.value}))})),
                     // 訪談日期
                     e("div",null,
