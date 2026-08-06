@@ -198,7 +198,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-06-94-member-role-selector";
+const BUILD_TAG="2026-08-06-95-trainee-seat-font";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -3386,7 +3386,7 @@ function App(){
         }}),
         e("div",{style:{flex:1,minWidth:0}},
           e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},tf.name||"（未填姓名）"),
-          e("div",{style:{fontSize:11,color:"var(--txt3)"}},"#"+tf.seat)
+          e("div",{style:{fontSize:13,color:"var(--txt3)"}},"#"+tf.seat)
         ),
         traineeTab==="basic"
           ? basicEditing
