@@ -17,25 +17,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Bump patch version
-        id: ver
-        run: |
-          CURRENT=$(grep -oP 'const APP_VERSION="\K[^"]+' index.html | head -1)
-          IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
-          NEW="${MAJ}.${MIN}.$((PAT + 1))"
-          sed -i "s/const APP_VERSION=\"${CURRENT}\"/const APP_VERSION=\"${NEW}\"/" index.html
-          echo "new=${NEW}" >> "$GITHUB_OUTPUT"
-
-      - name: Commit & push version bump
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git diff --cached --quiet || git commit -m "chore: bump version to ${{ steps.ver.outputs.new }} [skip ci]"
-          git push
 
       - name: Deploy to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4
@@ -47,9 +28,10 @@ jobs:
 
       - name: 發布版本通知
         run: |
+          TAG=$(grep -oP 'BUILD_TAG="\K[^"]+' index.html | head -1)
           echo "## 🚀 發布完成" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| 項目 | 內容 |" >> "$GITHUB_STEP_SUMMARY"
           echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **版本號** | \`v${{ steps.ver.outputs.new }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **BUILD_TAG** | \`${TAG}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **發布時間** | $(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M:%S') 台北時間 |" >> "$GITHUB_STEP_SUMMARY"
