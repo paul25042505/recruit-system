@@ -477,7 +477,7 @@ function App(){
   const [showEditLog,setShowEditLog]=useState(false);
   const [editLogData,setEditLogData]=useState(null);
   // 新增約談
-  const [newItvw,setNewItvw]=useState({unit:"",date:"",period:"",interviewer:"",contact:"",note:"",statusId:null});
+  const [newItvw,setNewItvw]=useState({unit:"",date:isoToday(),period:"",interviewer:"",contact:"",note:"",statusId:null});
   // 梯次 Tab
   const [batchTab,setBatchTab]=useState("list");
   // 訓員 Tab (基本資料/資格審查/意願訪談)
@@ -1116,7 +1116,7 @@ function App(){
     setSaving(true);
     try{
       await patchBatch({trainees:(curBatch.trainees||[]).map(t=>t.id===updated.id?updated:t)});
-      setNewItvw({unit:"",date:"",period:"",interviewer:"",contact:"",note:"",statusId:null});
+      setNewItvw({unit:"",date:isoToday(),period:"",interviewer:"",contact:"",note:"",statusId:null});
       setDirty(false);toast_("約談紀錄已新增 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
@@ -3573,9 +3573,9 @@ function App(){
                               onClick:()=>{setItvwUnitMode(false);setItvwUnitInput("");}},e(Icon,{n:"xmark",s:18}))
                           )
                         :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-                            e("select",{style:{...S.sel,flex:1},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value}))},
+                            e("select",{style:{...S.sel,flex:1},value:newItvw.unit,onChange:ev=>setNewItvw(p=>({...p,unit:ev.target.value,interviewer:"",contact:""}))},
                               e("option",{value:""},"請選擇單位"),
-                              ...(cfg?.brigadeUnits||[]).map(u=>e("option",{key:u,value:u},u))
+                              ...(unitProfiles||[]).map(u=>e("option",{key:u.name,value:u.name},u.name))
                             ),
                             e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
                               onClick:()=>{setItvwUnitMode(true);setItvwUnitInput("");}},"+"),
@@ -3590,20 +3590,17 @@ function App(){
                         const unitProfile=(unitProfiles||[]).find(u=>u.name===newItvw.unit);
                         const recruiters=unitProfile?.recruiters||[];
                         if(recruiters.length>0){
-                          return e(React.Fragment,null,
-                            e("select",{style:{...S.sel,marginBottom:6},value:newItvw.interviewer,
-                              onChange:ev=>{
-                                const r=recruiters.find(x=>(x.rank?" "+x.rank+" "+x.name:x.name)===ev.target.value);
-                                setNewItvw(p=>({...p,interviewer:ev.target.value,contact:r?.contact||p.contact}));
-                              }
-                            },
-                              e("option",{value:""},"— 選擇招募員 —"),
-                              ...recruiters.map(r=>{
-                                const label=r.rank?" "+r.rank+" "+r.name:r.name;
-                                return e("option",{key:r.id,value:label},label+(r.contact?" （"+r.contact+"）":""));
-                              })
-                            ),
-                            e("input",{style:S.inp,placeholder:"或手動輸入…",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))})
+                          return e("select",{style:S.sel,value:newItvw.interviewer,
+                            onChange:ev=>{
+                              const r=recruiters.find(x=>(x.rank?x.rank+" "+x.name:x.name)===ev.target.value);
+                              setNewItvw(p=>({...p,interviewer:ev.target.value,contact:r?.contact||""}));
+                            }
+                          },
+                            e("option",{value:""},"— 選擇招募員 —"),
+                            ...recruiters.map(r=>{
+                              const label=r.rank?r.rank+" "+r.name:r.name;
+                              return e("option",{key:r.id||label,value:label},label+(r.contact?" ｜ "+r.contact:""));
+                            })
                           );
                         }
                         return e("input",{style:S.inp,placeholder:"招募員級職姓名",value:newItvw.interviewer,onChange:ev=>setNewItvw(p=>({...p,interviewer:ev.target.value}))});
