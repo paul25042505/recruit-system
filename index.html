@@ -1917,10 +1917,18 @@ function App(){
 
   // ── 單位 tab（招募員按旅級單位分組）────────────────────────────────────────────
   if(view==="unitView"){
+    // Normalize unit key: NFC + trim + collapse internal whitespace
+    // Also replace visually-identical "zero" variants (○ ◯ Ｏ etc.) with 〇 (U+3007)
+    function normUnitKey(s){
+      return (s||"").normalize("NFC").trim().replace(/\s+/g," ")
+        .replace(/[○●◦Ｏｏ]/g,"〇");
+    }
     const grouped={};
+    const groupDisplay={};
     uvUsers.forEach(u=>{
-      const key=(u.brigadeUnit||u.unit||"未填單位").trim();
-      if(!grouped[key])grouped[key]=[];
+      const raw=u.brigadeUnit||u.unit||"未填單位";
+      const key=normUnitKey(raw)||"未填單位";
+      if(!grouped[key]){grouped[key]=[];groupDisplay[key]=raw.trim();}
       grouped[key].push(u);
     });
     const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
@@ -1944,10 +1952,11 @@ function App(){
           ),
           ...sortedKeys.map(unit=>{
             const users=grouped[unit];
+            const displayName=groupDisplay[unit]||unit;
             return e("div",{key:unit,style:{...S.card,marginBottom:10,padding:0,overflow:"hidden"}},
               e("div",{style:{padding:"10px 14px",background:"var(--bg3)",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid var(--border)"}},
                 e(Icon,{n:"building",s:14,c:"#f59e0b"}),
-                e("span",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",flex:1}},unit),
+                e("span",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",flex:1}},displayName),
                 e("span",{style:{fontSize:11,color:"var(--txt3)"}},users.length+" 人")
               ),
               ...users.map((u,i)=>e("div",{key:u.uid||i,style:{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:i<users.length-1?"1px solid var(--border2)":"none"}},
