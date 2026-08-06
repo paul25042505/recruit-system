@@ -391,7 +391,7 @@ function DatePicker({value,onChange,placeholder,style}){
   const cells=[];
   for(let i=0;i<firstDow;i++)cells.push(null);
   for(let d=1;d<=daysInMonth;d++)cells.push(d);
-  while(cells.length%7!==0)cells.push(null);
+  while(cells.length<42)cells.push(null);
   const prevM=()=>{if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1);};
   const nextM=()=>{if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1);};
   const MN=["1","2","3","4","5","6","7","8","9","10","11","12"];
