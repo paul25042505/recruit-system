@@ -240,6 +240,10 @@ const DEF_SCHED=[
   {key:"medical_exp",label:"體檢表效期",date:""},
 ];
 const EDUCATIONS=["國中","高中職","高中職肄業","專科","國立大學","私立大學","研究所","其他"];
+const LICENSE_OPTS=["輕型機車","普通重型機車","大型重型機車","普通小型車（汽車）","大貨車","聯結車","大客車"];
+const FAMILY_MEMBER_OPTS=["父","母","兄","弟","姐","妹","祖父","祖母","外祖父","外祖母","配偶","子女"];
+const FAMILY_SIT_OPTS=["小康","清寒","富裕","其他"];
+const MIL_OPINION_OPTS=["支持","中立","反對"];
 const CITIES=["台北市","新北市","桃園市","台中市","台南市","高雄市","基隆市","新竹市","新竹縣","苗栗縣","彰化縣","南投縣","雲林縣","嘉義市","嘉義縣","屏東縣","宜蘭縣","花蓮縣","台東縣","澎湖縣","金門縣","連江縣"];
 const DISTRICTS={
   "台北市":["中正區","大同區","中山區","松山區","大安區","萬華區","信義區","士林區","北投區","內湖區","南港區","文山區"],
@@ -3292,7 +3296,7 @@ function App(){
                 e("button",{style:{...S.btn("ghost","sm"),color:"#ef4444",borderColor:"#ef444433"},onClick:()=>{setBasicEditing(false);setBasicDraft(null);}},"✕"),
                 e("button",{style:S.btn("primary","sm"),onClick:()=>{setTf(p=>({...p,...basicDraft,customData:{...(p.customData||{}),...(basicDraft.customData||{})}}));setDirty(true);setBasicEditing(false);setBasicDraft(null);}},"✓ 確定")
               )
-            : e("button",{style:S.btn("ghost","sm"),onClick:()=>{setBasicDraft({name:tf.name,education:tf.education,dropoutSemester:tf.dropoutSemester,school:tf.school,department:tf.department,city:tf.city,district:tf.district,workExp:tf.workExp,workPlace:tf.workPlace,workYears:tf.workYears});setBasicEditing(true);}},"✏ 編輯")
+            : e("button",{style:S.btn("ghost","sm"),onClick:()=>{setBasicDraft({name:tf.name,education:tf.education,dropoutSemester:tf.dropoutSemester,school:tf.school,department:tf.department,city:tf.city,district:tf.district,workExp:tf.workExp,workPlace:tf.workPlace,workYears:tf.workYears,salary:tf.salary||"",licenseTypes:tf.licenseTypes||[],certifications:tf.certifications||"",familySituation:tf.familySituation||"",familyMembers:tf.familyMembers||[],hasDebt:tf.hasDebt||"",debtNote:tf.debtNote||""});setBasicEditing(true);}},"✏ 編輯")
           : null
       ),
 
@@ -3355,8 +3359,33 @@ function App(){
                   )),
                   basicDraft.workExp==="有"&&e(React.Fragment,null,
                     fld("目前／上一份工作單位",e("input",{className:"inp-edit",style:inpSt,placeholder:"例：台積電",value:basicDraft.workPlace||"",onChange:ev=>setBasicDraft(p=>({...p,workPlace:ev.target.value}))})),
-                    fld("工作年資（年）",e("input",{className:"inp-edit",style:inpSt,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))}))
-                  )
+                    fld("工作年資（年）",e("input",{className:"inp-edit",style:inpSt,type:"text",inputMode:"numeric",placeholder:"例：3",value:basicDraft.workYears||"",onChange:ev=>setBasicDraft(p=>({...p,workYears:ev.target.value}))})),
+                    fld("工作月薪（元）",e("input",{className:"inp-edit",style:inpSt,type:"text",inputMode:"numeric",placeholder:"例：35000",value:basicDraft.salary||"",onChange:ev=>setBasicDraft(p=>({...p,salary:ev.target.value}))}))
+                  ),
+                  fld("駕照",e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:2}},
+                    ...LICENSE_OPTS.map(opt=>{
+                      const arr=basicDraft.licenseTypes||[];
+                      const on=arr.includes(opt);
+                      return e("button",{key:opt,type:"button",style:{...S.btn(on?"primary":"ghost","sm"),fontSize:12},onClick:()=>setBasicDraft(p=>{const a=p.licenseTypes||[];return{...p,licenseTypes:on?a.filter(x=>x!==opt):[...a,opt]};})},opt);
+                    })
+                  )),
+                  fld("證照 / 特殊技能",e("input",{className:"inp-edit",style:inpSt,placeholder:"例：廚師丙級、電腦檢定",value:basicDraft.certifications||"",onChange:ev=>setBasicDraft(p=>({...p,certifications:ev.target.value}))}))
+                )),
+                secCard("家庭背景",e(React.Fragment,null,
+                  fld("家庭狀況",e("select",{className:"inp-edit",style:selSt,value:basicDraft.familySituation||"",onChange:ev=>setBasicDraft(p=>({...p,familySituation:ev.target.value}))},
+                    e("option",{value:""},"請選擇"),...FAMILY_SIT_OPTS.map(v=>e("option",{key:v},v))
+                  )),
+                  fld("家中成員",e("div",{style:{display:"flex",flexWrap:"wrap",gap:6,paddingTop:2}},
+                    ...FAMILY_MEMBER_OPTS.map(opt=>{
+                      const arr=basicDraft.familyMembers||[];
+                      const on=arr.includes(opt);
+                      return e("button",{key:opt,type:"button",style:{...S.btn(on?"primary":"ghost","sm"),fontSize:12},onClick:()=>setBasicDraft(p=>{const a=p.familyMembers||[];return{...p,familyMembers:on?a.filter(x=>x!==opt):[...a,opt]};})},opt);
+                    })
+                  )),
+                  fld("負債狀況",e("select",{className:"inp-edit",style:selSt,value:basicDraft.hasDebt||"",onChange:ev=>setBasicDraft(p=>({...p,hasDebt:ev.target.value,debtNote:""}))},
+                    e("option",{value:""},"請選擇"),e("option",{value:"無"},"無"),e("option",{value:"有"},"有")
+                  )),
+                  basicDraft.hasDebt==="有"&&fld("負債說明",e("input",{className:"inp-edit",style:inpSt,placeholder:"說明負債狀況",value:basicDraft.debtNote||"",onChange:ev=>setBasicDraft(p=>({...p,debtNote:ev.target.value}))}))
                 )),
                 cfields.length>0&&secCard("其他資訊",e("div",null,
                   ...cfields.map(f=>{
@@ -3402,9 +3431,17 @@ function App(){
                 ),
                 sec("地區",[row("城市",tf.city),row("行政區",tf.district,true)]),
                 sec("工作",[
-                  row("工作經驗",tf.workExp,tf.workExp!=="有"),
-                  tf.workExp==="有"&&row("工作單位",tf.workPlace,!tf.workYears),
-                  tf.workExp==="有"&&tf.workYears&&row("工作年資",tf.workYears+"年",true),
+                  row("工作經驗",tf.workExp,tf.workExp!=="有"&&!tf.licenseTypes?.length&&!tf.certifications),
+                  tf.workExp==="有"&&row("工作單位",tf.workPlace),
+                  tf.workExp==="有"&&row("工作年資",tf.workYears?(tf.workYears+"年"):"—"),
+                  tf.workExp==="有"&&row("工作月薪",tf.salary?(Number(tf.salary).toLocaleString()+" 元"):"—"),
+                  row("駕照",(tf.licenseTypes&&tf.licenseTypes.length)?(tf.licenseTypes.join("、")):"無"),
+                  row("證照",tf.certifications||"—",true),
+                ].filter(Boolean)),
+                sec("家庭",[
+                  row("家庭狀況",tf.familySituation),
+                  row("家中成員",(tf.familyMembers&&tf.familyMembers.length)?(tf.familyMembers.join("、")):"—"),
+                  row("負債狀況",tf.hasDebt==="有"?(("有")+(tf.debtNote?("："+tf.debtNote):"")):(tf.hasDebt||"—"),true),
                 ].filter(Boolean)),
                 cfields.length>0&&sec("其他",cfields.map((f,i)=>{
                   const val=tf.customData?.[f.id]||"";
@@ -3463,6 +3500,38 @@ function App(){
         ),// end qual tab
         // 意願訪談 tab
         traineeTab==="will"&&e(React.Fragment,null,
+        // 從軍意願評估卡片
+        e("div",{style:{...S.card,marginBottom:10,padding:0,overflow:"hidden"}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"10px 16px",borderBottom:"1px solid var(--border2)"}},
+            e("div",{style:{width:3,height:16,background:"#f59e0b",borderRadius:3,flexShrink:0}}),
+            e("span",{style:{fontSize:12,fontWeight:800,color:"var(--txt)",letterSpacing:"0.04em"}},"從軍意願評估")
+          ),
+          e("div",{style:{padding:"12px 16px"}},
+            ...[
+              {key:"selfMilOpinion",noteKey:"selfMilNote",label:"自己對從軍看法",opts:MIL_OPINION_OPTS},
+              {key:"familyMilOpinion",noteKey:"familyMilNote",label:"家人對從軍看法",opts:MIL_OPINION_OPTS},
+              {key:"partnerMilOpinion",noteKey:"partnerMilNote",label:"伴侶對從軍看法",opts:[...MIL_OPINION_OPTS,"無伴侶"]},
+            ].map(({key,noteKey,label,opts},idx,arr)=>e("div",{key,style:{marginBottom:idx<arr.length-1?16:0}},
+              e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt2)",marginBottom:8}},label),
+              e("div",{style:{display:"flex",gap:6,marginBottom:tf[key]&&tf[key]!=="無伴侶"?8:0}},
+                ...opts.map(opt=>{
+                  const colors={"支持":"#22c55e","中立":"#f59e0b","反對":"#ef4444","無伴侶":"#94a3b8"};
+                  const c=colors[opt]||"#64748b";
+                  const active=tf[key]===opt;
+                  return e("button",{key:opt,type:"button",
+                    style:{flex:1,padding:"7px 4px",borderRadius:9,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",
+                      background:active?(c+"22"):"transparent",
+                      color:active?c:"var(--txt3)",
+                      border:"1.5px solid "+(active?c+"88":"var(--border)")},
+                    onClick:()=>{setTf(p=>({...p,[key]:p[key]===opt?"":opt}));setDirty(true);}
+                  },opt);
+                })
+              ),
+              tf[key]&&tf[key]!=="無伴侶"&&e("input",{style:{...S.inp,fontSize:13},placeholder:"補充說明…",value:tf[noteKey]||"",
+                onChange:ev=>{setTf(p=>({...p,[noteKey]:ev.target.value}));setDirty(true);}})
+            ))
+          )
+        ),
         // 意願訪談
         e("div",{style:{...S.card,marginBottom:10}},
           e("div",{style:S.slbl},"▍ 意願訪談"),
