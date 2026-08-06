@@ -2842,17 +2842,15 @@ function App(){
                         isCoordinator?"承辦人":"招募員"
                       )
                     ),
-                    !u._notFound&&e("div",{style:{display:"flex",flexDirection:"column",gap:6,paddingTop:8,borderTop:"1px solid var(--border2)"}},
-                      u.phone&&e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+                    !u._notFound&&(u.phone||u.lineId)&&e("div",{style:{display:"flex",alignItems:"center",gap:12,paddingTop:8,borderTop:"1px solid var(--border2)",flexWrap:"wrap"}},
+                      u.phone&&e("div",{style:{display:"flex",alignItems:"center",gap:6}},
                         e(Icon,{n:"phone",s:13,c:"var(--txt3)"}),
-                        e("span",{style:{fontSize:12,color:"var(--txt3)"}},"手機："),
                         e("span",{style:{fontSize:12,color:"var(--txt)",fontWeight:600}},u.phone)
                       ),
-                      u.lineId&&e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+                      u.lineId&&e("div",{style:{display:"flex",alignItems:"center",gap:6}},
                         e("div",{style:{width:13,height:13,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}},
                           e("svg",{viewBox:"0 0 24 24",width:13,height:13,fill:"#06c755",dangerouslySetInnerHTML:{__html:LINE_SVG}})
                         ),
-                        e("span",{style:{fontSize:12,color:"var(--txt3)"}},"Line："),
                         e("span",{style:{fontSize:12,color:"#06c755",fontWeight:700}},u.lineId)
                       )
                     )
