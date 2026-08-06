@@ -527,6 +527,8 @@ function App(){
   const [buInputMode,setBUInputMode]=useState(false);
   const [adminBUInput,setAdminBUInput]=useState("");
   const [adminBUMode,setAdminBUMode]=useState(false);
+  const [pfBUInput,setPfBUInput]=useState("");
+  const [pfBUMode,setPfBUMode]=useState(false);
   const [itvwUnitMode,setItvwUnitMode]=useState(false);
   const [itvwUnitInput,setItvwUnitInput]=useState("");
   const [winW,setWinW]=useState(window.innerWidth);
@@ -539,7 +541,7 @@ function App(){
   const [loginInProgress,setLoginInProgress]=useState(false);
   const [loginPopupBlocked,setLoginPopupBlocked]=useState(false);
   // 個人資料設定表單
-  const [pf,setPf]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",subUnit:"",phone:"",roles:["recruiter"],role:"recruiter",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
+  const [pf,setPf]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",subUnit:"",phone:"",lineId:"",roles:["recruiter"],role:"recruiter",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
   const [pfSaving,setPfSaving]=useState(false);
   const [retrying,setRetrying]=useState(false);
   const [loadingSlow,setLoadingSlow]=useState(false);
@@ -703,7 +705,7 @@ function App(){
     setBatches([]);setCfg(null);setCurBatch(null);setFeedbackList([]);setUnitProfiles([]);
   }
   async function saveMyProfile(){
-    if(!pf.name.trim()||!pf.rank||!pf.brigadeUnit.trim()){toast_("請填寫姓名、階級與單位全銜","err");return;}
+    if(!pf.name.trim()||!pf.rank||!pf.brigadeUnit){toast_("請填寫姓名、階級與旅級單位","err");return;}
     if(!authUser)return;
     setPfSaving(true);
     try{
@@ -1126,6 +1128,20 @@ function App(){
     setAdminBUInput("");
     toast_("已新增並選擇 ✓");
   }
+  async function doAddPfBrigadeUnit(){
+    const trimmed=pfBUInput.trim();
+    if(!trimmed)return;
+    const existing=cfg?.brigadeUnits||[];
+    if(!existing.includes(trimmed)){
+      const newCfg={...cfg,brigadeUnits:[...existing,trimmed]};
+      await fsSet("settings/global",newCfg);
+      setCfg(newCfg);
+    }
+    setPf(p=>({...p,brigadeUnit:trimmed}));
+    setPfBUMode(false);
+    setPfBUInput("");
+    toast_("已新增並選擇 ✓");
+  }
   async function doAddItvwUnit(){
     const trimmed=itvwUnitInput.trim();
     if(!trimmed)return;
@@ -1461,12 +1477,38 @@ function App(){
             )
           ),
           e("div",{style:{gridColumn:"span 2"}},
-            e("label",{style:S.lbl},"單位全銜 *"),
-            e("input",{style:S.inp,placeholder:"例：陸軍步兵第一〇一旅",value:pf.brigadeUnit,onChange:ev=>setPf(p=>({...p,brigadeUnit:ev.target.value}))})
+            e("label",{style:S.lbl},"旅級單位 *"),
+            pfBUMode
+              ?e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                  e("input",{style:{...S.inp,flex:1},placeholder:"輸入旅級單位全銜",value:pfBUInput,autoFocus:true,
+                    onChange:ev=>setPfBUInput(ev.target.value),
+                    onKeyDown:ev=>ev.key==="Enter"&&doAddPfBrigadeUnit()}),
+                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#10b981",border:"none",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:doAddPfBrigadeUnit},e(Icon,{n:"checkCircle",s:18,c:"#fff"})),
+                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"var(--bg3)",border:"1px solid var(--border)",color:"var(--txt3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:()=>{setPfBUMode(false);setPfBUInput("");}},e(Icon,{n:"xmark",s:18}))
+                )
+              :e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                  e("select",{style:{...S.sel,flex:1},value:pf.brigadeUnit,
+                    onChange:ev=>setPf(p=>({...p,brigadeUnit:ev.target.value}))},
+                    e("option",{value:""},"請選擇"),
+                    ...(cfg?.brigadeUnits||[]).map(u=>e("option",{key:u,value:u},u))
+                  ),
+                  e("button",{style:{height:38,minWidth:38,borderRadius:10,background:"#ef4444",border:"none",color:"#fff",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:()=>{setPfBUMode(true);setPfBUInput("");}},"+")
+                )
+          ),
+          e("div",{style:{gridColumn:"span 2"}},
+            e("label",{style:S.lbl},"群／營級單位"),
+            e("input",{style:S.inp,placeholder:"例：旅部、一營、二營…",value:pf.battalionUnit,onChange:ev=>setPf(p=>({...p,battalionUnit:ev.target.value}))})
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"手機號碼"),
             e("input",{style:S.inp,type:"tel",inputMode:"numeric",placeholder:"例：0912345678",value:pf.phone,onChange:ev=>setPf(p=>({...p,phone:ev.target.value}))})
+          ),
+          e("div",{style:{gridColumn:"span 2"}},
+            e("label",{style:S.lbl},"Line ID"),
+            e("input",{style:S.inp,placeholder:"輸入 Line ID（選填）",value:pf.lineId||"",onChange:ev=>setPf(p=>({...p,lineId:ev.target.value}))})
           )
         )
       ),
@@ -1481,15 +1523,11 @@ function App(){
           ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"證號"),
-            e("input",{style:S.inp,placeholder:"例：ROC-2024-A-04821",value:pf.licenseNo,onChange:ev=>setPf(p=>({...p,licenseNo:ev.target.value}))})
+            e("input",{style:S.inp,placeholder:"例：B12345",value:pf.licenseNo,onChange:ev=>setPf(p=>({...p,licenseNo:ev.target.value}))})
           ),
-          e("div",null,
+          e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"核發日期"),
             e(DatePicker,{value:pf.licenseIssueDate||"",onChange:v=>setPf(p=>({...p,licenseIssueDate:v}))})
-          ),
-          e("div",null,
-            e("label",{style:S.lbl},"效期截止"),
-            e(DatePicker,{value:pf.licenseExpiryDate||"",onChange:v=>setPf(p=>({...p,licenseExpiryDate:v}))})
           )
         )
       ),
