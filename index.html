@@ -3704,6 +3704,15 @@ function App(){
                         ),
                         e("div",{style:{display:"flex",alignItems:"center",gap:6,flexShrink:0}},
                           logSt&&e("span",{style:{...S.tag(logSt.color),fontSize:10,display:"inline-flex",alignItems:"center",gap:3}},e(Icon,{n:logSt.icon||"circle",s:10,c:logSt.color}),logSt.label),
+                          e("button",{style:{...S.btn("ghost","sm"),padding:"3px 8px",fontSize:11},title:"複製回報",onClick:()=>{
+                            const ls=sts.find(s=>s.id===log.statusId);
+                            const hasCarLic=(tf.licenseTypes||[]).includes("普通小型車（汽車）");
+                            const loc=[tf.city,tf.district].filter(Boolean).join("");
+                            const edu=[tf.education,tf.school].filter(Boolean).join(" ");
+                            const hdr=[curBatch.unit,curBatch.battalion,curBatch.company].filter(Boolean).join("")+"第"+(curBatch.sequence||"")+"梯狀況回報";
+                            const txt=[hdr,"學號姓名："+(tf.seat||"")+" "+(tf.name||""),"居住地："+(loc||"—"),"學歷："+(edu||"—"),"意願度："+(ls?.label||"—"),"汽車駕照："+(hasCarLic?"有":"無"),"約談紀錄："+(log.note||"")].join("\n");
+                            navigator.clipboard?.writeText(txt).then(()=>toast_("已複製 ✓")).catch(()=>toast_("複製失敗","err"));
+                          }},e(Icon,{n:"copy",s:15})),
                           e("button",{style:{...S.btn("ghost","sm"),padding:"3px 8px",fontSize:11},onClick:()=>{setEditLogData({...log});setShowEditLog(true);}},e(Icon,{n:"pencil",s:15}))
                         )
                       ),
