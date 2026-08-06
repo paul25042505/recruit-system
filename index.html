@@ -458,7 +458,7 @@ function App(){
   const [tf,setTf]=useState(null);const [dirty,setDirty]=useState(false);
   // 後台
   // 意見回饋
-  const [feedbackForm,setFeedbackForm]=useState({category:"",content:""});
+  const [feedbackForm,setFeedbackForm]=useState({type:"",category:"",targetUnit:"",content:""});
   const FB_CATS=[{key:"bug",label:"🐛 系統異常"},{key:"feature",label:"💡 功能建議"},{key:"account",label:"👤 帳號問題"},{key:"batch",label:"📋 梯次資料"},{key:"password",label:"🔑 密碼問題"},{key:"other",label:"💬 其他"}];
   const [feedbackList,setFeedbackList]=useState([]);
   // 約談紀錄編輯
@@ -1052,7 +1052,9 @@ function App(){
     finally{setSaving(false);}
   }
   async function saveFeedback(){
-    if(!feedbackForm.category){toast_("請選擇意見類別","err");return;}
+    if(!feedbackForm.type){toast_("請選擇問題類型","err");return;}
+    if(feedbackForm.type==="system"&&!feedbackForm.category){toast_("請選擇意見類別","err");return;}
+    if(feedbackForm.type==="recruit"&&!feedbackForm.targetUnit){toast_("請選擇接訓單位","err");return;}
     if(!feedbackForm.content.trim()){toast_("請填寫意見內容","err");return;}
     setSaving(true);
     try{
@@ -1062,7 +1064,7 @@ function App(){
       const updated=[...feedbackList,fb];
       await fsSet("feedback/list",updated);
       setFeedbackList(updated);
-      setFeedbackForm({category:"",content:""});
+      setFeedbackForm({type:"",category:"",targetUnit:"",content:""});
       toast_("意見已送出 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setSaving(false);}
@@ -2374,10 +2376,16 @@ function App(){
       feedbackList.length===0&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無意見回饋"),
       ...[...feedbackList].reverse().map((fb,i)=>{
         const catLabel=FB_CATS.find(c=>c.key===fb.category)?.label||fb.category||"";
+        const isRecruit=fb.type==="recruit";
         return e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
           e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}},
             e("div",{style:{flex:1,minWidth:0}},
-              catLabel&&e("span",{style:{display:"inline-block",fontSize:10,background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:6,padding:"2px 7px",color:"#f59e0b",fontWeight:700,marginBottom:4}},catLabel),
+              e("div",{style:{display:"flex",gap:4,flexWrap:"wrap",marginBottom:4}},
+                isRecruit
+                  ?e("span",{style:{display:"inline-block",fontSize:10,background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:6,padding:"2px 7px",color:"#3b82f6",fontWeight:700}},"招募問題")
+                  :catLabel&&e("span",{style:{display:"inline-block",fontSize:10,background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:6,padding:"2px 7px",color:"#f59e0b",fontWeight:700}},catLabel),
+                isRecruit&&fb.targetUnit&&e("span",{style:{display:"inline-block",fontSize:10,background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.3)",borderRadius:6,padding:"2px 7px",color:"#22c55e",fontWeight:700}},fb.targetUnit)
+              ),
               e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）"),
               fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:2}},fb.name)
             ),
@@ -2645,11 +2653,27 @@ function App(){
           e(Icon,{n:"lock",s:13,c:"var(--txt3)",style:{marginLeft:"auto"}})
         ),
         e("div",{style:{marginBottom:14}},
+          e("label",{style:S.lbl},"問題類型"),
+          e("div",{style:{display:"flex",gap:8,marginTop:6}},
+            ...[{v:"system",l:"⚙️ 系統問題"},{v:"recruit",l:"📋 招募問題"}].map(({v,l})=>
+              e("button",{key:v,style:{flex:1,padding:"8px 0",borderRadius:20,border:"1px solid "+(feedbackForm.type===v?"#3b82f6":"var(--border)"),background:feedbackForm.type===v?"rgba(59,130,246,0.12)":"var(--bg3)",color:feedbackForm.type===v?"#3b82f6":"var(--txt2)",fontSize:12,fontWeight:feedbackForm.type===v?700:500,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",transition:"all 0.15s"},
+                onClick:()=>setFeedbackForm(p=>({...p,type:v,category:"",targetUnit:""}))},l)
+            )
+          )
+        ),
+        feedbackForm.type==="system"&&e("div",{style:{marginBottom:14}},
           e("label",{style:S.lbl},"意見類別"),
           e("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}},
             ...FB_CATS.map(cat=>e("button",{key:cat.key,
               style:{padding:"7px 13px",borderRadius:20,border:"1px solid "+(feedbackForm.category===cat.key?"#f59e0b":"var(--border)"),background:feedbackForm.category===cat.key?"rgba(245,158,11,0.15)":"var(--bg3)",color:feedbackForm.category===cat.key?"#f59e0b":"var(--txt2)",fontSize:12,fontWeight:feedbackForm.category===cat.key?700:500,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",transition:"all 0.15s"},
               onClick:()=>setFeedbackForm(p=>({...p,category:cat.key}))},cat.label))
+          )
+        ),
+        feedbackForm.type==="recruit"&&e("div",{style:{marginBottom:14}},
+          e("label",{style:S.lbl},"接訓單位"),
+          e("select",{style:S.sel,value:feedbackForm.targetUnit,onChange:ev=>setFeedbackForm(p=>({...p,targetUnit:ev.target.value}))},
+            e("option",{value:""},"請選擇接訓單位"),
+            ...RECRUIT_UNITS.map(u=>e("option",{key:u,value:u},u))
           )
         ),
         e("div",{style:{marginBottom:14}},
@@ -2662,10 +2686,13 @@ function App(){
         e("div",{style:{...S.slbl,marginBottom:10}},"最近送出的意見"),
         ...[...feedbackList].reverse().slice(0,5).map((fb,i)=>{
           const catLabel=FB_CATS.find(c=>c.key===fb.category)?.label||fb.category||"";
+          const isRecruit=fb.type==="recruit";
           return e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
             e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}},
               e("div",null,
-                catLabel&&e("span",{style:{fontSize:10,background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:6,padding:"2px 7px",color:"#f59e0b",fontWeight:700,marginRight:6}},catLabel),
+                isRecruit
+                  ?e("span",{style:{fontSize:10,background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.3)",borderRadius:6,padding:"2px 7px",color:"#3b82f6",fontWeight:700,marginRight:6}},fb.targetUnit||"招募問題")
+                  :catLabel&&e("span",{style:{fontSize:10,background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:6,padding:"2px 7px",color:"#f59e0b",fontWeight:700,marginRight:6}},catLabel),
                 e("span",{style:{fontSize:12,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）")
               ),
               e("span",{style:{fontSize:10,color:"var(--txt3)",flexShrink:0}},fb.createdAt)
@@ -2675,6 +2702,29 @@ function App(){
           );
         })
       ),
+      (()=>{
+        const isCoordUser=(userProfile?.roles||[]).includes("coordinator");
+        const myBU=userProfile?.brigadeUnit||"";
+        if(!isCoordUser||!myBU)return null;
+        const unitFeedback=[...feedbackList].filter(fb=>fb.type==="recruit"&&fb.targetUnit===myBU).reverse();
+        return e("div",{style:{marginTop:20}},
+          e("div",{style:{...S.slbl,marginBottom:10}},"我的單位收到的招募回饋"),
+          unitFeedback.length===0
+            ?e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"20px 16px"}},"尚無針對本單位的招募回饋")
+            :e("div",null,
+                ...unitFeedback.map((fb,i)=>e("div",{key:fb.id||i,style:{...S.card,marginBottom:8}},
+                  e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}},
+                    e("div",null,
+                      e("span",{style:{fontSize:12,fontWeight:700,color:"var(--txt)"}},fb.unit||"（未填）")
+                    ),
+                    e("span",{style:{fontSize:10,color:"var(--txt3)",flexShrink:0}},fb.createdAt)
+                  ),
+                  fb.name&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},fb.name),
+                  e("div",{style:{fontSize:13,color:"var(--txt)",lineHeight:1.6}},fb.content)
+                ))
+              )
+        );
+      })(),
       e("div",{style:{height:80}})
     ),
     e(BottomNav)
