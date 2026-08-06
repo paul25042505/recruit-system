@@ -198,7 +198,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-06-96-unit-view-redesign";
+const BUILD_TAG="2026-08-06-97-unit-view-html-reference";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -1973,13 +1973,12 @@ function App(){
       grouped[key].push(u);
     });
     const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
-    const UV_COLORS=["#3b82f6","#f59e0b","#10b981","#f97316","#8b5cf6","#ec4899","#06b6d4","#ef4444"];
-    function uvColor(key){let h=0;for(let i=0;i<key.length;i++)h=(h*31+key.charCodeAt(i))&0xffff;return UV_COLORS[h%UV_COLORS.length];}
     const LINE_SVG_UV="<path d='M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.628-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314'/>";
+    const SHIELD_SVG_UV="<path d='M32 6L10 14V30C10 44 32 58 32 58C32 58 54 44 54 30V14L32 6Z' fill='#2563eb' stroke='#60A5FA' stroke-width='2'/><path d='M32 18L35.7 25.5L44 26.7L38 32.5L39.4 40.8L32 36.9L24.6 40.8L26 32.5L20 26.7L28.3 25.5L32 18Z' fill='#F59E0B'/>";
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:{...S.hdr,justifyContent:"space-between"}},
-        e("div",{style:{flex:1}},e("div",{style:{fontSize:17,fontWeight:800,color:"var(--txt)"}},"單位目錄")),
+        e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"單位")),
         e("div",{style:{display:"flex",gap:4}},
           e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",opacity:uvLoading?0.4:1},onClick:()=>{setUvLoading(true);fsList("users").then(all=>{setUvUsers((all||[]).filter(u=>u.status==="active"));setUvLoading(false);}).catch(()=>setUvLoading(false));},disabled:uvLoading},
             e(Icon,{n:"refresh",s:18,c:"var(--txt3)"})
@@ -1988,67 +1987,67 @@ function App(){
         )
       ),
       e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
-        e("div",{style:{padding:"16px 14px 0"}},
-          uvLoading&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"48px 0",fontSize:13}},"載入中…"),
-          !uvLoading&&sortedKeys.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"48px 0"}},
-            e(Icon,{n:"users",s:40,c:"var(--txt3)"}),
-            e("div",{style:{marginTop:10,fontSize:14,fontWeight:600}},"尚無已核准的成員")
-          ),
-          !uvLoading&&sortedKeys.length>0&&e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:12,fontWeight:600}},
-            "共 "+sortedKeys.length+" 個單位・"+uvUsers.length+" 位成員"
+        e("div",{style:{...S.sec,paddingTop:16}},
+          uvLoading&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},"載入中…"),
+          !uvLoading&&sortedKeys.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
+            e(Icon,{n:"users",s:36,c:"var(--txt3)"}),
+            e("div",{style:{marginTop:8,fontSize:13}},"尚無已核准的成員")
           ),
           ...sortedKeys.map(unit=>{
             const users=grouped[unit];
             const displayName=groupDisplay[unit]||unit;
-            const col=uvColor(unit);
-            const initial=(displayName||"？").replace(/^(陸軍|海軍|空軍|海巡|憲兵)/,"")[0]||displayName[0]||"？";
-            return e("div",{key:unit,style:{borderRadius:16,overflow:"hidden",marginBottom:12,
-              background:"var(--bg2)",border:"1px solid var(--border)",
-              boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}},
-              e("div",{style:{padding:"12px 14px",background:"var(--bg3)",display:"flex",alignItems:"center",gap:10}},
-                e("div",{style:{width:36,height:36,borderRadius:11,background:col+"22",border:"1px solid "+col+"55",
-                  display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
-                  e("span",{style:{fontSize:14,fontWeight:900,color:col}},initial)
-                ),
+            return e("div",{key:unit,style:{
+              borderRadius:26,overflow:"hidden",marginBottom:14,position:"relative",
+              background:"linear-gradient(135deg,#1e293b 0%,#0f172a 100%)",
+              border:"2px solid #3b82f6",
+              boxShadow:"0 10px 25px -5px rgba(59,130,246,0.4),0 8px 10px -6px rgba(0,0,0,0.5)"
+            }},
+              e("div",{style:{position:"absolute",width:60,height:60,background:"#3b82f6",
+                filter:"blur(30px)",opacity:0.5,top:-10,right:-10,zIndex:0,pointerEvents:"none"}}),
+              e("div",{style:{padding:"14px 16px",display:"flex",alignItems:"center",gap:12,position:"relative",zIndex:1}},
+                e("svg",{viewBox:"0 0 64 64",width:36,height:36,fill:"none",
+                  style:{flexShrink:0,filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.3))"},
+                  dangerouslySetInnerHTML:{__html:SHIELD_SVG_UV}}),
                 e("div",{style:{flex:1,minWidth:0}},
-                  e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},displayName)
-                ),
-                e("div",{style:{background:col+"18",border:"1px solid "+col+"44",borderRadius:20,
-                  padding:"3px 10px",fontSize:11,fontWeight:700,color:col,flexShrink:0}},users.length+" 人")
+                  e("div",{style:{fontSize:14,fontWeight:800,color:"#e2e8f0",letterSpacing:"0.02em",
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},displayName),
+                  e("div",{style:{fontSize:11,color:"#60a5fa",fontWeight:700,marginTop:2}},users.length+" 位成員")
+                )
               ),
-              ...users.map((u,i)=>{
-                const nameInitial=(u.name||u.googleDisplayName||"？")[0];
-                return e("div",{key:u.uid||i,style:{display:"flex",alignItems:"flex-start",gap:10,
-                  padding:"11px 14px",borderTop:"1px solid var(--border2)",background:"var(--bg2)"}},
-                  e("div",{style:{width:38,height:38,borderRadius:"50%",background:col+"15",
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:15,fontWeight:800,color:col,flexShrink:0}},nameInitial),
+              e("div",{style:{
+                margin:"0 8px 8px",borderRadius:12,overflow:"hidden",
+                background:"rgba(30,41,59,0.7)",border:"1px solid rgba(255,255,255,0.1)",
+                backdropFilter:"blur(8px)",position:"relative",zIndex:1
+              }},
+                ...users.map((u,i)=>e("div",{key:u.uid||i,style:{display:"flex",alignItems:"flex-start",gap:10,
+                  padding:"10px 14px",borderBottom:i<users.length-1?"1px solid rgba(255,255,255,0.07)":"none"}},
+                  e(Icon,{n:"user",s:16,c:"#94a3b8",style:{marginTop:2}}),
                   e("div",{style:{flex:1,minWidth:0}},
-                    e("div",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},
+                    e("div",{style:{fontSize:13,fontWeight:600,color:"#e2e8f0"}},
                       (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
                     ),
-                    u.battalionUnit&&e("div",{style:{fontSize:12,color:"var(--txt3)",marginTop:2}},u.battalionUnit),
-                    (u.phone||u.lineId)&&e("div",{style:{display:"flex",alignItems:"center",gap:10,marginTop:5,flexWrap:"wrap"}},
-                      u.phone&&e("div",{style:{display:"flex",alignItems:"center",gap:4}},
-                        e(Icon,{n:"phone",s:12,c:"var(--txt3)"}),
-                        e("span",{style:{fontSize:12,color:"var(--txt2)"}},u.phone)
+                    u.battalionUnit&&e("div",{style:{fontSize:11,color:"#94a3b8",marginTop:1}},u.battalionUnit),
+                    (u.phone||u.lineId)&&e("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:3,flexWrap:"wrap"}},
+                      u.phone&&e(React.Fragment,null,
+                        e(Icon,{n:"phone",s:11,c:"#94a3b8"}),
+                        e("span",{style:{fontSize:11,color:"#94a3b8"}},u.phone)
                       ),
-                      u.lineId&&e("div",{style:{display:"flex",alignItems:"center",gap:4}},
-                        e("svg",{viewBox:"0 0 24 24",width:13,height:13,fill:"#06c755",style:{flexShrink:0},dangerouslySetInnerHTML:{__html:LINE_SVG_UV}}),
-                        e("span",{style:{fontSize:12,color:"#06c755",fontWeight:700}},u.lineId)
+                      u.lineId&&e(React.Fragment,null,
+                        e("svg",{viewBox:"0 0 24 24",width:11,height:11,fill:"#06c755",style:{flexShrink:0},dangerouslySetInnerHTML:{__html:LINE_SVG_UV}}),
+                        e("span",{style:{fontSize:11,color:"#06c755",fontWeight:700}},u.lineId)
                       )
                     )
                   ),
-                  e("div",{style:{display:"flex",flexDirection:"column",gap:4,flexShrink:0,alignItems:"flex-end"}},
+                  e("div",{style:{display:"flex",gap:4,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}},
                     ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:{
-                      fontSize:10,fontWeight:700,borderRadius:6,padding:"3px 8px",whiteSpace:"nowrap",
-                      background:r==="admin"?"#f59e0b18":r==="coordinator"?"#3b82f618":"var(--bg3)",
-                      border:"1px solid "+(r==="admin"?"#f59e0b44":r==="coordinator"?"#3b82f644":"var(--border)"),
-                      color:r==="admin"?"#f59e0b":r==="coordinator"?"#3b82f6":"var(--txt2)"
+                      fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 7px",whiteSpace:"nowrap",
+                      background:r==="admin"?"#f59e0b18":r==="coordinator"?"#3b82f618":"rgba(255,255,255,0.08)",
+                      border:"1px solid "+(r==="admin"?"#f59e0b44":r==="coordinator"?"#3b82f644":"rgba(255,255,255,0.15)"),
+                      color:r==="admin"?"#f59e0b":r==="coordinator"?"#60a5fa":"#94a3b8"
                     }},r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r))
                   )
-                );
-              })
+                ))
+              )
             );
           }),
           e("div",{style:{height:16}})
