@@ -530,6 +530,7 @@ function App(){
   const [itvwUnitMode,setItvwUnitMode]=useState(false);
   const [itvwUnitInput,setItvwUnitInput]=useState("");
   const [winW,setWinW]=useState(window.innerWidth);
+  const [wmTime,setWmTime]=useState(()=>new Date());
 
   // 身分驗證
   const [authUser,setAuthUser]=useState(null);
@@ -852,11 +853,15 @@ function App(){
   },[]);
 
   // ── Watermark ───────────────────────────────────────────────────────────────
+  useEffect(()=>{
+    const t=setInterval(()=>setWmTime(new Date()),60000);
+    return()=>clearInterval(t);
+  },[]);
   const watermarkUrl=useMemo(()=>{
     if(!userProfile)return null;
     const unit=userProfile.unit||"";
     const rankName=(userProfile.rank||"")+(userProfile.name||"");
-    const now=new Date();
+    const now=wmTime;
     const dateStr=now.getFullYear()+"/"+(now.getMonth()+1).toString().padStart(2,"0")+"/"+now.getDate().toString().padStart(2,"0")+" "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0");
     const colW=Math.max(160,Math.round(winW/2));
     const canvas=document.createElement("canvas");
@@ -873,7 +878,7 @@ function App(){
       ctx.restore();
     });
     return canvas.toDataURL();
-  },[userProfile,winW]);
+  },[userProfile,winW,wmTime]);
 
   function WatermarkOverlay(){
     if(!watermarkUrl)return null;
