@@ -695,11 +695,11 @@ function App(){
     setPfSaving(true);
     try{
       const combinedUnit=[pf.brigadeUnit,pf.battalionUnit].filter(Boolean).join("・");
-      const profile={uid:authUser.uid,googleEmail:authUser.email,googleDisplayName:authUser.displayName,googlePhotoURL:authUser.photoURL,...pf,unit:combinedUnit,status:"pending",createdAt:todayStr()};
+      const profile={uid:authUser.uid,googleEmail:authUser.email,googleDisplayName:authUser.displayName,googlePhotoURL:authUser.photoURL,...pf,unit:combinedUnit,status:"active",createdAt:todayStr()};
       await fsSetUser(authUser.uid,profile);
       setUserProfile(profile);
-      setView("pendingApproval");
-      toast_("申請已送出，等待管理員審核");
+      setView("dashboard");
+      toast_("帳號建立成功，歡迎加入 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setPfSaving(false);}
   }
