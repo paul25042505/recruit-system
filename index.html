@@ -91,10 +91,16 @@ button{touch-action:manipulation;cursor:pointer;}
 .work-tile:active{opacity:0.65;}
 .inp-edit:focus{border-color:#f59e0b!important;box-shadow:0 0 0 3px rgba(245,158,11,0.12)!important;outline:none!important;}
 /* ─ 切換頁面動畫 ─ */
-@keyframes navSlideRight{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes navSlideLeft{from{transform:translateX(-32px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes navSlideRight{from{transform:translateX(48px)}to{transform:translateX(0)}}
+@keyframes navSlideLeft{from{transform:translateX(-32px)}to{transform:translateX(0)}}
+@keyframes navFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes navCounterRight{from{transform:translateX(-48px)}to{transform:translateX(0)}}
+@keyframes navCounterLeft{from{transform:translateX(32px)}to{transform:translateX(0)}}
 #root.nav-fwd{animation:navSlideRight 230ms cubic-bezier(.4,0,.2,1) both}
 #root.nav-bck{animation:navSlideLeft 230ms cubic-bezier(.4,0,.2,1) both}
+/* 反向抵消底部導覽列的位移，讓它保持原位 */
+#root.nav-fwd .bnav-inline,#root.nav-fwd .bnav{animation:navCounterRight 230ms cubic-bezier(.4,0,.2,1) both}
+#root.nav-bck .bnav-inline,#root.nav-bck .bnav{animation:navCounterLeft 230ms cubic-bezier(.4,0,.2,1) both}
 </style>
 <script>
 if('serviceWorker' in navigator){
