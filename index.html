@@ -264,22 +264,6 @@ const DISTRICTS={
   "金門縣":["金城鎮","金湖鎮","金沙鎮","金寧鄉","烈嶼鄉","烏坵鄉"],
   "連江縣":["南竿鄉","北竿鄉","莒光鄉","東引鄉"],
 };
-const SERVICES=["陸軍","海軍","空軍","海軍陸戰隊","憲兵","不限"];
-
-// ── 軍事單位層級 ────────────────────────────────────────────────────────────────
-const MILITARY_UNITS={
-  "陸軍司令部":["司令部本部","第一作戰區","第二作戰區","第三作戰區","第四作戰區","航空特戰指揮部","陸軍官校","步兵訓練指揮部","砲兵訓練指揮部","裝甲兵訓練指揮部","化學兵訓練中心","飛彈指揮部"],
-  "海軍司令部":["司令部本部","艦隊指揮部","水雷作戰指揮部","潛艦指揮部","海軍官校","左營海軍基地","蘇澳海軍基地","馬公海軍基地"],
-  "空軍司令部":["司令部本部","作戰指揮部","防空砲兵指揮部","空軍官校","航空技術學院","嘉義基地","清泉崗基地","台南基地","花蓮基地"],
-  "海軍陸戰隊指揮部":["指揮部本部","第66陸戰旅","第99陸戰旅","兩棲偵搜大隊","官校"],
-  "憲兵指揮部":["指揮部本部","北部地區憲兵隊","中部地區憲兵隊","南部地區憲兵隊","東部地區憲兵隊"],
-  "海巡署":["署本部","北部分署","中部分署","南部分署","東部分署","離島分署"],
-  "後備指揮部":["指揮部本部","北區指揮部","中區指揮部","南區指揮部","東區指揮部"],
-  "國防大學":["管理學院","理工學院","陸軍指參學院","海軍指參學院","空軍指參學院","政治作戰學院"],
-  "聯勤司令部":["司令部本部","兵工整備發展中心","化學兵研訓中心","材料生產廠"],
-  "軍備局":["局本部","生產製造中心","採購中心"],
-  "其他":["其他單位"],
-};
 const RANKS_ALL=["二兵","一兵","上兵","下士","中士","上士","士官長","少尉","中尉","上尉","少校","中校","上校","少將","中將","上將"];
 
 // ── Firestore: 個人資料 ─────────────────────────────────────────────────────────
@@ -472,14 +456,11 @@ function App(){
   const [sq,setSq]=useState("");const [fst,setFst]=useState("all");
   // 訓員表單
   const [tf,setTf]=useState(null);const [dirty,setDirty]=useState(false);
-  const [curTIdx,setCurTIdx]=useState(0);
   // 後台
   // 意見回饋
   const [feedbackForm,setFeedbackForm]=useState({category:"",content:""});
   const FB_CATS=[{key:"bug",label:"🐛 系統異常"},{key:"feature",label:"💡 功能建議"},{key:"account",label:"👤 帳號問題"},{key:"batch",label:"📋 梯次資料"},{key:"password",label:"🔑 密碼問題"},{key:"other",label:"💬 其他"}];
   const [feedbackList,setFeedbackList]=useState([]);
-  // 漢堡選單
-  const [showMenu,setShowMenu]=useState(false);
   // 約談紀錄編輯
   const [showEditLog,setShowEditLog]=useState(false);
   const [editLogData,setEditLogData]=useState(null);
@@ -493,7 +474,6 @@ function App(){
   const [basicEditing,setBasicEditing]=useState(false);
   const [basicDraft,setBasicDraft]=useState(null);
   const [scrollToSeat,setScrollToSeat]=useState(null);
-  const scrollDoneRef=useRef(false);
   // 單位查詢
   const [queryUnit,setQueryUnit]=useState("");
   const [queryDateFrom,setQueryDateFrom]=useState("");
@@ -522,7 +502,6 @@ function App(){
   const [memberSearch,setMemberSearch]=useState("");
   const [batchSearch,setBatchSearch]=useState("");
   const [recentCases,setRecentCases]=useState(()=>{try{return JSON.parse(localStorage.getItem("riims_recent")||"[]");}catch{return[];}});
-  const [showBrigadeSheet,setShowBrigadeSheet]=useState(false);
   const [newBUInput,setNewBUInput]=useState("");
   const [buInputMode,setBUInputMode]=useState(false);
   const [adminBUInput,setAdminBUInput]=useState("");
@@ -541,7 +520,7 @@ function App(){
   const [loginInProgress,setLoginInProgress]=useState(false);
   const [loginPopupBlocked,setLoginPopupBlocked]=useState(false);
   // 個人資料設定表單
-  const [pf,setPf]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",subUnit:"",phone:"",lineId:"",roles:["recruiter"],role:"recruiter",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
+  const [pf,setPf]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",phone:"",lineId:"",roles:["recruiter"],role:"recruiter",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
   const [pfSaving,setPfSaving]=useState(false);
   const [retrying,setRetrying]=useState(false);
   const [loadingSlow,setLoadingSlow]=useState(false);
@@ -744,7 +723,7 @@ function App(){
   async function saveMPD(){
     if(!moreProfileDraft.name.trim()||!moreProfileDraft.rank||!moreProfileDraft.brigadeUnit){toast_("請填寫姓名、階級與旅級單位","err");return;}
     const combinedUnit=[moreProfileDraft.brigadeUnit,moreProfileDraft.battalionUnit].filter(Boolean).join("・");
-    await updateMyProfile({name:moreProfileDraft.name.trim(),rank:moreProfileDraft.rank,unit:combinedUnit,brigadeUnit:moreProfileDraft.brigadeUnit,battalionUnit:moreProfileDraft.battalionUnit,lineId:moreProfileDraft.lineId||"",phone:moreProfileDraft.phone||"",roles:moreProfileDraft.roles||["recruiter"],role:(moreProfileDraft.roles||["recruiter"])[0]||"recruiter",subUnit:""});
+    await updateMyProfile({name:moreProfileDraft.name.trim(),rank:moreProfileDraft.rank,unit:combinedUnit,brigadeUnit:moreProfileDraft.brigadeUnit,battalionUnit:moreProfileDraft.battalionUnit,lineId:moreProfileDraft.lineId||"",phone:moreProfileDraft.phone||"",roles:moreProfileDraft.roles||["recruiter"],role:(moreProfileDraft.roles||["recruiter"])[0]||"recruiter"});
     setView("more");
   }
   // 簽證子頁儲存
@@ -967,7 +946,7 @@ function App(){
       const st=ev.state;
       if(!st||st.page==="home"){setView("home");document.title="梯次列表 | 招募資訊整合管理系統";return;}
       if(st.page==="admin"){enterAdmin();return;}
-      if(st.page==="memberProfile"){return;}
+      if(st.page==="memberProfile"){setView("admin");setASV("members");return;}
       if(st.page==="feedback"){setView("feedback");return;}
       if(st.page==="batch"&&st.batchId){
         const b=batches.find(x=>x.id===st.batchId);
@@ -984,7 +963,7 @@ function App(){
       }
       if(st.page==="trainee"&&st.traineeId&&curBatch){
         const t=(curBatch.trainees||[]).find(x=>x.id===st.traineeId);
-        if(t){const idx=(curBatch.trainees||[]).findIndex(x=>x.id===t.id);setCurTIdx(idx>=0?idx:0);setTf({...t});setDirty(false);setView("trainee");document.title=(t.name||"訓員")+" | "+fmtSeq(curBatch?.sequence)+" | 招募資訊整合管理系統";}
+        if(t){setTf({...t});setDirty(false);setView("trainee");document.title=(t.name||"訓員")+" | "+fmtSeq(curBatch?.sequence)+" | 招募資訊整合管理系統";}
         else setView("batch");
         return;
       }
@@ -1080,7 +1059,7 @@ function App(){
       const unit=userProfile?.brigadeUnit||userProfile?.unit||"";
       const name=(userProfile?.rank||"")+(userProfile?.name||"");
       const fb={id:uid(),createdAt:todayStr(),unit,name,...feedbackForm};
-      const updated=[...(await fsGet("feedback/list")||[]),fb];
+      const updated=[...feedbackList,fb];
       await fsSet("feedback/list",updated);
       setFeedbackList(updated);
       setFeedbackForm({category:"",content:""});
@@ -1160,18 +1139,6 @@ function App(){
     setItvwUnitInput("");
     toast_("已新增並選擇 ✓");
   }
-  async function addRecruitUnit(name){
-    if(!name.trim())return;
-    if((cfg.recruitUnits||[]).includes(name.trim()))return;
-    const newUnits=[...(cfg.recruitUnits||[]),name.trim()];
-    // 同步加到 unitProfiles
-    const existsInProfile=(cfg.recruitUnitProfiles||[]).some(p=>p.name===name.trim());
-    const newProfiles=existsInProfile?cfg.recruitUnitProfiles||[]:[...(cfg.recruitUnitProfiles||[]),{id:uid(),name:name.trim(),recruiters:[]}];
-    const newCfg={...cfg,recruitUnits:newUnits,recruitUnitProfiles:newProfiles};
-    await fsSet("settings/global",newCfg);
-    setCfg(newCfg);
-    setUnitProfiles(newProfiles);
-  }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
   function getServiceGrad(unit){
@@ -1191,7 +1158,6 @@ function App(){
     return{total:t.length,rev:t.filter(x=>x.interviewLogs&&x.interviewLogs.length>0).length,conf:t.filter(x=>getStId(x)===6).length,high:t.filter(x=>getStId(x)===5).length,none:t.filter(x=>!(x.interviewLogs||[]).length&&!getStId(x)).length};
   }
   function filterT(){
-    const tdISO=isoToday();
     const filtered=(curBatch?.trainees||[]).filter(t=>{
       const q=sq.toLowerCase();
       const mq=!q||t.name?.toLowerCase().includes(q)||String(t.seat).includes(q);
@@ -1206,8 +1172,6 @@ function App(){
     return filtered.sort((a,b)=>(a.seat||0)-(b.seat||0));
   }
   function openT(t){
-    const idx=(curBatch?.trainees||[]).findIndex(x=>x.id===t.id);
-    setCurTIdx(idx>=0?idx:0);
     setTf({...t});setDirty(false);setTraineeTab("basic");setBasicEditing(false);setBasicDraft(null);
     setNewItvw(p=>({...p,unit:p.unit||""}));
     setView("trainee");pushState({page:"trainee",traineeId:t.id,batchId:curBatch?.id},(t.name||"訓員")+" | "+fmtSeq(curBatch?.sequence));
@@ -1220,7 +1184,6 @@ function App(){
       setRecentCases(next);
     }catch(_){}
   }
-  function utf(patch){setTf(p=>({...p,...patch}));setDirty(true);}
   function isCoord(batchUnit){
     return (userProfile?.roles||[userProfile?.role||""]).includes("coordinator")&&
       (userProfile?.brigadeUnit||"")===(batchUnit||"");
@@ -1293,47 +1256,6 @@ function App(){
   }
 
   // ── Menu Overlay (rendered on top of every view) ─────────────────────────────
-  function MenuOverlay(){
-    if(!showMenu)return null;
-    return e("div",{style:{position:"fixed",inset:0,zIndex:500}},
-      e("div",{style:{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)"},onClick:()=>setShowMenu(false)}),
-      e("div",{style:{position:"absolute",top:0,left:0,bottom:0,width:"80%",maxWidth:320,background:"var(--menu)",display:"flex",flexDirection:"column",boxShadow:"8px 0 32px rgba(0,0,0,0.5)",overflowY:"auto"}},
-        e("div",{style:{...S.hdr,justifyContent:"space-between",flexShrink:0}},
-          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"選單"),
-          e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px"},onClick:()=>setShowMenu(false)},"✕")
-        ),
-        e("div",{style:{padding:"8px 0",flex:1}},
-          ...[
-            {icon:"home",label:"梯次列表",onClick:()=>{setShowMenu(false);setView("home");}},
-            {icon:"building",label:"單位目錄",onClick:()=>{setShowMenu(false);setView("unitView");}},
-            {icon:"chat",label:"意見回饋",onClick:()=>{setShowMenu(false);setView("feedback");}},
-          ].map(({icon,label,onClick})=>e("div",{key:label,style:{display:"flex",alignItems:"center",gap:14,padding:"14px 20px",cursor:"pointer",borderBottom:"1px solid var(--border2)"},onClick},
-            e(Icon,{n:icon,s:20,c:"var(--txt2)"}),
-            e("span",{style:{fontSize:15,fontWeight:700,color:"var(--txt)"}},label)
-          )),
-          // 只在梯次頁面才顯示梯次分頁
-          e("div",{key:"signout-btn",style:{padding:"14px 20px",borderTop:"1px solid var(--border)",cursor:"pointer",display:"flex",alignItems:"center",gap:14},
-            onClick:()=>{setShowMenu(false);reqSignOut();}},
-            e(Icon,{n:"logout",s:20,c:"var(--txt2)"}),
-            e("span",{style:{fontSize:15,fontWeight:700,color:"var(--txt3)"}},"登出")
-          ),
-          (view==="batch"||view==="trainee")&&curBatch&&e(React.Fragment,null,
-            e("div",{style:{padding:"10px 20px 6px",fontSize:11,fontWeight:800,color:"#f59e0b",letterSpacing:"0.1em"}},fmtSeq(curBatch.sequence)+" 分頁"),
-            ...[
-              {icon:"users",label:"訓員列表",tab:"list"},
-              {icon:"clipboard",label:"約談內容",tab:"query"},
-              {icon:"calendar",label:"梯次期程",tab:"sched"},
-              {icon:"building",label:"梯次資訊",tab:"info"},
-            ].map(({icon,label,tab})=>e("div",{key:tab,style:{display:"flex",alignItems:"center",gap:14,padding:"12px 20px",cursor:"pointer",borderBottom:"1px solid var(--border2)",background:batchTab===tab?"#1e2d45":"transparent"},
-              onClick:()=>{setShowMenu(false);setBatchTab(tab);if(view!=="batch")setView("batch");}},
-              e(Icon,{n:icon,s:18,c:batchTab===tab?"#f59e0b":"var(--txt3)"}),
-              e("span",{style:{fontSize:14,fontWeight:700,color:batchTab===tab?"#f59e0b":"var(--txt2)"}},label)
-            ))
-          )
-        )
-      )
-    );
-  }
 
   // ── Views ────────────────────────────────────────────────────────────────────
 
@@ -1541,7 +1463,6 @@ function App(){
 
   // ── Dashboard V2 (Work Center) ─────────────────────────────────────────────
   if(view==="dashboard"){
-    const todayISO=isoToday();
     // 效期計算
     function licenseStatus(profile){
       if(!profile?.licenseExpiryDate)return null;
@@ -1565,7 +1486,6 @@ function App(){
     }):batches;
     const myT=myBatches.flatMap(b=>(b.trainees||[]).map(t=>({...t,_batchId:b.id})));
     const myLogs=myT.flatMap(t=>(t.interviewLogs||[]).filter(l=>l.unit===myUnit));
-    const totalWork=0;
     // 漏斗統計（全部）
     const totalTrainees=allT.length;
     const totalConf=allT.filter(t=>getStId(t)===6).length;
@@ -2068,7 +1988,6 @@ function App(){
             e(Icon,{n:item.icon,s:22,c:item.color})
           ),
           e("div",{style:{flex:1}},
-            e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}}),
             e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},item.title)
           )
         ),
@@ -2766,10 +2685,7 @@ function App(){
     const trainees=filterT();
     const sched=curBatch.schedule||DEF_SCHED;
     const hc=curBatch.company&&curBatch.company!=="（無）";
-    const curBatchIdx=batches.findIndex(b=>b.id===curBatch.id);
-    const prevBatch=curBatchIdx>0?batches[curBatchIdx-1]:null;
-    const nextBatch=curBatchIdx<batches.length-1?batches[curBatchIdx+1]:null;
-    function goBatch(b){setCurBatch(b);setSq("");setFst("all");setBatchTab("list");}
+
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
@@ -2914,7 +2830,6 @@ function App(){
           trainees.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:40}},"無符合條件的訓員"),
           scrollToSeat!==null&&e(ScrollAnchor,{seat:scrollToSeat,onDone:()=>setScrollToSeat(null)}),
           ...trainees.map(t=>{
-            const tdISO=isoToday();
             return e("div",{key:t.id,id:"trainee-seat-"+t.seat,style:{...S.card,cursor:"pointer",padding:"10px 12px",display:"flex",alignItems:"center",gap:10},onClick:()=>openT(t)},
               e("div",{style:{width:34,height:34,background:"var(--bg3)",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--txt3)",flexShrink:0}},t.seat||"?"),
               e("div",{style:{flex:1,minWidth:0}},
@@ -3299,7 +3214,6 @@ function App(){
 
   if(view==="trainee"&&tf&&curBatch){
     const curSt=sts.find(s=>s.id===tf.statusId);
-    const isDisqualified=tf.statusId===1;
     const qa=tf.qualCheck||{};
     const qualItems=(cfg||DEF).qualCheckItems||DEF.qualCheckItems;
 
@@ -3314,7 +3228,7 @@ function App(){
       e(Toast),
       e("div",{style:S.hdr},
         e(BackBtn,{disabled:saving,onClick:async()=>{
-          if(dirty){await saveTF(true);toast_("已儲存 ✓");}
+          if(dirty){await saveTF(true);}
           setScrollToSeat(tf?.seat);
           setView("batch");
           const tab=batchTab||"list";
