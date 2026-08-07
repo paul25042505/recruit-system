@@ -198,7 +198,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-104-unit-search-and-count-label";
+const BUILD_TAG="2026-08-07-105-recruiter-card-match-unit-style";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -2998,36 +2998,52 @@ function App(){
               const grpMap={};
               members.forEach(u=>{const k=u.brigadeUnit||"（未填單位）";(grpMap[k]=grpMap[k]||[]).push(u);});
               const grpKeys=Object.keys(grpMap).sort((a,b)=>a==="（未填單位）"?1:b==="（未填單位）"?-1:a.localeCompare(b,"zh-TW"));
+              const recAC=u=>{const g=u?.gender;if(g==="female")return{bg:"#fce4ec",fg:"#c62828"};return{bg:"#dbeafe",fg:"#1d4ed8"};};
+              const recRL=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r;
+              const recRS=r=>({fontSize:11,fontWeight:700,borderRadius:20,padding:"2px 9px",background:r==="coordinator"?"#3b82f6":r==="admin"?"#f59e0b":"var(--bg3)",color:r==="coordinator"||r==="admin"?"#fff":"var(--txt2)",border:"none",display:"inline-block"});
               return e("div",null,
                 e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:8}},"共 "+members.length+" 人"),
                 ...grpKeys.map(k=>e("div",{key:k,style:{...S.card,marginBottom:10,padding:0,overflow:"hidden"}},
-                  e("div",{style:{padding:"10px 14px",background:"var(--bg3)",display:"flex",alignItems:"center",gap:8,borderBottom:"1px solid var(--border)"}},
-                    e(Icon,{n:"building",s:14,c:"#f59e0b"}),
-                    e("span",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",flex:1}},k),
-                    e("span",{style:{fontSize:11,color:"var(--txt3)"}},grpMap[k].length+" 人")
+                  e("div",{style:{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"12px 14px",
+                    background:"var(--bg3)",border:"none",borderBottom:"1px solid var(--border2)"}},
+                    e(Icon,{n:"building",s:16,c:"var(--txt3)"}),
+                    e("span",{style:{flex:1,fontSize:14,fontWeight:700,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},k),
+                    e("span",{style:{fontSize:12,color:"var(--txt3)",whiteSpace:"nowrap"}},"（"+grpMap[k].length+"員）")
                   ),
                   ...grpMap[k].map((u,i)=>{
-                    const isCoordinator=u.uid===coordUid;
-                    return e("div",{key:u.uid||i,style:{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:i<grpMap[k].length-1?"1px solid var(--border2)":"none"}},
-                      e(Icon,{n:"user",s:16,c:"var(--txt3)",style:{marginTop:2}}),
+                    const av=recAC(u);
+                    const initial=(u.name||u.googleDisplayName||"？")[0];
+                    return e("div",{key:u.uid||i,style:{display:"flex",alignItems:"center",gap:12,
+                      padding:"12px 14px",borderBottom:i<grpMap[k].length-1?"1px solid var(--border2)":"none",
+                      background:"var(--bg2)"}},
+                      e("div",{style:{width:40,height:40,borderRadius:"50%",background:av.bg,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        fontSize:15,fontWeight:800,color:av.fg,flexShrink:0}},initial),
                       e("div",{style:{flex:1,minWidth:0}},
-                        e("div",{style:{fontSize:13,fontWeight:600,color:"var(--txt)"}},
-                          (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
-                        ),
-                        u.battalionUnit&&e("div",{style:{fontSize:11,color:"var(--txt3)",marginTop:1}},u.battalionUnit),
-                        !u._notFound&&(u.phone||u.lineId)&&e("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:3,flexWrap:"wrap"}},
-                          u.phone&&e(React.Fragment,null,
-                            e(Icon,{n:"phone",s:11,c:"var(--txt3)"}),
-                            e("span",{style:{fontSize:11,color:"var(--txt3)"}},u.phone)
+                        e("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
+                          e("span",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},
+                            (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
                           ),
-                          u.lineId&&e(React.Fragment,null,
-                            e("svg",{viewBox:"0 0 24 24",width:11,height:11,fill:"#06c755",style:{flexShrink:0},dangerouslySetInnerHTML:{__html:LSP}}),
-                            e("span",{style:{fontSize:11,color:"#06c755",fontWeight:700}},u.lineId)
-                          )
+                          ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:recRS(r)},recRL(r)))
+                        ),
+                        u.battalionUnit&&e("div",{style:{display:"flex",alignItems:"center",gap:4,marginTop:3}},
+                          e(Icon,{n:"flag",s:11,c:"var(--txt3)"}),
+                          e("span",{style:{fontSize:12,color:"var(--txt3)"}},u.battalionUnit)
                         )
                       ),
-                      e("span",{style:{fontSize:10,background:isCoordinator?"#f59e0b18":"var(--bg3)",border:"1px solid "+(isCoordinator?"#f59e0b44":"var(--border)"),borderRadius:6,padding:"2px 7px",color:isCoordinator?"#f59e0b":"var(--txt2)",fontWeight:700,flexShrink:0}},
-                        isCoordinator?"承辦人":"招募員"
+                      !u._notFound&&e("div",{style:{display:"flex",flexDirection:"column",gap:6,flexShrink:0,alignItems:"flex-end"}},
+                        u.phone&&e("a",{href:"tel:"+u.phone,style:{display:"flex",alignItems:"center",gap:4,
+                          background:"#3b82f6",color:"#fff",borderRadius:8,padding:"5px 10px",
+                          fontSize:12,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}},
+                          e(Icon,{n:"phone",s:12,c:"#fff"}),"撥打電話"
+                        ),
+                        u.lineId&&e("a",{href:"https://line.me/ti/p/~"+u.lineId,target:"_blank",rel:"noopener",
+                          style:{display:"flex",alignItems:"center",gap:4,background:"#06c755",color:"#fff",
+                            borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,
+                            textDecoration:"none",whiteSpace:"nowrap"}},
+                          e("svg",{viewBox:"0 0 24 24",width:13,height:13,fill:"#fff",style:{flexShrink:0},dangerouslySetInnerHTML:{__html:LSP}}),
+                          "Line 聯繫"
+                        )
                       )
                     );
                   })
