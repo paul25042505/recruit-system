@@ -198,7 +198,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-06-98-unit-view-screenshot-design";
+const BUILD_TAG="2026-08-07-99-gender-and-unit-refinements";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -353,7 +353,7 @@ const ICONS={
   chevR:`<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>`,
   chevU:`<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/>`,
   chevD:`<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>`,
-  pin:`<path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>`,
+  flag:`<path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"/>`,
   pencil:`<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>`,
   trash:`<path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>`,
   search:`<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>`,
@@ -531,7 +531,7 @@ function App(){
   const [uvLoading,setUvLoading]=useState(false);
   const [uvCollapsed,setUvCollapsed]=useState(new Set());
   // 更多頁子頁草稿
-  const [moreProfileDraft,setMPD]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",lineId:"",phone:"",roles:["recruiter"]});
+  const [moreProfileDraft,setMPD]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",lineId:"",phone:"",roles:["recruiter"],gender:""});
   const [moreLicenseDraft,setMLD]=useState({licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
   // 待審核用戶列表（管理員用）
   const [pendingUsers,setPendingUsers]=useState([]);
@@ -562,7 +562,7 @@ function App(){
   const [loginInProgress,setLoginInProgress]=useState(false);
   const [loginPopupBlocked,setLoginPopupBlocked]=useState(false);
   // 個人資料設定表單
-  const [pf,setPf]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",phone:"",lineId:"",roles:["recruiter"],role:"recruiter",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
+  const [pf,setPf]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",phone:"",lineId:"",roles:["recruiter"],role:"recruiter",gender:"",licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
   const [pfSaving,setPfSaving]=useState(false);
   const [retrying,setRetrying]=useState(false);
   const [loadingSlow,setLoadingSlow]=useState(false);
@@ -776,7 +776,7 @@ function App(){
   async function saveMPD(){
     if(!moreProfileDraft.name.trim()||!moreProfileDraft.rank||!moreProfileDraft.brigadeUnit){toast_("請填寫姓名、階級與旅級單位","err");return;}
     const combinedUnit=[moreProfileDraft.brigadeUnit,moreProfileDraft.battalionUnit].filter(Boolean).join("・");
-    await updateMyProfile({name:moreProfileDraft.name.trim(),rank:moreProfileDraft.rank,unit:combinedUnit,brigadeUnit:moreProfileDraft.brigadeUnit,battalionUnit:moreProfileDraft.battalionUnit,lineId:moreProfileDraft.lineId||"",phone:moreProfileDraft.phone||"",roles:moreProfileDraft.roles||["recruiter"],role:(moreProfileDraft.roles||["recruiter"])[0]||"recruiter"});
+    await updateMyProfile({name:moreProfileDraft.name.trim(),rank:moreProfileDraft.rank,unit:combinedUnit,brigadeUnit:moreProfileDraft.brigadeUnit,battalionUnit:moreProfileDraft.battalionUnit,lineId:moreProfileDraft.lineId||"",phone:moreProfileDraft.phone||"",roles:moreProfileDraft.roles||["recruiter"],role:(moreProfileDraft.roles||["recruiter"])[0]||"recruiter",gender:moreProfileDraft.gender||""});
     setView("more");
   }
   // 簽證子頁儲存
@@ -1487,6 +1487,16 @@ function App(){
               e("option",{value:"coordinator"},"新訓單位招募承辦")
             )
           ),
+          e("div",null,
+            e("label",{style:S.lbl},"性別 *"),
+            e("div",{style:{display:"flex",gap:8}},
+              ...([{v:"male",l:"男"},{v:"female",l:"女"}]).map(({v,l})=>{
+                const active=pf.gender===v;
+                return e("button",{key:v,type:"button",style:{...S.btn(active?"primary":"ghost"),flex:1},
+                  onClick:()=>setPf(p=>({...p,gender:v}))},l);
+              })
+            )
+          ),
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"旅級單位 *"),
             pfBUMode
@@ -1815,7 +1825,7 @@ function App(){
       // 帳號設定
       Shdr("帳號設定",8),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:16}},
-        e(MoreNavRow,{icon:"user",label:"個人資料",sub:(userProfile?.rank||"")+" "+(userProfile?.name||""),onClick:()=>{const parts=(userProfile?.unit||"").split("・");const bg=userProfile?.brigadeUnit||(parts[0]||"");const bn=userProfile?.battalionUnit||(parts.slice(1).join("・")||"");setMPD({name:userProfile?.name||"",rank:userProfile?.rank||"",unit:userProfile?.unit||"",brigadeUnit:bg,battalionUnit:bn,lineId:userProfile?.lineId||"",phone:userProfile?.phone||"",roles:userProfile?.roles||["recruiter"]});setView("moreProfile");}})
+        e(MoreNavRow,{icon:"user",label:"個人資料",sub:(userProfile?.rank||"")+" "+(userProfile?.name||""),onClick:()=>{const parts=(userProfile?.unit||"").split("・");const bg=userProfile?.brigadeUnit||(parts[0]||"");const bn=userProfile?.battalionUnit||(parts.slice(1).join("・")||"");setMPD({name:userProfile?.name||"",rank:userProfile?.rank||"",unit:userProfile?.unit||"",brigadeUnit:bg,battalionUnit:bn,lineId:userProfile?.lineId||"",phone:userProfile?.phone||"",roles:userProfile?.roles||["recruiter"],gender:userProfile?.gender||""});setView("moreProfile");}})
       ),
       // 承辦人：單位回饋入口
       (userProfile?.roles||[]).includes("coordinator")&&e(React.Fragment,null,
@@ -1920,6 +1930,16 @@ function App(){
                   onClick:()=>setMPD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
               })
             )
+          ),
+          e("div",{style:{gridColumn:"span 2"}},
+            e("label",{style:S.lbl},"性別"),
+            e("div",{style:{display:"flex",gap:8}},
+              ...([{v:"male",l:"男"},{v:"female",l:"女"}]).map(({v,l})=>{
+                const active=moreProfileDraft.gender===v;
+                return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
+                  onClick:()=>setMPD(d=>({...d,gender:v}))},l);
+              })
+            )
           )
         )
       )
@@ -1983,7 +2003,7 @@ function App(){
       {bg:"#e3f2fd",fg:"#1565c0"},{bg:"#f3e5f5",fg:"#6a1b9a"},
       {bg:"#e0f7fa",fg:"#006064"},{bg:"#fbe9e7",fg:"#bf360c"}
     ];
-    function uvAvatarColor(name){let h=0;for(let i=0;i<(name||"").length;i++)h=(h*31+(name||"").charCodeAt(i))&0xffff;return UV_AVATAR[h%UV_AVATAR.length];}
+    function uvAvatarColor(u){const g=u?.gender;if(g==="female")return{bg:"#fce4ec",fg:"#c62828"};return{bg:"#dbeafe",fg:"#1d4ed8"};}
     const LINE_SVG_UV="<path d='M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.628-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314'/>";
     function uvRoleLabel(r){return r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r;}
     function uvRoleStyle(r){return{fontSize:11,fontWeight:700,borderRadius:20,padding:"2px 9px",
@@ -2026,7 +2046,7 @@ function App(){
               ),
               !collapsed&&e(React.Fragment,null,
                 ...users.map((u,i)=>{
-                  const av=uvAvatarColor(u.name||u.googleDisplayName||"");
+                  const av=uvAvatarColor(u);
                   const initial=(u.name||u.googleDisplayName||"？")[0];
                   return e("div",{key:u.uid||i,style:{display:"flex",alignItems:"center",gap:12,
                     padding:"12px 14px",borderBottom:i<users.length-1?"1px solid var(--border2)":"none",
@@ -2036,30 +2056,21 @@ function App(){
                       fontSize:15,fontWeight:800,color:av.fg,flexShrink:0}},initial),
                     e("div",{style:{flex:1,minWidth:0}},
                       e("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
-                        e("span",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},
+                        e("span",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},
                           (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
                         ),
                         ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:uvRoleStyle(r)},uvRoleLabel(r)))
                       ),
                       u.battalionUnit&&e("div",{style:{display:"flex",alignItems:"center",gap:4,marginTop:3}},
-                        e(Icon,{n:"pin",s:11,c:"var(--txt3)"}),
+                        e(Icon,{n:"flag",s:11,c:"var(--txt3)"}),
                         e("span",{style:{fontSize:12,color:"var(--txt3)"}},u.battalionUnit)
                       )
                     ),
                     e("div",{style:{display:"flex",flexDirection:"column",gap:6,flexShrink:0,alignItems:"flex-end"}},
-                      u.phone&&e("div",{style:{display:"flex",gap:5}},
-                        e("a",{href:"tel:"+u.phone,style:{display:"flex",alignItems:"center",gap:4,
-                          background:"#3b82f6",color:"#fff",borderRadius:8,padding:"5px 10px",
-                          fontSize:12,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}},
-                          e(Icon,{n:"phone",s:12,c:"#fff"}),"撥打電話"
-                        ),
-                        e("button",{style:{display:"flex",alignItems:"center",gap:4,
-                          background:"var(--bg3)",color:"var(--txt2)",border:"1px solid var(--border)",
-                          borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,cursor:"pointer",
-                          fontFamily:"'Noto Sans TC',sans-serif",whiteSpace:"nowrap"},
-                          onClick:()=>navigator.clipboard?.writeText(u.phone).then(()=>toast_("已複製號碼 ✓"))},
-                          "複製號碼"
-                        )
+                      u.phone&&e("a",{href:"tel:"+u.phone,style:{display:"flex",alignItems:"center",gap:4,
+                        background:"#3b82f6",color:"#fff",borderRadius:8,padding:"5px 10px",
+                        fontSize:12,fontWeight:700,textDecoration:"none",whiteSpace:"nowrap"}},
+                        e(Icon,{n:"phone",s:12,c:"#fff"}),"撥打電話"
                       ),
                       u.lineId&&e("a",{href:"https://line.me/ti/p/~"+u.lineId,target:"_blank",rel:"noopener",
                         style:{display:"flex",alignItems:"center",gap:4,background:"#06c755",color:"#fff",
