@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-108-fix-datepicker-portal";
+const BUILD_TAG="2026-08-07-109-segmented-toggle-buttons";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -334,6 +334,8 @@ const S={
   sel:{width:"100%",background:"var(--inp-bg)",border:"1px solid var(--border)",borderRadius:9,padding:"10px 12px",color:"var(--txt)",fontSize:14,outline:"none",position:"relative",zIndex:1},
   lbl:{display:"block",fontSize:11,color:"var(--txt3)",fontWeight:700,marginBottom:5,letterSpacing:"0.04em"},
   btn:(v="primary",sz="md")=>({display:"inline-flex",alignItems:"center",justifyContent:"center",gap:5,border:"none",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",fontWeight:700,borderRadius:sz==="sm"?8:10,fontSize:sz==="sm"?12:14,padding:sz==="sm"?"6px 12px":"10px 18px",background:v==="primary"?"linear-gradient(135deg,#f59e0b,#ef4444)":v==="ghost"?"transparent":"var(--bg3)",color:v==="ghost"?"var(--txt3)":"#fff",border:v==="ghost"?"1px solid var(--border)":"none"}),
+  segWrap:{display:"flex",background:"var(--bg3)",borderRadius:10,padding:3,gap:2},
+  segBtn:(a)=>({flex:1,padding:"9px 0",borderRadius:8,background:a?"var(--bg2)":"transparent",boxShadow:a?"0 1px 4px rgba(0,0,0,.15)":"none",border:"none",fontSize:14,fontWeight:a?700:600,color:a?"var(--txt)":"var(--txt3)",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"}),
   badge:{background:"var(--bg3)",color:"var(--txt3)",borderRadius:6,padding:"2px 8px",fontSize:11},
   tag:c=>({background:c+"20",color:c,borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700}),
   toast:t=>({position:"fixed",top:18,left:"50%",transform:"translateX(-50%)",background:t==="ok"?"#10b981":"#ef4444",color:"#fff",borderRadius:10,padding:"10px 22px",fontSize:13,fontWeight:700,zIndex:999,whiteSpace:"nowrap",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}),
@@ -1504,10 +1506,10 @@ function App(){
           ),
           e("div",null,
             e("label",{style:S.lbl},"性別 *"),
-            e("div",{style:{display:"flex",gap:8}},
+            e("div",{style:S.segWrap},
               ...([{v:"male",l:"男"},{v:"female",l:"女"}]).map(({v,l})=>{
                 const active=pf.gender===v;
-                return e("button",{key:v,type:"button",style:{...S.btn(active?"primary":"ghost"),flex:1},
+                return e("button",{key:v,type:"button",style:S.segBtn(active),
                   onClick:()=>setPf(p=>({...p,gender:v}))},l);
               })
             )
@@ -1553,8 +1555,8 @@ function App(){
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 12px"}},
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"招募類別"),
-            e("div",{style:{display:"flex",gap:8}},
-              ...["正編","協力"].map(t=>e("button",{key:t,style:{...S.btn(pf.licenseType===t?"primary":"ghost"),flex:1},onClick:()=>setPf(p=>({...p,licenseType:t}))},t+"招募"))
+            e("div",{style:S.segWrap},
+              ...["正編","協力"].map(t=>e("button",{key:t,style:S.segBtn(pf.licenseType===t),onClick:()=>setPf(p=>({...p,licenseType:t}))},t+"招募"))
             )
           ),
           e("div",{style:{gridColumn:"span 2"}},
@@ -1896,10 +1898,10 @@ function App(){
         ),
         e("div",null,
           e("label",{style:S.lbl},"性別"),
-          e("div",{style:{display:"flex",gap:8}},
+          e("div",{style:S.segWrap},
             ...([{v:"male",l:"男"},{v:"female",l:"女"}]).map(({v,l})=>{
               const active=moreProfileDraft.gender===v;
-              return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
+              return e("button",{key:v,style:S.segBtn(active),
                 onClick:()=>setMPD(d=>({...d,gender:v}))},l);
             })
           )
@@ -1933,10 +1935,10 @@ function App(){
         e("div",null,e("label",{style:S.lbl},"Line ID"),e("input",{style:S.inp,placeholder:"輸入 Line ID（選填）",value:moreProfileDraft.lineId,onChange:ev=>setMPD(d=>({...d,lineId:ev.target.value}))})),
         e("div",null,
           e("label",{style:S.lbl},"角色（可複選）"),
-          e("div",{style:{display:"flex",gap:8}},
+          e("div",{style:S.segWrap},
             ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"}]).map(({v,l})=>{
               const active=(moreProfileDraft.roles||[]).includes(v);
-              return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
+              return e("button",{key:v,style:S.segBtn(active),
                 onClick:()=>setMPD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
             })
           )
@@ -1960,8 +1962,8 @@ function App(){
         e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 12px"}},
           e("div",{style:{gridColumn:"span 2"}},
             e("label",{style:S.lbl},"招募類別"),
-            e("div",{style:{display:"flex",gap:8}},
-              ...["正編","協力"].map(t=>e("button",{key:t,style:{...S.btn(moreLicenseDraft.licenseType===t?"primary":"ghost"),flex:1},onClick:()=>setMLD(d=>({...d,licenseType:t}))},t+"招募"))
+            e("div",{style:S.segWrap},
+              ...["正編","協力"].map(t=>e("button",{key:t,style:S.segBtn(moreLicenseDraft.licenseType===t),onClick:()=>setMLD(d=>({...d,licenseType:t}))},t+"招募"))
             )
           ),
           e("div",{style:{gridColumn:"span 2"}},
@@ -2614,10 +2616,10 @@ function App(){
         ),
         e("div",null,
           e("label",{style:S.lbl},"性別"),
-          e("div",{style:{display:"flex",gap:8}},
+          e("div",{style:S.segWrap},
             ...([{v:"male",l:"男"},{v:"female",l:"女"}]).map(({v,l})=>{
               const active=editMemberDraft.gender===v;
-              return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
+              return e("button",{key:v,style:S.segBtn(active),
                 onClick:()=>setEMD(d=>({...d,gender:v}))},l);
             })
           )
@@ -2650,10 +2652,10 @@ function App(){
         e("div",null,e("label",{style:S.lbl},"Line ID"),e("input",{style:S.inp,placeholder:"輸入 Line ID（選填）",value:editMemberDraft.lineId||"",onChange:ev=>setEMD(d=>({...d,lineId:ev.target.value}))})),
         e("div",null,
           e("label",{style:S.lbl},"角色（可複選）"),
-          e("div",{style:{display:"flex",gap:8}},
+          e("div",{style:S.segWrap},
             ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"管理員"}]).map(({v,l})=>{
               const active=(editMemberDraft.roles||[]).includes(v);
-              return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
+              return e("button",{key:v,style:S.segBtn(active),
                 onClick:()=>setEMD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
             })
           )
