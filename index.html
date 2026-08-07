@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-109-segmented-toggle-buttons";
+const BUILD_TAG="2026-08-07-110-batch-coordinator-contact";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -495,6 +495,7 @@ function App(){
   // 驗證
   const [bPwd,setBPwd]=useState("");const [bPwdErr,setBPwdErr]=useState(false);
   const [pendBatch,setPendBatch]=useState(null);
+  const [batchCoordProfile,setBatchCoordProfile]=useState(null);
   // 篩選
   const [sq,setSq]=useState("");const [fst,setFst]=useState("all");
   // 訓員表單
@@ -669,6 +670,13 @@ function App(){
       }).catch(()=>{setCfg(DEF);});
     }
   },[view,cfg]);
+
+  // 批次切換時載入承辦人聯絡資料
+  useEffect(()=>{
+    const uid=curBatch?.coordinatorUid;
+    if(!uid){setBatchCoordProfile(null);return;}
+    fsGetUser(uid).then(p=>setBatchCoordProfile(p||null)).catch(()=>setBatchCoordProfile(null));
+  },[curBatch?.coordinatorUid]);
 
   // ── Auth state ──────────────────────────────────────────────────────────────
   // 安全逾時：5秒內 onAuthStateChanged 沒觸發就強制跳登入畫面
@@ -3366,6 +3374,22 @@ function App(){
               e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
                 e("div",{style:{fontSize:12,color:"var(--txt3)"}},"訓員人數"),
                 e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",textAlign:"right"}},(curBatch.trainees?.length||0)+" 人")
+              ),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"承辦人"),
+                e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",textAlign:"right"}},curBatch.coordinator||"—")
+              ),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"手機"),
+                batchCoordProfile?.phone
+                  ?e("a",{href:"tel:"+batchCoordProfile.phone,style:{fontSize:13,fontWeight:700,color:"#3b82f6",textDecoration:"none"}},batchCoordProfile.phone)
+                  :e("div",{style:{fontSize:13,color:"var(--txt3)"}},"—")
+              ),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"Line ID"),
+                batchCoordProfile?.lineId
+                  ?e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",userSelect:"all"}},batchCoordProfile.lineId)
+                  :e("div",{style:{fontSize:13,color:"var(--txt3)"}},"—")
               ),
               e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0"}},
                 e("div",null,
