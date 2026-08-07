@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-110-batch-coordinator-contact";
+const BUILD_TAG="2026-08-07-111-watermark-dark-mode-reactive";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -560,6 +560,7 @@ function App(){
   const [itvwUnitInput,setItvwUnitInput]=useState("");
   const [winW,setWinW]=useState(window.innerWidth);
   const [wmTime,setWmTime]=useState(()=>new Date());
+  const [isDarkScheme,setIsDarkScheme]=useState(()=>window.matchMedia("(prefers-color-scheme:dark)").matches);
 
   // 身分驗證
   const [authUser,setAuthUser]=useState(null);
@@ -920,6 +921,12 @@ function App(){
     const t=setInterval(()=>setWmTime(new Date()),60000);
     return()=>clearInterval(t);
   },[]);
+  useEffect(()=>{
+    const mq=window.matchMedia("(prefers-color-scheme:dark)");
+    const h=ev=>setIsDarkScheme(ev.matches);
+    mq.addEventListener("change",h);
+    return()=>mq.removeEventListener("change",h);
+  },[]);
   const watermarkUrl=useMemo(()=>{
     if(!userProfile)return null;
     const unit=userProfile.unit||"";
@@ -931,17 +938,16 @@ function App(){
     canvas.width=colW*2;canvas.height=150;
     const ctx=canvas.getContext("2d");
     if(!ctx)return null;
-    const isDk=!document.documentElement.classList.contains("light");
     [colW*0.5,colW*1.5].forEach(cx=>{
       ctx.save();ctx.translate(cx,75);ctx.rotate(-Math.PI/6);
       ctx.font="600 13px 'Noto Sans TC',sans-serif";
-      ctx.fillStyle=isDk?"rgba(255,255,255,0.09)":"rgba(0,0,0,0.08)";
+      ctx.fillStyle=isDarkScheme?"rgba(255,255,255,0.09)":"rgba(0,0,0,0.08)";
       ctx.textAlign="center";
       ctx.fillText(unit,0,-20);ctx.fillText(rankName,0,4);ctx.fillText(dateStr,0,28);
       ctx.restore();
     });
     return canvas.toDataURL();
-  },[userProfile,winW,wmTime]);
+  },[userProfile,winW,wmTime,isDarkScheme]);
 
   function WatermarkOverlay(){
     if(!watermarkUrl)return null;
