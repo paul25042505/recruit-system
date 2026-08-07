@@ -198,7 +198,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-102-profile-layout-match-admin-editor";
+const BUILD_TAG="2026-08-07-103-gender-below-rank-in-profile";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -1879,6 +1879,16 @@ function App(){
             ...RANKS_ALL.map(r=>e("option",{key:r,value:r},r))
           )
         ),
+        e("div",null,
+          e("label",{style:S.lbl},"性別"),
+          e("div",{style:{display:"flex",gap:8}},
+            ...([{v:"male",l:"男"},{v:"female",l:"女"}]).map(({v,l})=>{
+              const active=moreProfileDraft.gender===v;
+              return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
+                onClick:()=>setMPD(d=>({...d,gender:v}))},l);
+            })
+          )
+        ),
         e("div",null,e("label",{style:S.lbl},"旅級單位 *"),
           buInputMode
             ?e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
@@ -1913,16 +1923,6 @@ function App(){
               const active=(moreProfileDraft.roles||[]).includes(v);
               return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
                 onClick:()=>setMPD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
-            })
-          )
-        ),
-        e("div",null,
-          e("label",{style:S.lbl},"性別"),
-          e("div",{style:{display:"flex",gap:8}},
-            ...([{v:"male",l:"男"},{v:"female",l:"女"}]).map(({v,l})=>{
-              const active=moreProfileDraft.gender===v;
-              return e("button",{key:v,style:{...S.btn(active?"primary":"ghost"),flex:1},
-                onClick:()=>setMPD(d=>({...d,gender:v}))},l);
             })
           )
         )
