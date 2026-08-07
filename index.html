@@ -198,7 +198,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-103-gender-below-rank-in-profile";
+const BUILD_TAG="2026-08-07-104-unit-search-and-count-label";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -530,6 +530,7 @@ function App(){
   const [uvUsers,setUvUsers]=useState([]);
   const [uvLoading,setUvLoading]=useState(false);
   const [uvCollapsed,setUvCollapsed]=useState(new Set());
+  const [uvSearch,setUvSearch]=useState("");
   // 更多頁子頁草稿
   const [moreProfileDraft,setMPD]=useState({name:"",rank:"",unit:"",brigadeUnit:"",battalionUnit:"",lineId:"",phone:"",roles:["recruiter"],gender:""});
   const [moreLicenseDraft,setMLD]=useState({licenseType:"正編",licenseNo:"",licenseIssueDate:"",licenseExpiryDate:""});
@@ -1983,6 +1984,18 @@ function App(){
       grouped[key].push(u);
     });
     const sortedKeys=Object.keys(grouped).sort((a,b)=>a.localeCompare(b,"zh-TW",{sensitivity:"base"}));
+    const uvQ=uvSearch.trim().toLowerCase();
+    const filteredKeys=uvQ?sortedKeys.filter(unit=>{
+      const dn=(groupDisplay[unit]||unit).toLowerCase();
+      if(dn.includes(uvQ))return true;
+      return grouped[unit].some(u=>((u.rank||"")+" "+(u.name||"")).toLowerCase().includes(uvQ)||(u.name||"").toLowerCase().includes(uvQ));
+    }):sortedKeys;
+    function uvFilteredUsers(unit){
+      if(!uvQ)return grouped[unit];
+      const dn=(groupDisplay[unit]||unit).toLowerCase();
+      if(dn.includes(uvQ))return grouped[unit];
+      return grouped[unit].filter(u=>((u.rank||"")+" "+(u.name||"")).toLowerCase().includes(uvQ)||(u.name||"").toLowerCase().includes(uvQ));
+    }
     const UV_AVATAR=[
       {bg:"#e8eaf6",fg:"#5c6bc0"},{bg:"#fff8e1",fg:"#e65100"},
       {bg:"#e8f5e9",fg:"#2e7d32"},{bg:"#fce4ec",fg:"#c62828"},
@@ -2009,13 +2022,16 @@ function App(){
       ),
       e("div",{style:{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch"},className:"has-bnav ptr-scroll"},
         e("div",{style:{...S.sec,paddingTop:12}},
-          uvLoading&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},"載入中…"),
-          !uvLoading&&sortedKeys.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
-            e(Icon,{n:"users",s:36,c:"var(--txt3)"}),
-            e("div",{style:{marginTop:8,fontSize:13}},"尚無已核准的成員")
+          e("div",{style:{marginBottom:10}},
+            e("input",{style:{...S.inp,fontSize:13},placeholder:"搜尋單位・姓名",value:uvSearch,onChange:ev=>setUvSearch(ev.target.value)})
           ),
-          ...sortedKeys.map(unit=>{
-            const users=grouped[unit];
+          uvLoading&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0",fontSize:13}},"載入中…"),
+          !uvLoading&&filteredKeys.length===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",padding:"40px 0"}},
+            e(Icon,{n:"users",s:36,c:"var(--txt3)"}),
+            e("div",{style:{marginTop:8,fontSize:13}},uvQ?"查無符合結果":"尚無已核准的成員")
+          ),
+          ...filteredKeys.map(unit=>{
+            const users=uvFilteredUsers(unit);
             const displayName=groupDisplay[unit]||unit;
             const collapsed=uvCollapsed.has(unit);
             return e("div",{key:unit,style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
@@ -2026,7 +2042,7 @@ function App(){
                 e(Icon,{n:"building",s:16,c:"var(--txt3)"}),
                 e("span",{style:{flex:1,fontSize:14,fontWeight:700,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},displayName),
                 e("span",{style:{fontSize:12,color:"var(--txt3)",marginRight:4,whiteSpace:"nowrap"}},
-                  "("+users.length+" 名幹部)"
+                  "（"+users.length+"員）"
                 ),
                 e(Icon,{n:collapsed?"chevD":"chevU",s:16,c:"var(--txt3)"})
               ),
