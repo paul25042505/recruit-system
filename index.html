@@ -137,6 +137,7 @@ window.addEventListener("unhandledrejection",function(ev){__showBootError((ev.re
 </script>
 <script type="importmap">{"imports":{
   "react":"https://esm.sh/react@18",
+  "react-dom":"https://esm.sh/react-dom@18",
   "react-dom/client":"https://esm.sh/react-dom@18/client",
   "firebase/app":"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
   "firebase/firestore":"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js",
@@ -145,6 +146,7 @@ window.addEventListener("unhandledrejection",function(ev){__showBootError((ev.re
 <script type="module">
 import React,{useState,useEffect,useRef,useMemo,useLayoutEffect} from"react";
 import {createRoot} from"react-dom/client";
+import {createPortal} from"react-dom";
 import {initializeApp} from"firebase/app";
 import {
   getFirestore,
@@ -198,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-107-fix-profilesetup-brigade-dropdown";
+const BUILD_TAG="2026-08-07-108-fix-datepicker-portal";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -425,7 +427,7 @@ function DatePicker({value,onChange,placeholder,style}){
       e("span",{style:{color:value?"var(--txt)":"var(--txt3)",fontSize:14,flex:1,pointerEvents:"none"}},displayVal||ph),
       e(Icon,{n:"calendar",s:16,c:"var(--txt3)"})
     ),
-    open&&e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:9999},onClick:ev=>ev.target===ev.currentTarget&&setOpen(false)},
+    open&&createPortal(e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:9999},onClick:ev=>ev.target===ev.currentTarget&&setOpen(false)},
       e("div",{style:{background:"var(--bg2)",borderRadius:"20px 20px 0 0",padding:"20px 16px 36px",width:"100%",maxWidth:480}},
         e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}},
           e("div",{style:{fontSize:17,fontWeight:800,color:"var(--txt)"}},viewYear+"年 "+MN[viewMonth]+"月"),
@@ -455,7 +457,7 @@ function DatePicker({value,onChange,placeholder,style}){
           e("button",{type:"button",style:{width:44,height:44,borderRadius:"50%",background:pending?"#3b82f6":"#94a3b8",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},onClick:confirm},e(Icon,{n:"checkCircle",s:22,c:"#fff"}))
         )
       )
-    )
+    ),document.body)
   );
 }
 
