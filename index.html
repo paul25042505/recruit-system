@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-07-111-watermark-dark-mode-reactive";
+const BUILD_TAG="2026-08-10-112-login-logs-date-filter";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -2559,8 +2559,15 @@ function App(){
 
   // ── Login logs sub-view ────────────────────────────────────────────────────
   if(adminSubView==="loginLogs"){
-    const ROLE_FILTERS=[{k:"all",l:"全部"},{k:"recruiter",l:"招募員"},{k:"coordinator",l:"承辦人"},{k:"admin",l:"管理員"}];
-    const filteredLogs=loginLogsFilter==="all"?loginLogs:loginLogs.filter(l=>l.role===loginLogsFilter);
+    const DATE_FILTERS=[{k:"today",l:"今天"},{k:"7d",l:"近7天"},{k:"30d",l:"近30天"},{k:"all",l:"全部"}];
+    const now=Date.now();
+    const filteredLogs=loginLogs.filter(l=>{
+      if(loginLogsFilter==="all")return true;
+      if(loginLogsFilter==="today"){const d=new Date(l.ts),t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate();}
+      if(loginLogsFilter==="7d")return now-(l.ts||0)<=7*86400000;
+      if(loginLogsFilter==="30d")return now-(l.ts||0)<=30*86400000;
+      return true;
+    });
     return e("div",{style:S.app},
       e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
       e("div",{style:S.hdr},
@@ -2570,10 +2577,10 @@ function App(){
       ),
       e("div",{style:{...S.sec,paddingTop:12}},
         e("div",{style:{...S.segWrap,marginBottom:12}},
-          ...ROLE_FILTERS.map(f=>e("button",{key:f.k,style:S.segBtn(loginLogsFilter===f.k),onClick:()=>{setLoginLogsFilter(f.k);setEditingLogIdx(null);}},f.l))
+          ...DATE_FILTERS.map(f=>e("button",{key:f.k,style:S.segBtn(loginLogsFilter===f.k),onClick:()=>{setLoginLogsFilter(f.k);setEditingLogIdx(null);}},f.l))
         ),
         e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},
-          loginLogsLoading?"載入中…":"共 "+filteredLogs.length+" 筆"+(loginLogsFilter==="all"?"（最近 200 筆）":"")
+          loginLogsLoading?"載入中…":"共 "+filteredLogs.length+" 筆"+(loginLogsFilter==="all"?"（最近 200 筆）":loginLogsFilter==="today"?"（今日）":loginLogsFilter==="7d"?"（近7天）":"（近30天）")
         ),
         filteredLogs.length===0&&!loginLogsLoading&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無登入紀錄"),
         ...filteredLogs.map((log,i)=>{
