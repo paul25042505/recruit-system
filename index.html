@@ -554,6 +554,8 @@ function App(){
   const [buInputMode,setBUInputMode]=useState(false);
   const [adminBUInput,setAdminBUInput]=useState("");
   const [adminBUMode,setAdminBUMode]=useState(false);
+  const [loginLogs,setLoginLogs]=useState([]);
+  const [loginLogsLoading,setLoginLogsLoading]=useState(false);
   const [pfBUInput,setPfBUInput]=useState("");
   const [pfBUMode,setPfBUMode]=useState(false);
   const [itvwUnitMode,setItvwUnitMode]=useState(false);
@@ -714,6 +716,9 @@ function App(){
         if(!profile){setUserProfile(null);setView("profileSetup");done=true;return;}
         setUserProfile(profile);
         if(profile.status!=="active"){setView("pendingApproval");done=true;return;}
+        // 非同步寫入登入紀錄，不阻塞主流程
+        const _logEntry={uid:user.uid,name:(profile.rank||"")+(profile.name||""),unit:profile.unit||profile.brigadeUnit||"",role:(profile.roles||[profile.role||"recruiter"])[0],ts:Date.now()};
+        fsGet("loginLogs/recent").then(d=>{const next=[_logEntry,...(d?.logs||[])].slice(0,200);return fsSet("loginLogs/recent",{logs:next});}).catch(()=>{});
         const loadedBatches=await tout(loadAppData(),12000,"載入資料逾時");
         // 嘗試還原重新整理前的頁面位置
         const hs=window.history.state;
@@ -1346,6 +1351,11 @@ function App(){
       toast_("已儲存 ✓");
     }catch(err){toast_(err.message,"err");}
     finally{setEMSaving(false);}
+  }
+  async function loadLoginLogs(){
+    setLoginLogsLoading(true);
+    try{const d=await fsGet("loginLogs/recent");setLoginLogs(d?.logs||[]);}catch(_){}
+    finally{setLoginLogsLoading(false);}
   }
   function enterAdmin(){setASV(null);loadPendingUsers();loadAllUsers();setView("admin");pushState({page:"admin"},"後台管理");}
   const sts=(cfg||DEF).statusOptions;
@@ -2533,6 +2543,46 @@ function App(){
     e(BottomNav)
   );
 
+  // ── Login logs sub-view ────────────────────────────────────────────────────
+  if(adminSubView==="loginLogs") return e("div",{style:S.app},
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e("div",{style:S.hdr},
+      e(BackBtn,{onClick:()=>setASV(null)}),
+      e("div",{style:{flex:1}},e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"登入紀錄")),
+      e("button",{style:{...S.btn("ghost","sm"),fontSize:11,padding:"4px 10px"},onClick:loadLoginLogs,disabled:loginLogsLoading},loginLogsLoading?"載入中…":"重整")
+    ),
+    e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:10}},
+        loginLogsLoading?"載入中…":"共 "+loginLogs.length+" 筆（最近 200 筆）"
+      ),
+      loginLogs.length===0&&!loginLogsLoading&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無登入紀錄"),
+      ...loginLogs.map((log,i)=>{
+        const roleLbl=log.role==="admin"?"管理員":log.role==="coordinator"?"承辦人":"招募員";
+        const roleStyle=log.role==="admin"
+          ?{background:"rgba(245,158,11,0.15)",color:"#f59e0b"}
+          :log.role==="coordinator"
+            ?{background:"rgba(59,130,246,0.15)",color:"#3b82f6"}
+            :{background:"var(--bg3)",color:"var(--txt2)"};
+        const now=Date.now();const diff=now-(log.ts||0);
+        const timeStr=diff<60000?"剛剛":diff<3600000?Math.floor(diff/60000)+"分鐘前":diff<86400000?Math.floor(diff/3600000)+"小時前":diff<604800000?Math.floor(diff/86400000)+"天前":(()=>{const d=new Date(log.ts);return(d.getMonth()+1)+"月"+d.getDate()+"日 "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");})();
+        const initial=(log.name||"?").charAt(0);
+        return e("div",{key:i,style:{...S.card,marginBottom:8,display:"flex",alignItems:"center",gap:12}},
+          e("div",{style:{width:40,height:40,borderRadius:"50%",background:"rgba(139,92,246,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:15,fontWeight:800,color:"#8b5cf6"}},initial),
+          e("div",{style:{flex:1,minWidth:0}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:2}},
+              e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},log.name||"—"),
+              e("span",{style:{fontSize:10,fontWeight:700,borderRadius:6,padding:"2px 6px",...roleStyle}},roleLbl)
+            ),
+            e("div",{style:{fontSize:11,color:"var(--txt3)"}},log.unit||"—")
+          ),
+          e("div",{style:{fontSize:11,color:"var(--txt3)",flexShrink:0}},timeStr)
+        );
+      }),
+      e("div",{style:{height:48}})
+    ),
+    e(BottomNav)
+  );
+
   // ── Feedback sub-view ──────────────────────────────────────────────────────
   if(adminSubView==="feedback") return e("div",{style:S.app},
     e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
@@ -2598,6 +2648,7 @@ function App(){
       ]),
       adminSection("其他",[
         adminRow("chat","#0ea5e9","意見回饋紀錄","共 "+feedbackList.length+" 筆",0,()=>setASV("feedback")),
+        adminRow("clock","#8b5cf6","登入紀錄","查看成員登入歷程",0,()=>{setASV("loginLogs");loadLoginLogs();}),
       ]),
       e("div",{style:{height:48}})
     ),
