@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-130-pin-delete-submission";
+const BUILD_TAG="2026-08-13-131-guide-roles";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -2525,25 +2525,78 @@ function App(){
       e("div",{style:{width:60}})
     ),
     e("div",{style:{...S.sec,paddingTop:16,paddingBottom:40}},
+      // ── 角色說明 ──
+      e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt3)",letterSpacing:"0.06em",marginBottom:10,marginTop:4}},"角色與權限"),
+      ...[
+        {role:"招募員",color:"#6b7280",badge:"grey",
+          desc:"系統預設角色。完成 Google 登入後等待管理員審核，通過後可用梯次密碼加入梯次，協助進行訓員訪談與記錄。",
+          perms:[
+            "查看已加入梯次的訓員列表與詳細資料",
+            "新增/編輯每位訓員的約談紀錄（訪談日期、意願、備注）",
+            "更新訓員意願評估（高/中/低/無意願）",
+            "查看梯次期程與招募員名單",
+            "查看單位目錄、所有已核准成員",
+          ]},
+        {role:"招募承辦人",color:"#3b82f6",badge:"blue",
+          desc:"梯次的直接負責人，建立梯次時即成為該梯次承辦人。擁有該梯次的完整管理權限，與群組承辦人相同系統角色（承辦人），但僅管轄自己建立的梯次。",
+          perms:[
+            "建立梯次、設定接訓單位、梯次序號",
+            "修改訓員人數，新增/刪除訓員",
+            "設定開放模式（直接進入 或 需審核）",
+            "審核/拒絕成員的加入申請",
+            "刪除梯次（需輸入密碼確認）",
+            "產生並管理訓員公開填報連結",
+            "管理各座號身份碼（查看、設定、修改、清除、刪除填報）",
+            "設定梯次重要日期（報到日、擴宣日期等）",
+            "查看單位回饋紀錄",
+          ]},
+        {role:"群組承辦人",color:"#3b82f6",badge:"blue",
+          desc:"系統角色「承辦人」，負責管理所屬旅級單位的整體招募業務。可建立多個梯次、管理招募員、查看跨梯次的訓員資料。",
+          perms:[
+            "以上招募承辦人所有功能（可管轄自己建立的全部梯次）",
+            "招募員管理：核准/拒絕加入各梯次的申請",
+            "梯次資格審查設定：逐項填寫、整體判定（符合/不符/待確認）",
+            "查看單位整體回饋紀錄",
+            "分享系統連結邀請新招募員",
+          ]},
+      ].map(item=>e("div",{key:item.role,style:{...S.card,marginBottom:10}},
+        e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:10}},
+          e("div",{style:{fontSize:14,fontWeight:800,color:"var(--txt)"}},item.role),
+          e("div",{style:{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,background:item.color+"18",color:item.color,border:"1px solid "+item.color+"33"}},item.role==="招募員"?"一般成員":"承辦人")
+        ),
+        e("div",{style:{fontSize:12,color:"var(--txt2)",lineHeight:1.7,marginBottom:10}},item.desc),
+        e("div",{style:{background:"var(--bg3)",borderRadius:10,padding:"10px 12px"}},
+          e("div",{style:{fontSize:11,fontWeight:700,color:"var(--txt3)",marginBottom:6}},"可使用功能"),
+          ...item.perms.map((p,i)=>e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:7,marginBottom:i<item.perms.length-1?5:0}},
+            e("div",{style:{width:5,height:5,borderRadius:"50%",background:item.color,flexShrink:0,marginTop:5}}),
+            e("div",{style:{fontSize:12,color:"var(--txt2)",lineHeight:1.5}},p)
+          ))
+        )
+      )),
+      // ── 功能說明 ──
+      e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt3)",letterSpacing:"0.06em",marginBottom:10,marginTop:8}},"功能說明"),
       ...[
         {icon:"shield",color:"#f59e0b",title:"登入與身份驗證",
           desc:"使用 Google 帳號一鍵登入，系統管理員審核後即可使用。閒置超過 8 小時自動登出保護資料安全。",
-          steps:["點擊「以 Google 帳號登入」","完成 Google 授權","等待管理員核准後即可進入"]},
+          steps:["點擊「以 Google 帳號登入」","完成 Google 授權","等待管理員核准後即可進入系統"]},
         {icon:"list",color:"#3b82f6",title:"梯次管理",
-          desc:"建立並管理各梯次的訓員資料，每個梯次有獨立密碼保護，防止未授權存取。",
-          steps:["首頁點「+」新增梯次","填寫接訓單位、梯次資訊","系統自動產生 6 碼密碼，複製分享給成員"]},
+          desc:"承辦人可建立並管理各梯次的訓員資料，每個梯次有獨立 6 碼密碼保護，防止未授權存取。招募員輸入密碼後申請加入（開放模式下直接進入）。",
+          steps:["首頁點「+」新增梯次（承辦人）","填寫接訓單位、梯次序號","系統自動產生 6 碼密碼，複製分享給招募員"]},
         {icon:"users",color:"#22c55e",title:"訓員列表與訪談記錄",
-          desc:"掌握每位訓員的完整資訊，記錄每次訪談結果、意願評估與資格審查。",
-          steps:["進入梯次後查看訓員列表","點擊訓員查看詳細資料","在「意願訪談」tab 新增約談紀錄"]},
+          desc:"掌握每位訓員的完整資訊，記錄每次訪談結果、意願評估與資格審查。訓員照座號排列，支援姓名/座號搜尋、依意願狀態篩選。",
+          steps:["進入梯次後查看訓員列表","點擊訓員查看詳細資料","在「意願訪談」tab 新增約談紀錄、設定意願等級"]},
         {icon:"checkCircle",color:"#10b981",title:"資格審查",
-          desc:"逐項確認訓員是否符合入伍資格，包含病史、前科、刺青等項目，系統自動標記不符資格訓員。",
-          steps:["點選訓員 → 資格審查 tab","逐項填寫審查結果","確認後系統自動更新狀態"]},
-        {icon:"people",color:"#f97316",title:"單位目錄",
-          desc:"查看所有已註冊招募員的單位分佈，了解各單位參與招募的人員名單與角色。",
-          steps:["更多 → 單位目錄","查看各旅級單位的招募員","招募員/承辦角色顯示不同標籤"]},
+          desc:"逐項確認訓員是否符合入伍資格（痼疾、前科、刺青等），訓員自行填報的答案會自動匯入，承辦人可覆核並做整體判定。不符者自動標記。",
+          steps:["點選訓員 → 資格審查 tab","逐項確認（訓員自填答案已預載）","設定整體判定（符合/不符合/待確認）"]},
+        {icon:"phone",color:"#8b5cf6",title:"訓員公開填報",
+          desc:"產生唯一連結讓訓員自行填寫基本資料、家庭狀況、資格問題等。訓員以身份證末4碼作為身份驗證，填報完成後資料自動匯入對應座號。承辦人可在「管理身份碼」中查看每位訓員的驗證碼。",
+          steps:["梯次資訊 → 訓員填報連結 → 複製連結","傳送給訓員，請其依座號填寫","填報完成後，管理端自動同步資料"]},
+        {icon:"people",color:"#f97316",title:"招募員管理",
+          desc:"每個梯次有獨立的招募員名單。承辦人可設定「開放模式」（密碼正確直接加入）或「審核模式」（需承辦人手動核准）。可查看各單位的招募員分佈。",
+          steps:["梯次 → 招募員 tab 查看名單","梯次資訊 → 承辦人管理 → 開放模式切換","待核准清單點擊「核准」或「拒絕」"]},
         {icon:"calendar",color:"#06b6d4",title:"梯次期程",
-          desc:"設定並追蹤梯次的重要日期，包括報到日、各階段擴宣日期等，確保所有人掌握關鍵時程。",
-          steps:["梯次內切換至「期程」tab","填寫各關鍵日期","日期自動顯示於梯次卡片"]},
+          desc:"設定並追蹤梯次的重要日期，包括報到日、各階段擴宣日期、補件截止、起役日等，確保所有招募員掌握關鍵時程。",
+          steps:["梯次內切換至「梯次期程」tab","逐一填寫各關鍵日期","日期資訊顯示於梯次卡片"]},
       ].map(item=>e("div",{key:item.title,style:{...S.card,marginBottom:12}},
         e("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:12}},
           e("div",{style:{width:44,height:44,borderRadius:14,background:item.color+"18",border:"1px solid "+item.color+"33",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
