@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-12-121-trainee-centered-modal";
+const BUILD_TAG="2026-08-12-122-trainee-flex-scroll-fix";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -1644,7 +1644,7 @@ function App(){
         e("div",{style:{width:60}})
       ),
       // content
-      e("div",{style:{...S.sec,paddingTop:16,paddingBottom:24,overflowY:"auto",flex:1}},
+      e("div",{style:{...S.sec,paddingTop:16,paddingBottom:24,overflowY:"auto",flex:1,minHeight:0}},
 
         // ── Step 1: Basic Info ──────────────────────────────────────────────
         tFormStep===1&&e(React.Fragment,null,
