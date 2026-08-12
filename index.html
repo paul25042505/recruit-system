@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-128-fix-merge-no-overwrite";
+const BUILD_TAG="2026-08-13-129-pin-manager";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -537,6 +537,11 @@ function App(){
   // 梯次 Tab
   const [batchTab,setBatchTab]=useState("list");
   const [batchLoadedSeats,setBatchLoadedSeats]=useState({});
+  const [batchTraineeDocs,setBatchTraineeDocs]=useState({});
+  const [showPinMgr,setShowPinMgr]=useState(false);
+  const [pinMgrLoading,setPinMgrLoading]=useState(false);
+  const [pinEditSeat,setPinEditSeat]=useState(null);
+  const [pinEditVal,setPinEditVal]=useState("");
   // 訓員 Tab (基本資料/資格審查/意願訪談)
   const [traineeTab,setTraineeTab]=useState("basic");
   // 基本資料編輯模式
@@ -707,11 +712,14 @@ function App(){
     fsGetUser(uid).then(p=>setBatchCoordProfile(p||null)).catch(()=>setBatchCoordProfile(null));
   },[curBatch?.coordinatorUid]);
 
-  // 批次資訊頁：從子集合載入已填座號（避免匿名 write 更新 filledSeats 失敗時顯示錯誤）
+  // 批次資訊頁：從子集合載入已填座號 + 完整 docs（供身份碼管理）
   useEffect(()=>{
     if(!curBatch?.id||batchTab!=="info")return;
     fsList("batches/"+curBatch.id+"/trainees")
-      .then(docs=>setBatchLoadedSeats(prev=>({...prev,[curBatch.id]:docs.map(d=>Number(d.seatNo)||Number(d.id))})))
+      .then(docs=>{
+        setBatchLoadedSeats(prev=>({...prev,[curBatch.id]:docs.map(d=>Number(d.seatNo)||Number(d.id))}));
+        setBatchTraineeDocs(prev=>({...prev,[curBatch.id]:docs}));
+      })
       .catch(()=>{});
   },[curBatch?.id,batchTab]);
   // 開啟梯次時自動把填報表單資料 merge 進 trainees[]（訓員自填的基本資料）
@@ -1494,7 +1502,7 @@ function App(){
       const path="batches/"+tFormBatch.id+"/trainees/"+tFormSeat;
       const existing=await fsGet(path)||{};
       const newVer={data:{...tFormDraft,seatNo:tFormSeat},submittedAt:Date.now()};
-      await fsSet(path,{seatNo:tFormSeat,idHash:tFormIdHash,versions:[...(existing.versions||[]),newVer],lastSubmittedAt:Date.now()});
+      await fsSet(path,{seatNo:tFormSeat,idHash:tFormIdHash,idLast4:tFormIdInput,versions:[...(existing.versions||[]),newVer],lastSubmittedAt:Date.now()});
       // filledSeats 更新為 best-effort（匿名用戶可能無權寫入 batch doc，但訓員資料已儲存）
       try{
         const updBatch=await fsGet("batches/"+tFormBatch.id)||{};
@@ -3950,10 +3958,105 @@ function App(){
                     }
                   },e(Icon,{n:"share",s:14,c:"var(--txt3)"}),"分享")
                 )
+              ),
+              e("div",{style:{paddingTop:10}},
+                e("button",{style:{...S.btn("ghost","sm"),width:"100%",gap:4,display:"flex",alignItems:"center",justifyContent:"center"},
+                  onClick:()=>{setShowPinMgr(true);}
+                },e(Icon,{n:"lock",s:14,c:"var(--txt3)"}),"管理身份碼")
               )
             );
           })(),
           e("div",{style:{height:40}})
+        ),
+        showPinMgr&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&(setShowPinMgr(false),setPinEditSeat(null),setPinEditVal(""))},
+          e("div",{style:{...S.mBox,maxHeight:"75vh",display:"flex",flexDirection:"column"}},
+            e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4,flexShrink:0}},
+              e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"座號身份碼管理"),
+              e("button",{style:{background:"none",border:"none",cursor:"pointer",padding:"4px 8px"},onClick:()=>{setShowPinMgr(false);setPinEditSeat(null);setPinEditVal("");}},e(Icon,{n:"x",s:18,c:"var(--txt3)"}))
+            ),
+            e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:12,flexShrink:0}},"訓員首次送出後自動建立，承辦人可重設或清除"),
+            e("div",{style:{overflowY:"auto",flex:1}},
+              (()=>{
+                const docs=batchTraineeDocs[curBatch.id]||[];
+                const totalSeats=Number(curBatch.traineeCount)||0;
+                const allSeats=Array.from({length:totalSeats},(_,i)=>i+1);
+                if(!totalSeats)return e("div",{style:{textAlign:"center",color:"var(--txt3)",fontSize:12,padding:"16px 0"}},"尚未設定訓員人數");
+                return e(React.Fragment,null,
+                  ...allSeats.map(seatNo=>{
+                    const doc=docs.find(d=>Number(d.seatNo||d.id)===seatNo);
+                    const pin=doc?.idLast4;
+                    const hasHash=!!doc?.idHash;
+                    const isEditing=pinEditSeat===seatNo;
+                    return e("div",{key:seatNo,style:{display:"flex",alignItems:"center",gap:8,padding:"10px 0",borderBottom:"1px solid var(--border2)"}},
+                      e("div",{style:{width:36,height:36,background:"var(--bg3)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:"var(--txt3)",flexShrink:0}},seatNo),
+                      isEditing
+                        ? e(React.Fragment,null,
+                            e("input",{style:{...S.inp,flex:1,fontSize:18,textAlign:"center",letterSpacing:"0.3em",padding:"6px 8px"},type:"tel",inputMode:"numeric",maxLength:4,placeholder:"____",autoFocus:true,value:pinEditVal,
+                              onChange:ev=>setPinEditVal(ev.target.value.replace(/\D/g,"").slice(0,4)),
+                              onKeyDown:async ev=>{
+                                if(ev.key==="Enter"&&pinEditVal.length===4){
+                                  setPinMgrLoading(true);
+                                  try{
+                                    const path="batches/"+curBatch.id+"/trainees/"+seatNo;
+                                    const existing=await fsGet(path)||{};
+                                    const h=await hashIdLast4(pinEditVal,curBatch.id,seatNo);
+                                    await fsSet(path,{...existing,seatNo,idHash:h,idLast4:pinEditVal});
+                                    setBatchTraineeDocs(prev=>({...prev,[curBatch.id]:(prev[curBatch.id]||[]).map(d=>Number(d.seatNo||d.id)===seatNo?{...d,idHash:h,idLast4:pinEditVal}:d).concat(!prev[curBatch.id]?.find(d=>Number(d.seatNo||d.id)===seatNo)?[{id:String(seatNo),seatNo,idHash:h,idLast4:pinEditVal,versions:[]}]:[])}));
+                                    toast_("已更新 ✓");
+                                  }catch(_){toast_("更新失敗");}
+                                  finally{setPinMgrLoading(false);setPinEditSeat(null);setPinEditVal("");}
+                                }
+                              }
+                            }),
+                            e("button",{style:{...S.btn("primary","sm"),flexShrink:0},disabled:pinEditVal.length!==4||pinMgrLoading,
+                              onClick:async()=>{
+                                if(pinEditVal.length!==4)return;
+                                setPinMgrLoading(true);
+                                try{
+                                  const path="batches/"+curBatch.id+"/trainees/"+seatNo;
+                                  const existing=await fsGet(path)||{};
+                                  const h=await hashIdLast4(pinEditVal,curBatch.id,seatNo);
+                                  await fsSet(path,{...existing,seatNo,idHash:h,idLast4:pinEditVal});
+                                  setBatchTraineeDocs(prev=>{
+                                    const arr=prev[curBatch.id]||[];
+                                    const exists=arr.find(d=>Number(d.seatNo||d.id)===seatNo);
+                                    const updated=exists?arr.map(d=>Number(d.seatNo||d.id)===seatNo?{...d,idHash:h,idLast4:pinEditVal}:d):[...arr,{id:String(seatNo),seatNo,idHash:h,idLast4:pinEditVal,versions:[]}];
+                                    return{...prev,[curBatch.id]:updated};
+                                  });
+                                  toast_("已更新 ✓");
+                                }catch(_){toast_("更新失敗");}
+                                finally{setPinMgrLoading(false);setPinEditSeat(null);setPinEditVal("");}
+                              }
+                            },"確認"),
+                            e("button",{style:{...S.btn("ghost","sm"),flexShrink:0},onClick:()=>{setPinEditSeat(null);setPinEditVal("");}},e(Icon,{n:"x",s:14}))
+                          )
+                        : e(React.Fragment,null,
+                            e("div",{style:{flex:1}},
+                              pin
+                                ? e("div",{style:{fontSize:20,fontWeight:800,letterSpacing:"0.3em",color:"var(--txt)",fontFamily:"monospace"}},pin)
+                                : e("div",{style:{fontSize:12,color:hasHash?"#f59e0b":"var(--txt3)"}},hasHash?"已設定（舊版無法查看）":"未設定")
+                            ),
+                            e("button",{style:{...S.btn("ghost","sm"),flexShrink:0,fontSize:11},onClick:()=>{setPinEditSeat(seatNo);setPinEditVal(pin||"");}},pin?"修改":"設定"),
+                            hasHash&&e("button",{style:{...S.btn("ghost","sm"),flexShrink:0,fontSize:11,color:"#ef4444"},
+                              onClick:async()=>{
+                                if(!confirm("確認清除座號 #"+seatNo+" 的身份碼？清除後任何人都可以重新設定。"))return;
+                                try{
+                                  const path="batches/"+curBatch.id+"/trainees/"+seatNo;
+                                  const existing=await fsGet(path)||{};
+                                  const{idHash:_h,idLast4:_p,...rest}=existing;
+                                  await fsSet(path,rest);
+                                  setBatchTraineeDocs(prev=>({...prev,[curBatch.id]:(prev[curBatch.id]||[]).map(d=>Number(d.seatNo||d.id)===seatNo?{...d,idHash:undefined,idLast4:undefined}:d)}));
+                                  toast_("已清除 ✓");
+                                }catch(_){toast_("清除失敗");}
+                              }
+                            },"清除")
+                          )
+                    );
+                  })
+                );
+              })()
+            )
+          )
         ),
         showEC&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEC(false)},
           e("div",{style:{...S.mBox,maxHeight:"50vh"}},
