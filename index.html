@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-12-122-trainee-flex-scroll-fix";
+const BUILD_TAG="2026-08-12-123-trainee-full-width";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -1558,7 +1558,7 @@ function App(){
           e("div",{style:{fontSize:12,color:"var(--txt3)"}},batchTitle)
         )
       ),
-      e("div",{style:{...S.sec,paddingTop:16}},
+      e("div",{style:{...S.sec,paddingTop:16,maxWidth:"none",margin:0}},
         e("div",{style:{...S.card,marginBottom:16}},
           e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",marginBottom:4}},"請選擇您的座號"),
           e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:16}},
@@ -1644,7 +1644,7 @@ function App(){
         e("div",{style:{width:60}})
       ),
       // content
-      e("div",{style:{...S.sec,paddingTop:16,paddingBottom:24,overflowY:"auto",flex:1,minHeight:0}},
+      e("div",{style:{...S.sec,paddingTop:16,paddingBottom:24,overflowY:"auto",flex:1,minHeight:0,maxWidth:"none",margin:0}},
 
         // ── Step 1: Basic Info ──────────────────────────────────────────────
         tFormStep===1&&e(React.Fragment,null,
