@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-125-sync-form-to-trainees";
+const BUILD_TAG="2026-08-13-126-form-prefill-qualcheck";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -725,13 +725,23 @@ function App(){
         const sub=docs.find(d=>Number(d.seatNo||d.id)===t.seat);
         if(!sub?.versions?.length)return t;
         const latest=sub.versions[sub.versions.length-1]?.data||{};
+        // 基本資料 patch（非管理端欄位）
         const patch={};
         for(const[k,v]of Object.entries(latest)){
           if(!ADMIN_KEYS.has(k)&&v!==undefined&&v!=="")patch[k]=v;
         }
-        if(!Object.keys(patch).length)return t;
+        // 把訓員自報的 q_{id} / q_{id}Note 填入 qualCheck（只補空值，不覆蓋管理員已設定的）
+        const existingQual=t.qualCheck||{};
+        const qualPatch={};
+        for(const[k,v]of Object.entries(latest)){
+          if(k.startsWith("q_")&&v!==undefined&&v!==""){
+            const qk=k.slice(2); // "q_disease" → "disease"
+            if(existingQual[qk]===undefined||existingQual[qk]==="")qualPatch[qk]=v;
+          }
+        }
+        if(!Object.keys(patch).length&&!Object.keys(qualPatch).length)return t;
         changed=true;
-        return{...t,...patch};
+        return{...t,...patch,qualCheck:{...existingQual,...qualPatch}};
       });
       if(!changed)return;
       const up={...curBatch,trainees:merged};
@@ -1467,6 +1477,11 @@ function App(){
         return;
       }
       setTFormIdHash(h);
+      // 已有填報紀錄時，預填最後一次提交的內容供修改
+      if(existing?.versions?.length){
+        const latest=existing.versions[existing.versions.length-1]?.data||{};
+        setTFormDraft({...latest});
+      }
       setTFormShowIdModal(false);
       setTFormStep(1);
     }catch(_){setTFormIdError("驗證失敗，請重試");}
@@ -1610,7 +1625,7 @@ function App(){
                 fontFamily:"'Noto Sans TC',sans-serif"
               },onClick:()=>{setTFormSeat(n);setTFormIdInput("");setTFormIdError("");setTFormShowIdModal(true);}},
                 String(n),
-                filled&&!sel&&e("span",{style:{fontSize:9,color:"#22c55e"}},"已填")
+                null
               );
             })
           )
