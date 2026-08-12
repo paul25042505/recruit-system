@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-129-pin-manager";
+const BUILD_TAG="2026-08-13-130-pin-delete-submission";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -4049,7 +4049,31 @@ function App(){
                                   toast_("已清除 ✓");
                                 }catch(_){toast_("清除失敗");}
                               }
-                            },"清除")
+                            },"清除"),
+                            doc&&e("button",{style:{...S.btn("ghost","sm"),flexShrink:0,fontSize:11,color:"#ef4444"},
+                              onClick:async()=>{
+                                if(!confirm("確認刪除座號 #"+seatNo+" 的所有填報資料？此操作無法復原。"))return;
+                                try{
+                                  // 刪除子集合文件
+                                  await fsDel("batches/"+curBatch.id+"/trainees/"+seatNo);
+                                  // 清空 trainees[] 裡由表單填入的欄位，保留管理端資料
+                                  const KEEP=new Set(["id","seat","interviewLogs","memo","statusId","scheduleAtt","createdAt"]);
+                                  const updatedTrainees=(curBatch.trainees||[]).map(t=>{
+                                    if(t.seat!==seatNo)return t;
+                                    const kept={};
+                                    KEEP.forEach(k=>{if(t[k]!==undefined)kept[k]=t[k];});
+                                    return{...kept,name:"",education:"",school:"",department:"",city:"",district:"",workExp:"",workPlace:"",workYears:"",qualCheck:{}};
+                                  });
+                                  const up={...curBatch,trainees:updatedTrainees};
+                                  await fsSet("batches/"+curBatch.id,up);
+                                  setCurBatch(up);
+                                  setBatches(p=>p.map(b=>b.id===up.id?up:b));
+                                  setBatchTraineeDocs(prev=>({...prev,[curBatch.id]:(prev[curBatch.id]||[]).filter(d=>Number(d.seatNo||d.id)!==seatNo)}));
+                                  setBatchLoadedSeats(prev=>({...prev,[curBatch.id]:(prev[curBatch.id]||[]).filter(n=>n!==seatNo)}));
+                                  toast_("已刪除 ✓");
+                                }catch(_){toast_("刪除失敗");}
+                              }
+                            },"刪除填報")
                           )
                     );
                   })
