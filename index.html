@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-127-revert-btn-color";
+const BUILD_TAG="2026-08-13-128-fix-merge-no-overwrite";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -725,10 +725,10 @@ function App(){
         const sub=docs.find(d=>Number(d.seatNo||d.id)===t.seat);
         if(!sub?.versions?.length)return t;
         const latest=sub.versions[sub.versions.length-1]?.data||{};
-        // 基本資料 patch（非管理端欄位）
+        // 基本資料 patch（非管理端欄位，且管理端該欄位為空才填入）
         const patch={};
         for(const[k,v]of Object.entries(latest)){
-          if(!ADMIN_KEYS.has(k)&&v!==undefined&&v!=="")patch[k]=v;
+          if(!ADMIN_KEYS.has(k)&&v!==undefined&&v!==""&&!t[k])patch[k]=v;
         }
         // 把訓員自報的 q_{id} / q_{id}Note 填入 qualCheck（只補空值，不覆蓋管理員已設定的）
         const existingQual=t.qualCheck||{};
