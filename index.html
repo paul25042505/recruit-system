@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-10-112-login-logs-date-filter";
+const BUILD_TAG="2026-08-12-113-trainee-public-form";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -480,6 +480,14 @@ function App(){
   // 新增梯次
   const [showAB,setShowAB]=useState(false);
   const [nb,setNb]=useState({unit:"",battalion:"",company:"",sequence:"",traineeCount:"30"});
+  // ── 訓員公開填報 ──
+  const _tToken=useMemo(()=>new URLSearchParams(window.location.search).get("t"),[]);
+  const [tFormBatch,setTFormBatch]=useState(null);
+  const [tFormStep,setTFormStep]=useState(0);
+  const [tFormSeat,setTFormSeat]=useState(null);
+  const [tFormDraft,setTFormDraft]=useState({});
+  const [tFormLoading,setTFormLoading]=useState(false);
+  const [tFormSeatsFilled,setTFormSeatsFilled]=useState([]);
   const [showNewBatchPwd,setShowNewBatchPwd]=useState(null);
   // 新增訓員
   const [showAT,setShowAT]=useState(false);
@@ -688,10 +696,25 @@ function App(){
   // 安全逾時：5秒內 onAuthStateChanged 沒觸發就強制跳登入畫面
   useEffect(()=>{
     const t=setTimeout(()=>{
-      setAuthReady(cur=>{if(!cur){setView("login");return true;}return cur;});
+      setAuthReady(cur=>{if(!cur){if(!_tToken)setView("login");return true;}return cur;});
     },5000);
     const ts=setTimeout(()=>setLoadingSlow(true),6000);
     return()=>{clearTimeout(t);clearTimeout(ts);}
+  },[]);
+  // 訓員公開填報 URL 偵測
+  useEffect(()=>{
+    if(!_tToken)return;
+    setTFormLoading(true);
+    Promise.all([fsGet("batches/"+_tToken),fsGet("settings/global")])
+      .then(([batch,gs])=>{
+        if(!batch){setTFormLoading(false);return;}
+        const merged=gs?{...DEF,...gs}:DEF;
+        setTFormBatch({...batch,id:_tToken,_qualCheckItems:merged.qualCheckItems||DEF.qualCheckItems});
+        setTFormSeatsFilled(batch.filledSeats||[]);
+        setView("traineeForm");
+      })
+      .catch(()=>{})
+      .finally(()=>setTFormLoading(false));
   },[]);
   // 主要 auth 狀態監聽
   useEffect(()=>{
@@ -706,7 +729,7 @@ function App(){
         toast_("閒置超過8小時，已自動登出");
         return;
       }
-      if(!user){setAuthUser(null);setUserProfile(null);setView("login");return;}
+      if(!user){setAuthUser(null);setUserProfile(null);if(!_tToken)setView("login");return;}
       touchActivity(); // 登入成功，記錄活躍時間
       setAuthUser(user);
       // 整體 auth+load 流程設 15 秒上限
@@ -1371,6 +1394,22 @@ function App(){
     setLoginLogs(next);
     try{await fsSet("loginLogs/recent",{logs:next});}catch(_){toast_("刪除失敗","err");}
   }
+  async function submitTraineeForm(){
+    if(!tFormBatch||!tFormSeat)return;
+    setTFormLoading(true);
+    try{
+      const path="batches/"+tFormBatch.id+"/trainees/"+tFormSeat;
+      const existing=await fsGet(path)||{};
+      const newVer={data:{...tFormDraft,seatNo:tFormSeat},submittedAt:Date.now()};
+      await fsSet(path,{seatNo:tFormSeat,versions:[...(existing.versions||[]),newVer],lastSubmittedAt:Date.now()});
+      const updBatch=await fsGet("batches/"+tFormBatch.id)||{};
+      const filledSeats=[...new Set([...(updBatch.filledSeats||[]),tFormSeat])];
+      await fsSet("batches/"+tFormBatch.id,{...updBatch,filledSeats});
+      setTFormSeatsFilled(filledSeats);
+      setTFormStep(4);
+    }catch(e){alert("送出失敗，請重試");}
+    finally{setTFormLoading(false);}
+  }
   function enterAdmin(){setASV(null);loadPendingUsers();loadAllUsers();setView("admin");pushState({page:"admin"},"後台管理");}
   const sts=(cfg||DEF).statusOptions;
   const Toast=()=>toast?e("div",{style:S.toast(toast.type)},toast.msg):null;
@@ -1421,6 +1460,183 @@ function App(){
       )
     )
   );
+
+  // ── Trainee Public Form ─────────────────────────────────────────────────────
+  if(view==="traineeForm"&&tFormBatch){
+    const tc=Number(tFormBatch.traineeCount)||0;
+    const seats=Array.from({length:tc},(_,i)=>i+1);
+    const d=tFormDraft;
+    const upd=patch=>setTFormDraft(p=>({...p,...patch}));
+    const qualItems=(tFormBatch._qualCheckItems)||DEF.qualCheckItems;
+    const batchTitle=(tFormBatch.unit||"")+(tFormBatch.sequence?" · "+(tFormBatch.sequence):"");
+    const tInp={...S.inp,borderRadius:10};
+    const tSel={...S.sel,borderRadius:10};
+    const tFld=(lbl,inp,full)=>e("div",{style:{gridColumn:full?"1/-1":"auto",marginBottom:0}},
+      e("div",{style:{fontSize:11,fontWeight:700,color:"var(--txt3)",marginBottom:6}},lbl),inp
+    );
+    const tCard=(title,...children)=>e("div",{style:{...S.card,marginBottom:12}},
+      e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:12}},title),
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 14px"}},
+        ...children
+      )
+    );
+    const toggleArr=(arr,v)=>(arr||[]).includes(v)?arr.filter(x=>x!==v):[...(arr||[]),v];
+
+    // ── Step 4: Success ───────────────────────────────────────────────────────
+    if(tFormStep===4)return e("div",{style:{...S.app,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 24px",textAlign:"center"}},
+      e("div",{style:{fontSize:48,marginBottom:16}},"✅"),
+      e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)",marginBottom:8}},"填寫完成！"),
+      e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:4}},batchTitle),
+      e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:24}},"座號 #"+tFormSeat+" 資料已送出"),
+      e("div",{style:{fontSize:12,color:"var(--txt2)",background:"var(--bg2)",borderRadius:12,padding:"12px 16px"}},
+        "資料已儲存，可關閉此頁面。如需修改可重新點選座號再次填寫。"
+      )
+    );
+
+    // ── Step 0: Seat Selection ────────────────────────────────────────────────
+    if(tFormStep===0)return e("div",{style:{...S.app,minHeight:"100vh"}},
+      e("div",{style:S.hdr},
+        e("div",{style:{flex:1,padding:"0 16px"}},
+          e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"訓員填報"),
+          e("div",{style:{fontSize:12,color:"var(--txt3)"}},batchTitle)
+        )
+      ),
+      e("div",{style:{...S.sec,paddingTop:16}},
+        e("div",{style:{...S.card,marginBottom:16}},
+          e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",marginBottom:4}},"請選擇您的座號"),
+          e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:16}},
+            "共 "+tc+" 個座號　已填 "+tFormSeatsFilled.length+" / "+tc
+          ),
+          tc===0&&e("div",{style:{textAlign:"center",color:"var(--txt3)",fontSize:12,padding:"16px 0"}},"此梯次尚未設定訓員人數"),
+          tc>0&&e("div",{style:{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:16}},
+            ...seats.map(n=>{
+              const filled=tFormSeatsFilled.includes(n);
+              const sel=tFormSeat===n;
+              return e("button",{key:n,style:{
+                padding:"12px 0",borderRadius:10,
+                border:"2px solid "+(sel?"#3b82f6":filled?"#22c55e":"var(--border)"),
+                background:sel?"rgba(59,130,246,0.12)":filled?"rgba(34,197,94,0.08)":"var(--bg2)",
+                color:sel?"#3b82f6":filled?"#22c55e":"var(--txt)",
+                fontSize:14,fontWeight:sel?800:600,cursor:"pointer",
+                display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+                fontFamily:"'Noto Sans TC',sans-serif"
+              },onClick:()=>setTFormSeat(sel?null:n)},
+                String(n),
+                filled&&!sel&&e("span",{style:{fontSize:9,color:"#22c55e"}},"已填")
+              );
+            })
+          ),
+          tFormSeat&&tFormSeatsFilled.includes(tFormSeat)&&e("div",{style:{fontSize:12,color:"#f59e0b",background:"rgba(245,158,11,0.1)",borderRadius:8,padding:"8px 12px",marginBottom:12}},"此座號已有填寫紀錄，重新送出將更新內容。"),
+          e("button",{style:{...S.btn("primary"),width:"100%"},onClick:()=>tFormSeat&&setTFormStep(1),disabled:!tFormSeat},"下一步 →")
+        )
+      )
+    );
+
+    // ── Steps 1–3 共用殼 ─────────────────────────────────────────────────────
+    const stepInfo=[null,"基本資料","資格審查","從軍意願"];
+    const isLast=tFormStep===3;
+    return e("div",{style:{...S.app,minHeight:"100vh"}},
+      // header
+      e("div",{style:S.hdr},
+        e("button",{style:{...S.btn("ghost","sm"),padding:"6px 10px",marginLeft:4,flexShrink:0},onClick:()=>setTFormStep(s=>s-1)},"‹ 上一步"),
+        e("div",{style:{flex:1,textAlign:"center"}},
+          e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)"}},stepInfo[tFormStep]||""),
+          e("div",{style:{fontSize:11,color:"var(--txt3)"}},"步驟 "+tFormStep+" / 3 · 座號 #"+tFormSeat)
+        ),
+        e("div",{style:{width:60}})
+      ),
+      // content
+      e("div",{style:{...S.sec,paddingTop:16,paddingBottom:100,overflowY:"auto",flex:1}},
+
+        // ── Step 1: Basic Info ──────────────────────────────────────────────
+        tFormStep===1&&e(React.Fragment,null,
+          tCard("基本資訊",
+            tFld("姓名",e("input",{style:{...tInp,gridColumn:"1/-1"},placeholder:"請輸入姓名",value:d.name||"",onChange:ev=>upd({name:ev.target.value})}),true)
+          ),
+          tCard("居住地區",
+            tFld("居住城市",e("select",{style:tSel,value:d.city||"",onChange:ev=>upd({city:ev.target.value,district:""})},e("option",{value:""},"請選擇"),...CITIES.map(v=>e("option",{key:v},v)))),
+            tFld("行政區",e("select",{style:tSel,value:d.district||"",onChange:ev=>upd({district:ev.target.value}),disabled:!d.city},e("option",{value:""},"請選擇"),...(DISTRICTS[d.city]||[]).map(v=>e("option",{key:v},v))))
+          ),
+          tCard("學歷背景",
+            tFld("畢業學歷",e("select",{style:tSel,value:d.education||"",onChange:ev=>upd({education:ev.target.value,dropoutSemester:"",school:"",department:""})},e("option",{value:""},"請選擇"),...EDUCATIONS.map(v=>e("option",{key:v},v))),true),
+            d.education==="高中職肄業"
+              ?tFld("肄業學期",e("select",{style:tSel,value:d.dropoutSemester||"",onChange:ev=>upd({dropoutSemester:ev.target.value})},e("option",{value:""},"請選擇"),...["一年級上","一年級下","二年級上","二年級下","三年級上","三年級下"].map(v=>e("option",{key:v},v))),true)
+              :e(React.Fragment,null,
+                  tFld("學校名稱",e("input",{style:tInp,placeholder:"學校名稱",value:d.school||"",onChange:ev=>upd({school:ev.target.value})})),
+                  tFld("就讀科系",e("input",{style:tInp,placeholder:"科系",value:d.department||"",onChange:ev=>upd({department:ev.target.value})}))
+                )
+          ),
+          tCard("工作經歷",
+            tFld("工作經驗",e("select",{style:tSel,value:d.workExp||"",onChange:ev=>upd({workExp:ev.target.value})},e("option",{value:""},"請選擇"),e("option",{value:"無"},"無"),e("option",{value:"有"},"有")),true),
+            d.workExp==="有"&&e(React.Fragment,null,
+              tFld("工作單位",e("input",{style:tInp,placeholder:"公司／單位名稱",value:d.workPlace||"",onChange:ev=>upd({workPlace:ev.target.value})}),true),
+              tFld("年資（年）",e("input",{style:tInp,type:"number",min:"0",value:d.workYears||"",onChange:ev=>upd({workYears:ev.target.value})})),
+              tFld("月薪（元）",e("input",{style:tInp,type:"number",min:"0",value:d.salary||"",onChange:ev=>upd({salary:ev.target.value})}))
+            ),
+            tFld("駕照",e("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
+              ...LICENSE_OPTS.map(opt=>{
+                const on=(d.licenseTypes||[]).includes(opt);
+                return e("button",{key:opt,type:"button",style:{fontSize:11,padding:"4px 10px",borderRadius:8,border:"1.5px solid "+(on?"#3b82f6":"var(--border)"),background:on?"rgba(59,130,246,0.1)":"var(--bg2)",color:on?"#3b82f6":"var(--txt2)",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},onClick:()=>upd({licenseTypes:toggleArr(d.licenseTypes,opt)})},opt);
+              })
+            ),true),
+            tFld("證照／特殊技能",e("input",{style:tInp,placeholder:"無則留空",value:d.certifications||"",onChange:ev=>upd({certifications:ev.target.value})}),true)
+          ),
+          tCard("家庭背景",
+            tFld("家庭狀況",e("select",{style:tSel,value:d.familySituation||"",onChange:ev=>upd({familySituation:ev.target.value})},e("option",{value:""},"請選擇"),...FAMILY_SIT_OPTS.map(v=>e("option",{key:v},v))),true),
+            tFld("家中成員",e("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}},
+              ...FAMILY_MEMBER_OPTS.map(opt=>{
+                const on=(d.familyMembers||[]).includes(opt);
+                return e("button",{key:opt,type:"button",style:{fontSize:12,padding:"6px 0",borderRadius:8,border:"1.5px solid "+(on?"#3b82f6":"var(--border)"),background:on?"rgba(59,130,246,0.1)":"var(--bg2)",color:on?"#3b82f6":"var(--txt2)",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},onClick:()=>upd({familyMembers:toggleArr(d.familyMembers,opt)})},opt);
+              })
+            ),true),
+            tFld("負債狀況",e("select",{style:tSel,value:d.hasDebt||"",onChange:ev=>upd({hasDebt:ev.target.value})},e("option",{value:""},"請選擇"),e("option",{value:"無"},"無"),e("option",{value:"有"},"有")),true),
+            d.hasDebt==="有"&&tFld("負債說明",e("input",{style:tInp,placeholder:"請說明",value:d.debtNote||"",onChange:ev=>upd({debtNote:ev.target.value})}),true)
+          )
+        ),
+
+        // ── Step 2: 資格審查 ───────────────────────────────────────────────
+        tFormStep===2&&e("div",{style:{...S.card}},
+          e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:16}},"資格審查"),
+          ...qualItems.map(({id,label,desc},idx,arr)=>e("div",{key:id,style:{marginBottom:idx<arr.length-1?16:0}},
+            e("div",{style:{fontSize:13,fontWeight:700,color:"var(--txt)",marginBottom:2}},label),
+            e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:8}},desc),
+            e("div",{style:{display:"flex",gap:8,marginBottom:4}},
+              ...[["no","否","#22c55e"],["yes","是","#ef4444"]].map(([v,lbl,c])=>{
+                const active=d["q_"+id]===v;
+                return e("button",{key:v,style:{flex:1,padding:"8px 0",borderRadius:8,border:"1.5px solid "+(active?c:"var(--border)"),background:active?"rgba("+( v==="no"?"34,197,94":"239,68,68")+",0.1)":"var(--bg2)",color:active?c:"var(--txt2)",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},onClick:()=>upd({["q_"+id]:active?null:v})},lbl);
+              })
+            ),
+            d["q_"+id]==="yes"&&e("input",{style:{...tInp,marginTop:4},placeholder:"請說明詳細情況…",value:d["q_"+id+"Note"]||"",onChange:ev=>upd({["q_"+id+"Note"]:ev.target.value})})
+          ))
+        ),
+
+        // ── Step 3: 從軍意願評估 ──────────────────────────────────────────
+        tFormStep===3&&e("div",{style:{...S.card}},
+          e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:16}},"從軍意願評估"),
+          ...[
+            {key:"selfMilOpinion",noteKey:"selfMilNote",label:"自己對從軍看法",opts:MIL_OPINION_OPTS},
+            {key:"familyMilOpinion",noteKey:"familyMilNote",label:"家人對從軍看法",opts:MIL_OPINION_OPTS},
+            {key:"partnerMilOpinion",noteKey:"partnerMilNote",label:"伴侶對從軍看法",opts:[...MIL_OPINION_OPTS,"無伴侶"]},
+          ].map(({key,noteKey,label,opts},idx,arr)=>e("div",{key,style:{marginBottom:idx<arr.length-1?20:0}},
+            e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt2)",marginBottom:8}},label),
+            e("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}},
+              ...opts.map(opt=>{
+                const active=d[key]===opt;
+                const col=opt==="支持"?"#22c55e":opt==="中立"?"#f59e0b":opt==="反對"?"#ef4444":"#8b5cf6";
+                return e("button",{key:opt,style:{flex:1,minWidth:"max-content",padding:"8px 10px",borderRadius:8,border:"1.5px solid "+(active?col:"var(--border)"),background:active?("rgba("+( opt==="支持"?"34,197,94":opt==="中立"?"245,158,11":opt==="反對"?"239,68,68":"139,92,246")+",0.12)"):"var(--bg2)",color:active?col:"var(--txt2)",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif"},onClick:()=>upd({[key]:active?null:opt})},opt);
+              })
+            ),
+            d[key]&&d[key]!=="無伴侶"&&e("input",{style:{...tInp},placeholder:"補充說明…",value:d[noteKey]||"",onChange:ev=>upd({[noteKey]:ev.target.value})})
+          ))
+        )
+      ),
+      // bottom nav buttons
+      e("div",{style:{position:"fixed",bottom:0,left:0,right:0,padding:"12px 16px",paddingBottom:"calc(12px + env(safe-area-inset-bottom,0px))",background:"var(--hdr)",borderTop:"1px solid var(--border)",display:"flex",gap:10}},
+        e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setTFormStep(s=>s-1)},"上一步"),
+        e("button",{style:{...S.btn("primary"),flex:1},onClick:isLast?submitTraineeForm:()=>setTFormStep(s=>s+1),disabled:tFormLoading},tFormLoading?"送出中…":isLast?"送出":"下一步 →")
+      )
+    );
+  }
 
   // ── Login ──────────────────────────────────────────────────────────────────
   if(view==="login") return e("div",{style:{...S.app,minHeight:"100vh",display:"flex",flexDirection:"column"}},
@@ -3565,6 +3781,35 @@ function App(){
                 )))
             )
           ),
+          (isAdminUser()||curBatch.coordinatorUid===userProfile?.uid)&&(()=>{
+            const tUrl=window.location.origin+window.location.pathname+"?t="+curBatch.id;
+            const filledCount=(curBatch.filledSeats||[]).length;
+            const totalCount=Number(curBatch.traineeCount)||0;
+            const shareText="【訓員資料填報】\n"+fmtSeq(curBatch.sequence)+" "+curBatch.unit+"\n請點選連結填寫您的基本資料：\n"+tUrl;
+            return e("div",{style:{...S.card,marginBottom:10}},
+              e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:12}},"訓員填報連結"),
+              e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:12,color:"var(--txt3)"}},"填寫進度"),
+                e("div",{style:{fontSize:13,fontWeight:700,color:filledCount===totalCount&&totalCount>0?"#22c55e":"var(--txt)"}},
+                  totalCount>0?filledCount+" / "+totalCount+" 已填":"尚未設定人數"
+                )
+              ),
+              e("div",{style:{padding:"10px 0",borderBottom:"1px solid var(--border2)"}},
+                e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:6}},"公開填報網址"),
+                e("div",{style:{fontSize:11,color:"var(--txt2)",background:"var(--bg3)",borderRadius:8,padding:"8px 10px",wordBreak:"break-all",lineHeight:1.5,marginBottom:8}},tUrl),
+                e("div",{style:{display:"flex",gap:8}},
+                  e("button",{style:{...S.btn("ghost","sm"),flex:1,gap:4,display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:()=>{navigator.clipboard?.writeText(tUrl).catch(()=>{});toast_("已複製連結 ✓");}
+                  },e(Icon,{n:"copy",s:14,c:"var(--txt3)"}),"複製連結"),
+                  e("a",{
+                    href:"https://line.me/R/msg/text/?"+encodeURIComponent(shareText),
+                    target:"_blank",
+                    style:{...S.btn("ghost","sm"),flex:1,textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:4,color:"#06c755",borderColor:"#06c75533",background:"rgba(6,199,85,0.05)"}
+                  },e(Icon,{n:"chat",s:14,c:"#06c755"}),"分享 LINE")
+                )
+              )
+            );
+          })(),
           e("div",{style:{height:40}})
         ),
         showEC&&e("div",{style:S.modal,onClick:ev=>ev.target===ev.currentTarget&&setShowEC(false)},
