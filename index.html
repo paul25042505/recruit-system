@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-12-124-trainee-green-submit";
+const BUILD_TAG="2026-08-13-125-sync-form-to-trainees";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -714,6 +714,32 @@ function App(){
       .then(docs=>setBatchLoadedSeats(prev=>({...prev,[curBatch.id]:docs.map(d=>Number(d.seatNo)||Number(d.id))})))
       .catch(()=>{});
   },[curBatch?.id,batchTab]);
+  // 開啟梯次時自動把填報表單資料 merge 進 trainees[]（訓員自填的基本資料）
+  useEffect(()=>{
+    if(!curBatch?.id||!curBatch.trainees?.length)return;
+    const ADMIN_KEYS=new Set(["id","seat","interviewLogs","memo","statusId","qualCheck","scheduleAtt","createdAt"]);
+    fsList("batches/"+curBatch.id+"/trainees").then(docs=>{
+      if(!docs.length)return;
+      let changed=false;
+      const merged=(curBatch.trainees||[]).map(t=>{
+        const sub=docs.find(d=>Number(d.seatNo||d.id)===t.seat);
+        if(!sub?.versions?.length)return t;
+        const latest=sub.versions[sub.versions.length-1]?.data||{};
+        const patch={};
+        for(const[k,v]of Object.entries(latest)){
+          if(!ADMIN_KEYS.has(k)&&v!==undefined&&v!=="")patch[k]=v;
+        }
+        if(!Object.keys(patch).length)return t;
+        changed=true;
+        return{...t,...patch};
+      });
+      if(!changed)return;
+      const up={...curBatch,trainees:merged};
+      setCurBatch(up);
+      setBatches(p=>p.map(b=>b.id===up.id?up:b));
+      fsSet("batches/"+curBatch.id,up).catch(()=>{});
+    }).catch(()=>{});
+  },[curBatch?.id]);
 
   // ── Auth state ──────────────────────────────────────────────────────────────
   // 安全逾時：5秒內 onAuthStateChanged 沒觸發就強制跳登入畫面
@@ -736,6 +762,11 @@ function App(){
         setTFormBatch({...batch,id:_tToken,_qualCheckItems:merged.qualCheckItems||DEF.qualCheckItems});
         setTFormSeatsFilled(batch.filledSeats||[]);
         setView("traineeForm");
+        // 從子集合取得精確已填座號（filledSeats 可能因匿名寫入失敗而不準確）
+        fsList("batches/"+_tToken+"/trainees").then(docs=>{
+          const seatNos=docs.map(d=>Number(d.seatNo||d.id)).filter(Boolean);
+          if(seatNos.length)setTFormSeatsFilled(seatNos);
+        }).catch(()=>{});
       })
       .catch(err=>{
         const code=err?.code||"";
