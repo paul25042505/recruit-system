@@ -153,7 +153,7 @@ import {
   doc,getDoc,setDoc,deleteDoc,collection,getDocs
 } from"firebase/firestore";
 import {
-  getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,onAuthStateChanged,signOut as fbSignOut
+  getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,onAuthStateChanged,signOut as fbSignOut,signInAnonymously
 } from"firebase/auth";
 
 const e=React.createElement;
@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-12-113-trainee-public-form";
+const BUILD_TAG="2026-08-13-114-trainee-form-auth-fix";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -705,15 +705,16 @@ function App(){
   useEffect(()=>{
     if(!_tToken)return;
     setTFormLoading(true);
-    Promise.all([fsGet("batches/"+_tToken),fsGet("settings/global")])
+    signInAnonymously(_auth)
+      .then(()=>Promise.all([fsGet("batches/"+_tToken),fsGet("settings/global")]))
       .then(([batch,gs])=>{
-        if(!batch){setTFormLoading(false);return;}
+        if(!batch){setTFormBatch(null);setView("traineeForm");return;} // 找不到梯次
         const merged=gs?{...DEF,...gs}:DEF;
         setTFormBatch({...batch,id:_tToken,_qualCheckItems:merged.qualCheckItems||DEF.qualCheckItems});
         setTFormSeatsFilled(batch.filledSeats||[]);
         setView("traineeForm");
       })
-      .catch(()=>{})
+      .catch(()=>{setTFormBatch(null);setView("traineeForm");})
       .finally(()=>setTFormLoading(false));
   },[]);
   // 主要 auth 狀態監聽
@@ -722,6 +723,7 @@ function App(){
     function tout(p,ms,msg){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(msg)),ms))]);}
     return onAuthStateChanged(_auth,async user=>{
       setAuthReady(true);
+      if(_tToken)return; // 訓員填報模式：略過一般 auth 流程
       // 閒置超時判斷：登入成功但距離上次操作超過 8 小時
       if(user&&isIdleTimedOut()){
         setAuthUser(null);setUserProfile(null);setView("login");
@@ -1462,6 +1464,11 @@ function App(){
   );
 
   // ── Trainee Public Form ─────────────────────────────────────────────────────
+  if(view==="traineeForm"&&!tFormBatch)return e("div",{style:{...S.app,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 24px",textAlign:"center"}},
+    e("div",{style:{fontSize:40,marginBottom:16}},"❌"),
+    e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)",marginBottom:8}},"找不到梯次"),
+    e("div",{style:{fontSize:12,color:"var(--txt3)"}},"連結可能已失效，請聯繫承辦人取得新連結。")
+  );
   if(view==="traineeForm"&&tFormBatch){
     const tc=Number(tFormBatch.traineeCount)||0;
     const seats=Array.from({length:tc},(_,i)=>i+1);
@@ -3801,11 +3808,12 @@ function App(){
                   e("button",{style:{...S.btn("ghost","sm"),flex:1,gap:4,display:"flex",alignItems:"center",justifyContent:"center"},
                     onClick:()=>{navigator.clipboard?.writeText(tUrl).catch(()=>{});toast_("已複製連結 ✓");}
                   },e(Icon,{n:"copy",s:14,c:"var(--txt3)"}),"複製連結"),
-                  e("a",{
-                    href:"https://line.me/R/msg/text/?"+encodeURIComponent(shareText),
-                    target:"_blank",
-                    style:{...S.btn("ghost","sm"),flex:1,textDecoration:"none",display:"flex",alignItems:"center",justifyContent:"center",gap:4,color:"#06c755",borderColor:"#06c75533",background:"rgba(6,199,85,0.05)"}
-                  },e(Icon,{n:"chat",s:14,c:"#06c755"}),"分享 LINE")
+                  e("button",{style:{...S.btn("ghost","sm"),flex:1,gap:4,display:"flex",alignItems:"center",justifyContent:"center"},
+                    onClick:async()=>{
+                      if(navigator.share){try{await navigator.share({title:"訓員資料填報",text:shareText,url:tUrl});}catch(_){}}
+                      else{navigator.clipboard?.writeText(tUrl).catch(()=>{});toast_("已複製連結 ✓");}
+                    }
+                  },e(Icon,{n:"share",s:14,c:"var(--txt3)"}),"分享")
                 )
               )
             );
