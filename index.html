@@ -68,15 +68,15 @@ html.light input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.6
 input,textarea,select{-webkit-user-select:text!important;user-select:text!important;pointer-events:auto!important;touch-action:manipulation;cursor:text;}
 button{touch-action:manipulation;cursor:pointer;}
 /* 底部導覽列 */
-.bnav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--hdr);border-top:1px solid var(--border);height:calc(80px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);z-index:100;}
-.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;background:transparent;border:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;touch-action:manipulation;}
+.bnav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--hdr);border-top:1px solid var(--border);height:calc(88px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);z-index:100;}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 0 2px;background:transparent;border:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;touch-action:manipulation;}
 .bnav-icon{display:flex;align-items:center;justify-content:center;}
 .bnav-lbl{font-size:11px;font-weight:700;color:var(--txt3);}
 .bnav-item.active .bnav-lbl{color:#f59e0b;}
 .bnav-pip{width:5px;height:5px;border-radius:50%;background:#f59e0b;}
 /* 有底部導覽列的頁面，最底部留白 */
-.has-bnav{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));}
-.bnav-inline{position:relative;display:flex;background:var(--hdr);border-top:1px solid var(--border);height:calc(80px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;z-index:100;}
+.has-bnav{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px));}
+.bnav-inline{position:relative;display:flex;background:var(--hdr);border-top:1px solid var(--border);height:calc(88px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;z-index:100;}
 /* 浮水印覆蓋層 */
 .watermark-overlay{position:fixed;inset:0;pointer-events:none;user-select:none;z-index:50;}
 /* 身分識別卡 */
@@ -1024,7 +1024,7 @@ function App(){
       ...tabs.map(tab=>e("button",{key:tab.key,className:"bnav-item"+(activeKey===tab.key?" active":""),
         onClick:()=>tab.key==="admin"?enterAdmin():setView(tab.key)
       },
-        e("span",{className:"bnav-icon"},e(Icon,{n:tab.icon,s:26})),
+        e("span",{className:"bnav-icon"},e(Icon,{n:tab.icon,s:28})),
         e("span",{className:"bnav-lbl"},tab.label),
         activeKey===tab.key&&e("span",{className:"bnav-pip"})
       ))
