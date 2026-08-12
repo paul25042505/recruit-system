@@ -201,7 +201,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-126-form-prefill-qualcheck";
+const BUILD_TAG="2026-08-13-127-revert-btn-color";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -1777,7 +1777,7 @@ function App(){
       // bottom nav buttons
       e("div",{style:{flexShrink:0,padding:"12px 16px",paddingBottom:"calc(12px + env(safe-area-inset-bottom,0px))",background:"var(--hdr)",borderTop:"1px solid var(--border)",display:"flex",gap:10}},
         e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>setTFormStep(s=>s-1)},"上一步"),
-        e("button",{style:{...S.btn("primary"),flex:1,background:isLast?"linear-gradient(135deg,#22c55e,#16a34a)":undefined},onClick:isLast?submitTraineeForm:()=>setTFormStep(s=>s+1),disabled:tFormLoading},tFormLoading?"送出中…":isLast?"送出":"下一步 →")
+        e("button",{style:{...S.btn("primary"),flex:1},onClick:isLast?submitTraineeForm:()=>setTFormStep(s=>s+1),disabled:tFormLoading},tFormLoading?"送出中…":isLast?"送出":"下一步 →")
       )
     );
   }
