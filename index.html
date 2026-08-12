@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-114-trainee-form-auth-fix";
+const BUILD_TAG="2026-08-12-115-trainee-form-ui-fix";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -487,6 +487,7 @@ function App(){
   const [tFormSeat,setTFormSeat]=useState(null);
   const [tFormDraft,setTFormDraft]=useState({});
   const [tFormLoading,setTFormLoading]=useState(false);
+  const [tFormError,setTFormError]=useState("");
   const [tFormSeatsFilled,setTFormSeatsFilled]=useState([]);
   const [showNewBatchPwd,setShowNewBatchPwd]=useState(null);
   // 新增訓員
@@ -708,13 +709,18 @@ function App(){
     signInAnonymously(_auth)
       .then(()=>Promise.all([fsGet("batches/"+_tToken),fsGet("settings/global")]))
       .then(([batch,gs])=>{
-        if(!batch){setTFormBatch(null);setView("traineeForm");return;} // 找不到梯次
+        if(!batch){setTFormError("notFound");setTFormBatch(null);setView("traineeForm");return;}
         const merged=gs?{...DEF,...gs}:DEF;
         setTFormBatch({...batch,id:_tToken,_qualCheckItems:merged.qualCheckItems||DEF.qualCheckItems});
         setTFormSeatsFilled(batch.filledSeats||[]);
         setView("traineeForm");
       })
-      .catch(()=>{setTFormBatch(null);setView("traineeForm");})
+      .catch(err=>{
+        const code=err?.code||"";
+        setTFormError(code==="auth/operation-not-allowed"?"authDisabled":"notFound");
+        setTFormBatch(null);
+        setView("traineeForm");
+      })
       .finally(()=>setTFormLoading(false));
   },[]);
   // 主要 auth 狀態監聽
@@ -1465,9 +1471,9 @@ function App(){
 
   // ── Trainee Public Form ─────────────────────────────────────────────────────
   if(view==="traineeForm"&&!tFormBatch)return e("div",{style:{...S.app,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 24px",textAlign:"center"}},
-    e("div",{style:{fontSize:40,marginBottom:16}},"❌"),
-    e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)",marginBottom:8}},"找不到梯次"),
-    e("div",{style:{fontSize:12,color:"var(--txt3)"}},"連結可能已失效，請聯繫承辦人取得新連結。")
+    e("div",{style:{fontSize:40,marginBottom:16}},tFormError==="authDisabled"?"⚙️":"❌"),
+    e("div",{style:{fontSize:16,fontWeight:800,color:"var(--txt)",marginBottom:8}},tFormError==="authDisabled"?"系統尚未開放填報":"找不到梯次"),
+    e("div",{style:{fontSize:12,color:"var(--txt3)"}},tFormError==="authDisabled"?"填報功能尚未啟用，請聯繫承辦人。":"連結可能已失效，請聯繫承辦人取得新連結。")
   );
   if(view==="traineeForm"&&tFormBatch){
     const tc=Number(tFormBatch.traineeCount)||0;
@@ -3802,8 +3808,6 @@ function App(){
                 )
               ),
               e("div",{style:{padding:"10px 0",borderBottom:"1px solid var(--border2)"}},
-                e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:6}},"公開填報網址"),
-                e("div",{style:{fontSize:11,color:"var(--txt2)",background:"var(--bg3)",borderRadius:8,padding:"8px 10px",wordBreak:"break-all",lineHeight:1.5,marginBottom:8}},tUrl),
                 e("div",{style:{display:"flex",gap:8}},
                   e("button",{style:{...S.btn("ghost","sm"),flex:1,gap:4,display:"flex",alignItems:"center",justifyContent:"center"},
                     onClick:()=>{navigator.clipboard?.writeText(tUrl).catch(()=>{});toast_("已複製連結 ✓");}
