@@ -200,7 +200,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-12-117-trainee-id-verification";
+const BUILD_TAG="2026-08-12-118-trainee-id-modal";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -498,6 +498,7 @@ function App(){
   const [tFormIdError,setTFormIdError]=useState("");
   const [tFormIdVerifying,setTFormIdVerifying]=useState(false);
   const [tFormIdHash,setTFormIdHash]=useState("");
+  const [tFormShowIdModal,setTFormShowIdModal]=useState(false);
   const [tFormSeatsFilled,setTFormSeatsFilled]=useState([]);
   const [showNewBatchPwd,setShowNewBatchPwd]=useState(null);
   // 新增訓員
@@ -1433,6 +1434,7 @@ function App(){
         return;
       }
       setTFormIdHash(h);
+      setTFormShowIdModal(false);
       setTFormStep(1);
     }catch(_){setTFormIdError("驗證失敗，請重試");}
     finally{setTFormIdVerifying(false);}
@@ -1573,29 +1575,43 @@ function App(){
                 fontSize:14,fontWeight:sel?800:600,cursor:"pointer",
                 display:"flex",flexDirection:"column",alignItems:"center",gap:2,
                 fontFamily:"'Noto Sans TC',sans-serif"
-              },onClick:()=>{setTFormSeat(sel?null:n);setTFormIdInput("");setTFormIdError("");}},
+              },onClick:()=>{setTFormSeat(n);setTFormIdInput("");setTFormIdError("");setTFormShowIdModal(true);}},
                 String(n),
                 filled&&!sel&&e("span",{style:{fontSize:9,color:"#22c55e"}},"已填")
               );
             })
           ),
-          tFormSeat&&e("div",{style:{marginBottom:12}},
-            e("div",{style:{fontSize:12,fontWeight:700,color:"var(--txt2)",marginBottom:8}},
-              tFormSeatsFilled.includes(tFormSeat)
-                ?"座號 #"+tFormSeat+" 已有填寫紀錄，輸入原身份證末4碼才能修改："
-                :"確認您是座號 #"+tFormSeat+"，請輸入身份證末4碼："
-            ),
-            e("input",{
-              style:{...S.inp,letterSpacing:"0.4em",textAlign:"center",fontSize:20,fontWeight:700,marginBottom:tFormIdError?6:0},
-              type:"text",inputMode:"numeric",maxLength:4,placeholder:"_ _ _ _",
-              value:tFormIdInput,
-              onChange:ev=>{setTFormIdInput(ev.target.value.replace(/\D/g,"").slice(0,4));setTFormIdError("");}
-            }),
-            tFormIdError&&e("div",{style:{fontSize:12,color:"#ef4444",background:"rgba(239,68,68,0.08)",borderRadius:8,padding:"8px 10px"}},tFormIdError)
-          ),
-          e("button",{style:{...S.btn("primary"),width:"100%"},onClick:verifyAndProceed,disabled:!tFormSeat||tFormIdInput.length!==4||tFormIdVerifying},tFormIdVerifying?"驗證中…":"下一步 →")
         )
       )
+    ),
+    tFormShowIdModal&&e("div",{style:{...S.modal},onClick:ev=>{if(ev.target===ev.currentTarget){setTFormShowIdModal(false);setTFormIdInput("");setTFormIdError("");}}},
+      e("div",{style:{...S.mBox}},
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}},
+          e("div",null,
+            e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"身份驗證"),
+            e("div",{style:{fontSize:12,color:"var(--txt3)"}},"座號 #"+tFormSeat)
+          ),
+          e("button",{style:{background:"none",border:"none",cursor:"pointer",padding:"4px 8px"},onClick:()=>{setTFormShowIdModal(false);setTFormIdInput("");setTFormIdError("");}},e(Icon,{n:"x",s:18,c:"var(--txt3)"}))
+        ),
+        e("div",{style:{fontSize:12,color:"var(--txt2)",marginBottom:12}},
+          tFormSeatsFilled.includes(tFormSeat)
+            ?"此座號已有填寫紀錄，請輸入當初設定的身份證末4碼才能修改："
+            :"請輸入您的身份證末4碼確認身份："
+        ),
+        e("input",{
+          style:{...S.inp,letterSpacing:"0.5em",textAlign:"center",fontSize:24,fontWeight:800,padding:"14px 12px"},
+          type:"text",inputMode:"numeric",maxLength:4,placeholder:"_ _ _ _",
+          value:tFormIdInput,autoFocus:true,
+          onChange:ev=>{setTFormIdInput(ev.target.value.replace(/\D/g,"").slice(0,4));setTFormIdError("");},
+          onKeyDown:ev=>ev.key==="Enter"&&tFormIdInput.length===4&&verifyAndProceed()
+        }),
+        tFormIdError&&e("div",{style:{fontSize:12,color:"#ef4444",background:"rgba(239,68,68,0.08)",borderRadius:8,padding:"8px 10px",marginTop:10}},tFormIdError),
+        e("div",{style:{display:"flex",gap:10,marginTop:16}},
+          e("button",{style:{...S.btn("ghost"),flex:1},onClick:()=>{setTFormShowIdModal(false);setTFormIdInput("");setTFormIdError("");}},"取消"),
+          e("button",{style:{...S.btn("primary"),flex:1},onClick:verifyAndProceed,disabled:tFormIdInput.length!==4||tFormIdVerifying},tFormIdVerifying?"驗證中…":"送出")
+        )
+      )
+    )
     );
 
     // ── Steps 1–3 共用殼 ─────────────────────────────────────────────────────
