@@ -202,7 +202,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-132-pwa-install-banner";
+const BUILD_TAG="2026-08-13-133-remove-admin-label";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -1897,9 +1897,9 @@ function App(){
     e(Toast),
     e("div",{style:{textAlign:"center",maxWidth:400,width:"100%"}},
       e(Icon,{n:"clock",s:56,c:"#f59e0b",w:1.5}),
-      e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)",marginTop:14,marginBottom:8}},"等待管理員審核"),
+      e("div",{style:{fontSize:18,fontWeight:800,color:"var(--txt)",marginTop:14,marginBottom:8}},"等待系統審核"),
       e("div",{style:{fontSize:13,color:"var(--txt3)",marginBottom:28,lineHeight:1.8}},
-        "您的帳號申請已送出。","請稍候，管理員審核完成後即可登入系統。"
+        "您的帳號申請已送出。","請稍候，審核完成後即可登入系統。"
       ),
       e("button",{style:{...S.btn("ghost"),width:"100%"},onClick:signOutUser},"登出帳號")
     )
@@ -1929,7 +1929,7 @@ function App(){
         e("div",{style:{background:"#ef444412",border:"1px solid #ef444433",borderRadius:12,padding:"14px",marginBottom:24,fontSize:13,color:"#fca5a5",lineHeight:1.7,textAlign:"center"}},
           "⚠️ 密碼只顯示這一次",e("br"),
           "請截圖或複製後傳給招募員",e("br"),
-          "忘記密碼請聯絡管理員"
+          "忘記密碼請聯絡承辦人"
         ),
         e("button",{style:{...S.btn("primary"),width:"100%",padding:14,fontSize:15},
           onClick:()=>setShowNewBatchPwd(null)},"我已儲存密碼，確認")
@@ -2334,7 +2334,7 @@ function App(){
       ),
       e("div",{style:{...S.card,padding:0,overflow:"hidden",marginBottom:10}},
         ...((userProfile?.roles?.includes("admin")||userProfile?.googleEmail==="paul25042505@gmail.com")?[
-          e(MoreNavRow,{key:"admin",icon:"cog",label:"後台管理",sub:"管理員限定",onClick:()=>enterAdmin()}),
+          e(MoreNavRow,{key:"admin",icon:"cog",label:"後台管理",sub:"承辦人限定",onClick:()=>enterAdmin()}),
           e("div",{key:"admin-div",style:{height:1,background:"var(--border)",marginLeft:64}})
         ]:[]),
         e(MoreNavRow,{icon:"info",label:"關於系統",sub:"版本・著作權",onClick:()=>setView("moreAbout")})
@@ -2488,7 +2488,7 @@ function App(){
     ];
     function uvAvatarColor(u){const g=u?.gender;if(g==="female")return{bg:"#fce4ec",fg:"#c62828"};return{bg:"#dbeafe",fg:"#1d4ed8"};}
     const LINE_SVG_UV="<path d='M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.628-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314'/>";
-    function uvRoleLabel(r){return r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r;}
+    function uvRoleLabel(r){return r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"招募承辦":r;}
     function uvRoleStyle(r){return{fontSize:11,fontWeight:700,borderRadius:20,padding:"2px 9px",
       background:r==="coordinator"?"#3b82f6":r==="admin"?"#f59e0b":"var(--bg3)",
       color:r==="coordinator"||r==="admin"?"#fff":"var(--txt2)",
@@ -2591,7 +2591,7 @@ function App(){
       e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt3)",letterSpacing:"0.06em",marginBottom:10,marginTop:4}},"角色與權限"),
       ...[
         {role:"招募員",color:"#6b7280",badge:"grey",
-          desc:"系統預設角色。完成 Google 登入後等待管理員審核，通過後可用梯次密碼加入梯次，協助進行訓員訪談與記錄。",
+          desc:"系統預設角色。完成 Google 登入後等待承辦人審核，通過後可用梯次密碼加入梯次，協助進行訓員訪談與記錄。",
           perms:[
             "查看已加入梯次的訓員列表與詳細資料",
             "新增/編輯每位訓員的約談紀錄（訪談日期、意願、備注）",
@@ -2639,8 +2639,8 @@ function App(){
       e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt3)",letterSpacing:"0.06em",marginBottom:10,marginTop:8}},"功能說明"),
       ...[
         {icon:"shield",color:"#f59e0b",title:"登入與身份驗證",
-          desc:"使用 Google 帳號一鍵登入，系統管理員審核後即可使用。閒置超過 8 小時自動登出保護資料安全。",
-          steps:["點擊「以 Google 帳號登入」","完成 Google 授權","等待管理員核准後即可進入系統"]},
+          desc:"使用 Google 帳號一鍵登入，系統承辦人審核後即可使用。閒置超過 8 小時自動登出保護資料安全。",
+          steps:["點擊「以 Google 帳號登入」","完成 Google 授權","等待承辦人核准後即可進入系統"]},
         {icon:"list",color:"#3b82f6",title:"梯次管理",
           desc:"承辦人可建立並管理各梯次的訓員資料，每個梯次有獨立 6 碼密碼保護，防止未授權存取。招募員輸入密碼後申請加入（開放模式下直接進入）。",
           steps:["首頁點「+」新增梯次（承辦人）","填寫接訓單位、梯次序號","系統自動產生 6 碼密碼，複製分享給招募員"]},
@@ -2704,7 +2704,7 @@ function App(){
       e("div",{style:{...S.card,padding:0,marginBottom:16}},
         ...[
           ["版本","v"+appVersion()],
-          ["發布日期",buildTagDate()],
+          ["發布日期","2026年5月"],
           ["最後更新",buildTagDate()],
         ].map(([k,v],i,arr)=>e("div",{key:k,style:{display:"flex",alignItems:"center",padding:"12px 16px",borderBottom:i<arr.length-1?"1px solid var(--border2)":"none"}},
           e("span",{style:{fontSize:13,color:"var(--txt3)",flex:1}},k),
@@ -2732,15 +2732,15 @@ function App(){
             e("span",{style:{fontSize:14,fontWeight:700,color:"var(--txt)"}},"使用條款")
           ),
           e("div",{style:{fontSize:12,color:"var(--txt2)",lineHeight:1.8,paddingLeft:38}},
-            "本系統（RIIMS）為軍事招募資訊管理專用平台，僅限系統管理員授權招募人員使用。",
+            "本系統（RIIMS）為軍事招募資訊管理專用平台，僅限授權招募人員使用。",
             e("br"),
-            "• 使用者須以個人Google帳號登入，帳號由管理員審核後方可使用。",
+            "• 使用者須以個人Google帳號登入，帳號由承辦人審核後方可使用。",
             e("br"),
             "• 禁止將帳號、密碼或系統存取權限轉借他人。",
             e("br"),
             "• 禁止將系統內任何訓員資料用於非招募業務之目的。",
             e("br"),
-            "• 違反使用規定者，管理員得立即停用其帳號，並依相關規定移送處理。"
+            "• 違反使用規定者，承辦人得立即停用其帳號，並依相關規定移送處理。"
           )
         ),
         // 隱私政策
@@ -2754,7 +2754,7 @@ function App(){
             e("br"),
             "• 資料儲存於Google Firebase，受Google企業級安全機制保護。",
             e("br"),
-            "• 訓員個人資料依招募業務需要保存，業務結束後由管理員定期清理。",
+            "• 訓員個人資料依招募業務需要保存，業務結束後定期清理。",
             e("br"),
             "• 使用者離職或帳號停用後，其操作記錄仍依規定保留供稽核。"
           )
@@ -2796,7 +2796,7 @@ function App(){
             e("br"),e("br"),
             "本系統原始碼為內部使用，不對外公開發布。系統本身非開源軟體，上述授權條款適用於各第三方元件，不代表本系統採用相同授權。",
             e("br"),e("br"),
-            "安全聲明：本系統不收集任何用於商業目的之資料，所有Firebase存取均透過安全規則限制，服務帳號私鑰嚴格保管於管理員本機，不存在於任何程式碼倉庫中。"
+            "安全聲明：本系統不收集任何用於商業目的之資料，所有Firebase存取均透過安全規則限制，服務帳號私鑰嚴格保管於系統本機，不存在於任何程式碼倉庫中。"
           )
         )
       ),
@@ -2852,7 +2852,7 @@ function App(){
 
   if(view==="admin"){
   // ── iOS Settings-style admin helpers ──────────────────────────────────────
-  const roleLabel=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r;
+  const roleLabel=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"招募承辦":r;
   const roleStyle=r=>({fontSize:10,background:r==="admin"?"#f59e0b18":r==="coordinator"?"#3b82f618":"var(--bg3)",border:"1px solid "+(r==="admin"?"#f59e0b44":r==="coordinator"?"#3b82f644":"var(--border)"),borderRadius:6,padding:"2px 7px",color:r==="admin"?"#f59e0b":r==="coordinator"?"#3b82f6":"var(--txt2)",fontWeight:700});
   const adminRow=(icon,iconBg,label,sub,badge,onClick)=>e("button",{key:label,style:{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:"none",border:"none",borderBottom:"1px solid var(--border2)",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",textAlign:"left"},onClick},
     e("div",{style:{width:34,height:34,borderRadius:10,background:iconBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:icon,s:17,c:"#fff",w:2})),
@@ -3068,7 +3068,7 @@ function App(){
         filteredLogs.length===0&&!loginLogsLoading&&e("div",{style:{...S.card,textAlign:"center",color:"var(--txt3)",fontSize:13,padding:"28px 16px"}},"尚無登入紀錄"),
         ...filteredLogs.map((log,i)=>{
           const realIdx=loginLogs.indexOf(log);
-          const roleLbl=log.role==="admin"?"管理員":log.role==="coordinator"?"承辦人":"招募員";
+          const roleLbl=log.role==="admin"?"承辦人":log.role==="coordinator"?"承辦人":"招募員";
           const roleStyle=log.role==="admin"
             ?{background:"rgba(245,158,11,0.15)",color:"#f59e0b"}
             :log.role==="coordinator"
@@ -3258,7 +3258,7 @@ function App(){
         e("div",null,
           e("label",{style:S.lbl},"角色（可複選）"),
           e("div",{style:S.segWrap},
-            ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"管理員"}]).map(({v,l})=>{
+            ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"系統承辦"}]).map(({v,l})=>{
               const active=(editMemberDraft.roles||[]).includes(v);
               return e("button",{key:v,style:S.segBtn(active),
                 onClick:()=>setEMD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
@@ -3620,7 +3620,7 @@ function App(){
               members.forEach(u=>{const k=u.brigadeUnit||"（未填單位）";(grpMap[k]=grpMap[k]||[]).push(u);});
               const grpKeys=Object.keys(grpMap).sort((a,b)=>a==="（未填單位）"?1:b==="（未填單位）"?-1:a.localeCompare(b,"zh-TW"));
               const recAC=u=>{const g=u?.gender;if(g==="female")return{bg:"#fce4ec",fg:"#c62828"};return{bg:"#dbeafe",fg:"#1d4ed8"};};
-              const recRL=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"管理員":r;
+              const recRL=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"招募承辦":r;
               const recRS=r=>({fontSize:11,fontWeight:700,borderRadius:20,padding:"2px 9px",background:r==="coordinator"?"#3b82f6":r==="admin"?"#f59e0b":"var(--bg3)",color:r==="coordinator"||r==="admin"?"#fff":"var(--txt2)",border:"none",display:"inline-block"});
               return e("div",null,
                 e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:8}},"共 "+members.length+" 人"),
