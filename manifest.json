@@ -1,0 +1,16 @@
+{
+  "name": "招募資訊整合管理系統",
+  "short_name": "RIIMS",
+  "description": "陸軍招募資訊整合管理系統",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0f1e",
+  "theme_color": "#0a0f1e",
+  "orientation": "portrait-primary",
+  "lang": "zh-TW",
+  "icons": [
+    { "src": "./favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
