@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="RIIMS"/>
 <meta name="theme-color" content="#0a0f1e"/>
+<link rel="manifest" href="./manifest.json"/>
 <link rel="apple-touch-icon" href="./apple-touch-icon.png"/>
 <link rel="icon" type="image/png" href="./favicon.png"/>
 <title>招募資訊整合管理系統</title>
@@ -201,7 +202,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-131-guide-roles";
+const BUILD_TAG="2026-08-13-132-pwa-install-banner";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -472,6 +473,15 @@ async function hashIdLast4(v,batchId,seatNo){
 
 // ═══ APP ══════════════════════════════════════════════════════════════════════
 
+// ── PWA 安裝環境偵測（全域，只計算一次）──────────────────────────────────────
+const _UA=navigator.userAgent;
+const _isLine=/Line\//i.test(_UA);
+const _isIOS=/iPhone|iPad|iPod/i.test(_UA);
+const _isAndroid=/Android/i.test(_UA);
+const _isStandalone=window.matchMedia("(display-mode: standalone)").matches||!!navigator.standalone;
+let _deferredInstallPrompt=null;
+window.addEventListener("beforeinstallprompt",ev=>{ev.preventDefault();_deferredInstallPrompt=ev;});
+
 function App(){
   // ── State ───────────────────────────────────────────────────────────────────
   const [view,setViewRaw]=useState("loading");
@@ -484,6 +494,7 @@ function App(){
   const [toast,setToast]=useState(null);
   const [errMsg,setErrMsg]=useState("");
   const [saving,setSaving]=useState(false);
+  const [showInstallBanner,setShowInstallBanner]=useState(!_isStandalone&&!sessionStorage.getItem("installDismissed"));
   // 新增梯次
   const [showAB,setShowAB]=useState(false);
   const [nb,setNb]=useState({unit:"",battalion:"",company:"",sequence:"",traineeCount:"30"});
@@ -1520,6 +1531,56 @@ function App(){
   const sts=(cfg||DEF).statusOptions;
   const Toast=()=>toast?e("div",{style:S.toast(toast.type)},toast.msg):null;
 
+  // ── 加入主畫面引導 Banner ──────────────────────────────────────────────────
+  function dismissInstall(){sessionStorage.setItem("installDismissed","1");setShowInstallBanner(false);}
+  const pageUrl=window.location.href.split("?")[0].split("#")[0];
+  const intentUrl="intent://"+pageUrl.replace(/^https?:\/\//,"")+"#Intent;scheme=https;package=com.android.chrome;end";
+  const InstallBanner=()=>{
+    if(!showInstallBanner)return null;
+    // 已是 standalone → 不顯示
+    if(_isStandalone)return null;
+    // LINE 瀏覽器
+    if(_isLine){
+      return e("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"#1DB954",color:"#fff",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 2px 8px rgba(0,0,0,0.25)"}},
+        e("div",{style:{flex:1}},
+          e("div",{style:{fontSize:13,fontWeight:800,marginBottom:2}},"請用瀏覽器開啟以加入主畫面"),
+          _isAndroid
+            ? e("a",{href:intentUrl,style:{fontSize:11,color:"#fff",opacity:0.9,textDecoration:"underline"}},"點此在 Chrome 中開啟 →")
+            : e("div",{style:{fontSize:11,opacity:0.9}},"點右下角 ··· → 「在瀏覽器中開啟」")
+        ),
+        e("button",{style:{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:"0 4px",opacity:0.8},onClick:dismissInstall},"×")
+      );
+    }
+    // iOS Safari（非 LINE）
+    if(_isIOS){
+      return e("div",{style:{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:"var(--hdr)",borderTop:"1px solid var(--border)",padding:"12px 16px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 -2px 12px rgba(0,0,0,0.15)"}},
+        e("div",{style:{flex:1}},
+          e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:3}},"加入主畫面，像 App 一樣使用"),
+          e("div",{style:{fontSize:11,color:"var(--txt3)"}},
+            "點下方",e("span",{style:{margin:"0 4px",fontSize:13}},"⎙"),"分享 → 「加入主畫面」"
+          )
+        ),
+        e("button",{style:{background:"none",border:"none",cursor:"pointer",padding:"4px 6px"},onClick:dismissInstall},e(Icon,{n:"x",s:18,c:"var(--txt3)"}))
+      );
+    }
+    // Android Chrome（非 LINE）
+    if(_isAndroid){
+      return e("div",{style:{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,background:"var(--hdr)",borderTop:"1px solid var(--border)",padding:"12px 16px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 -2px 12px rgba(0,0,0,0.15)"}},
+        e("div",{style:{flex:1}},
+          e("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)",marginBottom:3}},"加入主畫面，像 App 一樣使用"),
+          e("div",{style:{fontSize:11,color:"var(--txt3)"}},"點右上角 ⋮ → 「加入主畫面」或「安裝應用程式」")
+        ),
+        e("div",{style:{display:"flex",gap:6,flexShrink:0}},
+          _deferredInstallPrompt&&e("button",{style:{...S.btn("primary","sm"),fontSize:12},
+            onClick:async()=>{if(!_deferredInstallPrompt)return;_deferredInstallPrompt.prompt();const r=await _deferredInstallPrompt.userChoice;if(r.outcome==="accepted"){_deferredInstallPrompt=null;dismissInstall();}}
+          },"安裝"),
+          e("button",{style:{background:"none",border:"none",cursor:"pointer",padding:"4px 6px"},onClick:dismissInstall},e(Icon,{n:"x",s:18,c:"var(--txt3)"}))
+        )
+      );
+    }
+    return null;
+  };
+
   // ── Scroll Anchor Component ──────────────────────────────────────────────────
   function ScrollAnchor({seat,onDone}){
     const ref=useRef(null);
@@ -1792,6 +1853,7 @@ function App(){
 
   // ── Login ──────────────────────────────────────────────────────────────────
   if(view==="login") return e("div",{style:{...S.app,minHeight:"100vh",display:"flex",flexDirection:"column"}},
+    e(InstallBanner),
     e("div",{style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"32px 24px"}},
       e("div",{style:{width:"100%",maxWidth:380}},
         // 識別標誌
@@ -3259,7 +3321,7 @@ function App(){
   );
 
   if(view==="home") return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
-    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),
+    e(WatermarkOverlay),e(UpdateBanner),e(PTRIndicator),e(Toast),e(SignoutConfirm),e(InstallBanner),
     e("div",{style:{...S.hdr,justifyContent:"space-between"}},
       e("div",{style:{flex:1}},
         e("div",{style:{fontSize:15,fontWeight:800,color:"var(--txt)"}},"梯次列表"),
