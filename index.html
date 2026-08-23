@@ -202,7 +202,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-135-admin-label-system-manager";
+const BUILD_TAG="2026-08-13-136-admin-role-gate";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -3258,7 +3258,7 @@ function App(){
         e("div",null,
           e("label",{style:S.lbl},"角色（可複選）"),
           e("div",{style:S.segWrap},
-            ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"系統管理員"}]).map(({v,l})=>{
+            ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},...(isAdminUser()?[{v:"admin",l:"系統管理員"}]:[])]).map(({v,l})=>{
               const active=(editMemberDraft.roles||[]).includes(v);
               return e("button",{key:v,style:S.segBtn(active),
                 onClick:()=>setEMD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
