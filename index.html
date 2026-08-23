@@ -202,7 +202,7 @@ async function fsDel(p){
   await deleteDoc(doc(_db,...p.split("/")));
 }
 
-const BUILD_TAG="2026-08-13-133-remove-admin-label";
+const BUILD_TAG="2026-08-13-134-unify-admin-coordinator";
 const APP_MAJOR_MINOR="2.5";
 function buildSeq(){const m=BUILD_TAG.match(/^\d{4}-\d{2}-\d{2}-(\d+)-/);return m?m[1]:"0";}
 function appVersion(){return APP_MAJOR_MINOR+"."+buildSeq();}
@@ -2490,7 +2490,7 @@ function App(){
     const LINE_SVG_UV="<path d='M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.628-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314'/>";
     function uvRoleLabel(r){return r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"招募承辦":r;}
     function uvRoleStyle(r){return{fontSize:11,fontWeight:700,borderRadius:20,padding:"2px 9px",
-      background:r==="coordinator"?"#3b82f6":r==="admin"?"#f59e0b":"var(--bg3)",
+      background:r==="coordinator"||r==="admin"?"#3b82f6":"var(--bg3)",
       color:r==="coordinator"||r==="admin"?"#fff":"var(--txt2)",
       border:"none",display:"inline-block"};}
     return e("div",{style:{...S.app,display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}},
@@ -2545,7 +2545,7 @@ function App(){
                         e("span",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},
                           (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
                         ),
-                        ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:uvRoleStyle(r)},uvRoleLabel(r)))
+                        ...[...new Set((u.roles||[u.role||"recruiter"]).map(r=>r==="admin"?"coordinator":r))].map(r=>e("span",{key:r,style:uvRoleStyle(r)},uvRoleLabel(r)))
                       ),
                       u.battalionUnit&&e("div",{style:{display:"flex",alignItems:"center",gap:4,marginTop:3}},
                         e(Icon,{n:"flag",s:11,c:"var(--txt3)"}),
@@ -2853,7 +2853,7 @@ function App(){
   if(view==="admin"){
   // ── iOS Settings-style admin helpers ──────────────────────────────────────
   const roleLabel=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"招募承辦":r;
-  const roleStyle=r=>({fontSize:10,background:r==="admin"?"#f59e0b18":r==="coordinator"?"#3b82f618":"var(--bg3)",border:"1px solid "+(r==="admin"?"#f59e0b44":r==="coordinator"?"#3b82f644":"var(--border)"),borderRadius:6,padding:"2px 7px",color:r==="admin"?"#f59e0b":r==="coordinator"?"#3b82f6":"var(--txt2)",fontWeight:700});
+  const roleStyle=r=>({fontSize:10,background:r==="admin"||r==="coordinator"?"#3b82f618":"var(--bg3)",border:"1px solid "+(r==="admin"||r==="coordinator"?"#3b82f644":"var(--border)"),borderRadius:6,padding:"2px 7px",color:r==="admin"||r==="coordinator"?"#3b82f6":"var(--txt2)",fontWeight:700});
   const adminRow=(icon,iconBg,label,sub,badge,onClick)=>e("button",{key:label,style:{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:"none",border:"none",borderBottom:"1px solid var(--border2)",cursor:"pointer",fontFamily:"'Noto Sans TC',sans-serif",textAlign:"left"},onClick},
     e("div",{style:{width:34,height:34,borderRadius:10,background:iconBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{n:icon,s:17,c:"#fff",w:2})),
     e("div",{style:{flex:1,minWidth:0}},
@@ -2893,7 +2893,7 @@ function App(){
                 :e("div",{style:{fontSize:12,color:"#ef4444",marginBottom:2}},"未填單位"),
               e("div",{style:{fontSize:11,color:"var(--txt3)",marginBottom:4}},u.googleEmail),
               (u.roles||[]).length>0&&e("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},
-                ...(u.roles||[]).map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
+                ...[...new Set((u.roles||[]).map(r=>r==="admin"?"coordinator":r))].map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
               )
             ),
             e("button",{style:{...S.btn("primary","sm"),padding:"5px 14px",flexShrink:0},onClick:()=>approveUser(u)},"核准")
@@ -2951,7 +2951,7 @@ function App(){
                   e("span",{style:{fontSize:11,color:"var(--txt3)"}},u.phone)
                 ),
                 e("div",{style:{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}},
-                  ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
+                  ...[...new Set((u.roles||[u.role||"recruiter"]).map(r=>r==="admin"?"coordinator":r))].map(r=>e("span",{key:r,style:roleStyle(r)},roleLabel(r)))
                 )
               ),
               e(Icon,{n:"chevR",s:14,c:"var(--txt3)"})
@@ -3069,11 +3069,9 @@ function App(){
         ...filteredLogs.map((log,i)=>{
           const realIdx=loginLogs.indexOf(log);
           const roleLbl=log.role==="admin"?"承辦人":log.role==="coordinator"?"承辦人":"招募員";
-          const roleStyle=log.role==="admin"
-            ?{background:"rgba(245,158,11,0.15)",color:"#f59e0b"}
-            :log.role==="coordinator"
-              ?{background:"rgba(59,130,246,0.15)",color:"#3b82f6"}
-              :{background:"var(--bg3)",color:"var(--txt2)"};
+          const roleStyle=log.role==="admin"||log.role==="coordinator"
+            ?{background:"rgba(59,130,246,0.15)",color:"#3b82f6"}
+            :{background:"var(--bg3)",color:"var(--txt2)"};
           const avatarBg=log.gender==="male"?"rgba(59,130,246,0.15)":log.gender==="female"?"rgba(236,72,153,0.15)":"rgba(139,92,246,0.15)";
           const avatarColor=log.gender==="male"?"#3b82f6":log.gender==="female"?"#ec4899":"#8b5cf6";
           const avatarChar=log.surname||(log.name||"?").charAt(0);
@@ -3258,7 +3256,7 @@ function App(){
         e("div",null,
           e("label",{style:S.lbl},"角色（可複選）"),
           e("div",{style:S.segWrap},
-            ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"},{v:"admin",l:"系統承辦"}]).map(({v,l})=>{
+            ...([{v:"recruiter",l:"招募員"},{v:"coordinator",l:"招募承辦"}]).map(({v,l})=>{
               const active=(editMemberDraft.roles||[]).includes(v);
               return e("button",{key:v,style:S.segBtn(active),
                 onClick:()=>setEMD(d=>{const cur=d.roles||["recruiter"];const next=active?cur.filter(r=>r!==v):[...cur,v];return{...d,roles:next.length?next:["recruiter"]};})},l);
@@ -3621,7 +3619,7 @@ function App(){
               const grpKeys=Object.keys(grpMap).sort((a,b)=>a==="（未填單位）"?1:b==="（未填單位）"?-1:a.localeCompare(b,"zh-TW"));
               const recAC=u=>{const g=u?.gender;if(g==="female")return{bg:"#fce4ec",fg:"#c62828"};return{bg:"#dbeafe",fg:"#1d4ed8"};};
               const recRL=r=>r==="recruiter"?"招募員":r==="coordinator"?"招募承辦":r==="admin"?"招募承辦":r;
-              const recRS=r=>({fontSize:11,fontWeight:700,borderRadius:20,padding:"2px 9px",background:r==="coordinator"?"#3b82f6":r==="admin"?"#f59e0b":"var(--bg3)",color:r==="coordinator"||r==="admin"?"#fff":"var(--txt2)",border:"none",display:"inline-block"});
+              const recRS=r=>({fontSize:11,fontWeight:700,borderRadius:20,padding:"2px 9px",background:r==="coordinator"||r==="admin"?"#3b82f6":"var(--bg3)",color:r==="coordinator"||r==="admin"?"#fff":"var(--txt2)",border:"none",display:"inline-block"});
               return e("div",null,
                 e("div",{style:{fontSize:12,color:"var(--txt3)",marginBottom:8}},"共 "+members.length+" 人"),
                 ...grpKeys.map(k=>e("div",{key:k,style:{...S.card,marginBottom:10,padding:0,overflow:"hidden"}},
@@ -3645,7 +3643,7 @@ function App(){
                           e("span",{style:{fontSize:13,fontWeight:700,color:"var(--txt)"}},
                             (u.rank||"")+(u.rank&&u.name?" ":"")+(u.name||"（未填）")
                           ),
-                          ...(u.roles||[u.role||"recruiter"]).map(r=>e("span",{key:r,style:recRS(r)},recRL(r)))
+                          ...[...new Set((u.roles||[u.role||"recruiter"]).map(r=>r==="admin"?"coordinator":r))].map(r=>e("span",{key:r,style:recRS(r)},recRL(r)))
                         ),
                         u.battalionUnit&&e("div",{style:{display:"flex",alignItems:"center",gap:4,marginTop:3}},
                           e(Icon,{n:"flag",s:11,c:"var(--txt3)"}),
